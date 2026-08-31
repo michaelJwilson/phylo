@@ -1,1 +1,13 @@
 .claude/worktrees/
+
+# Rust
+/target/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.benchmarks/
+*.egg-info/
+
