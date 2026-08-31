@@ -29,7 +29,46 @@ source .venv/bin/activate
 - Use type hints on all Python function signatures (see Tooling below).
 - Any PR that changes behavior, conventions, or the dev/CI setup must update
   `README.md` and/or `CLAUDE.md` in the same PR, so the docs never drift
-  from what's actually in the repo.
+  from what's actually in the repo. If the change is user-visible, add a
+  `CHANGELOG.md` entry under `[Unreleased]` too.
+- The package version lives in exactly one place, `Cargo.toml`'s
+  `[package].version` (`pyproject.toml` reads it dynamically via maturin —
+  see `README.md`'s Versioning section). Never hardcode a second version
+  number anywhere.
+
+## Definition of done for new or changed functionality
+
+Beyond "it works," a PR that adds or changes package behavior (not a
+docs/CI-only change) should leave the repo in this state for the code it
+touches — use judgment on what's proportionate to the PR's size, but don't
+skip an item because it's inconvenient:
+
+- **Regression test**: pins expected output per the Conventions above.
+- **Property test**: for anything with a stateable invariant (symmetry,
+  non-negativity, idempotence, a conservation law, etc.), add a
+  `hypothesis` test in `tests/properties/` alongside the fixed-input
+  regression test — don't rely on one example alone for numerical code.
+- **Benchmark**: any new or materially changed hot function gets a
+  `pytest-benchmark` test (Python) or a `criterion` benchmark in `benches/`
+  (Rust), and the resulting numbers get reported in the PR description as
+  the baseline for future comparison — even though CI doesn't hard-gate on
+  them (see Tooling: comparisons are local-only, not CI-blocking, due to
+  GitHub-hosted runner hardware variance).
+- **Coverage**: doesn't drop the repo below the CI coverage gate
+  (`--cov-fail-under` in the `python-tests` job). Raise the gate as
+  coverage improves over time; never lower it just to make a PR pass —
+  write the missing test instead.
+- **Lint/type/format**: `ruff check`, `ruff format --check`, `mypy`
+  (Python) and `cargo clippy`, `cargo fmt --check` (Rust) all pass locally
+  before pushing — all four are required CI checks already, this just
+  means not relying on CI (or a reviewer) to catch it first.
+- **CI coverage of the change itself**: if a PR introduces a new language,
+  build target, or category of code that none of the existing CI jobs
+  would exercise, add or extend a CI job for it in the same PR — don't
+  leave a new category of code untested "for a follow-up."
+- **Docs**: see the Conventions bullet above (README/CLAUDE.md/CHANGELOG).
+- **Dependency hygiene**: any new dependency follows the Dependencies &
+  external tools rules below.
 
 ## Tooling
 
