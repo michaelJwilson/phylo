@@ -13,9 +13,13 @@ convenience.
 Use `uv` for environment and dependency management (Python 3.12):
 
 ```
-uv venv --python 3.12
+uv sync --locked --all-extras
 source .venv/bin/activate
 ```
+
+`--locked` fails if `uv.lock` has drifted from `pyproject.toml` instead of
+resolving something new. After changing a dependency, run `uv lock` and commit
+the updated `uv.lock` in the same PR.
 
 ## Conventions
 
@@ -119,11 +123,15 @@ skip an item because it's inconvenient:
 ## Tooling
 
 - Lint/format Python with `ruff check .` and `ruff format --check .`;
-  type-check with `mypy python/`. All three are enforced in CI
-  (`.github/workflows/ci.yml`'s `lint` job) — ruff's `ANN`
-  (annotation-presence) rules are intentionally disabled in
-  `pyproject.toml` since `mypy` is the enforcement point for type hints
-  here, not ruff.
+  type-check with `mypy`, which runs in `strict` mode over both `python/`
+  and `tests/`. All three are enforced in CI (`.github/workflows/ci.yml`'s
+  `lint` job) — ruff's `ANN` (annotation-presence) rules stay disabled in
+  `pyproject.toml` because `mypy --strict` already rejects an unannotated
+  signature.
+- Audit dependencies with `pip-audit` (Python) and `cargo audit` (Rust);
+  both run in CI's `audit` job and as pre-commit hooks. `cargo audit` is not
+  part of the Rust toolchain — install it with
+  `cargo install cargo-audit --locked`.
 - Lint/format Rust with `cargo clippy --all-targets -- -D warnings` and
   `cargo fmt --check`; both are enforced in CI (`rust-lint` job).
 - Optionally install `pre-commit` (`pip install ".[dev]"` includes it,
@@ -147,6 +155,25 @@ skip an item because it's inconvenient:
   `napoleon`); CI runs `sphinx-build -W` (warnings as errors) in the `docs`
   job. Write docstrings knowing they're rendered, not just read in-editor.
 
+## Reproducibility
+
+Reproducibility is the project's stated priority, so the environment is
+pinned end to end. Keep it that way:
+
+- **Both dependency graphs are locked.** `uv.lock` pins Python, `Cargo.lock`
+  pins Rust. Every install in CI passes `--locked`, which fails on a stale
+  lockfile rather than resolving something new. Regenerate with `uv lock` /
+  `cargo update` deliberately, and commit the result in the same PR.
+- **The toolchains are pinned.** `rust-toolchain.toml` fixes the Rust
+  compiler; CI pins the runner image (`ubuntu-24.04`, not `ubuntu-latest`)
+  and the `uv` version.
+- **Seed every random draw explicitly**, using `np.random.default_rng(seed)`.
+  Never use the legacy global `np.random.*` functions — ruff's `NPY002`
+  rejects them.
+- The `build` CI job deliberately installs with plain `pip` instead of the
+  lockfile: it checks the path a fresh consumer takes, which no lockfile
+  protects.
+
 ## Known gaps
 
 Current as of the initial scaffolding. Don't assume any of this exists; close
@@ -165,18 +192,6 @@ a gap deliberately, in its own PR, rather than assuming a past PR covered it.
 - **`python/phylo/` has no module structure.** It holds a re-export and a stub
   CLI. There is no `core.py`-equivalent, so there is no established home or
   naming pattern for real algorithms.
-- **Python dependencies are unlocked while Rust's are locked.** `Cargo.lock`
-  pins the Rust graph; the Python side resolves `>=` ranges fresh on every CI
-  run. Two runs months apart can use different NumPy versions, which sits badly
-  with reproducibility as the stated top priority.
-- **No RNG convention.** `tests/benchmarks/` calls the legacy
-  `np.random.seed`; ruff's `NPY002` (which flags exactly that) is disabled.
-  Pick `np.random.default_rng(seed)` and enforce it before real numerics land.
-- **Type hints are required but barely enforced.** `mypy` runs without
-  `--strict` (and without `disallow_untyped_defs`), so a fully unannotated
-  function passes CI despite the Conventions rule above.
-- **Tests are unlinted.** `pyproject.toml` sets `"tests/**" = ["ALL"]` in ruff's
-  per-file ignores, exempting the code where scientific correctness lives.
 - **Nothing detects performance regressions.** Benchmarks run in CI but assert
   nothing (deliberately — runner hardware varies), and the
   report-numbers-in-the-PR policy relies on human attention, not a mechanism.

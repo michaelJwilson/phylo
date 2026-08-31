@@ -11,13 +11,17 @@ Rust-accelerated backend (`phylo.oxiphylo`, via
 ## Setup
 
 ```
-# Create the virtual environment
-uv venv --python 3.12
+# Create the environment from the lockfile
+uv sync --locked --all-extras
 
 # Activate the environment
 # On macOS/Linux:
 source .venv/bin/activate 
 ```
+
+`--locked` fails if `uv.lock` has drifted from `pyproject.toml` rather than
+resolving new versions. After changing a dependency, run `uv lock` and commit
+the updated lockfile.
 
 ## Building
 
@@ -46,18 +50,26 @@ cargo bench # Rust: Criterion benchmarks (benches/)
 ## Linting & type checking
 
 ```
-pip install ".[dev]"
+uv sync --locked --extra dev
 ruff check .
 ruff format --check .
-mypy python/
-cargo clippy --all-targets -- -D warnings
+mypy                                       # strict mode, over python/ and tests/
+cargo clippy --locked --all-targets -- -D warnings
 cargo fmt --check
 ```
 
-Python code in this repo is type-hinted; `mypy` is the enforcement point
-for that (ruff's annotation-presence rules are intentionally off — see
-`CLAUDE.md`). Optionally run `pre-commit install` after `pip install
-".[dev]"` to run all of the above automatically on `git commit`.
+Run `pre-commit install` to run all of the above, plus the dependency audits
+below, automatically on `git commit`.
+
+## Dependency audits
+
+```
+pip-audit    # Python, from the dev extra
+cargo audit  # Rust; install once with `cargo install cargo-audit --locked`
+```
+
+Both run in CI's `audit` job, so a newly disclosed advisory against a pinned
+dependency fails the build.
 
 ## Documentation
 
@@ -75,14 +87,24 @@ warning fails the build rather than shipping silently.
 
 ## Continuous integration
 
-Every pull request against `main` runs six GitHub Actions jobs
+Every pull request against `main` runs seven GitHub Actions jobs
 (`.github/workflows/ci.yml`) ahead of review: `lint` (`ruff check`, `ruff
-format --check`, `mypy`), `rust-lint` (`cargo clippy`, `cargo fmt --check`),
-`rust-tests` (`cargo test` and `cargo bench`), `build` (compiles the
-extension and smoke-imports `phylo.oxiphylo`), `python-tests` (the full
+format --check`, strict `mypy`), `rust-lint` (`cargo clippy`, `cargo fmt
+--check`), `rust-tests` (`cargo test` and `cargo bench`), `build` (compiles
+the extension and smoke-imports `phylo.oxiphylo`), `python-tests` (the full
 `pytest` suite, including the `hypothesis` property tests, gated on a
-minimum coverage threshold via `pytest-cov`), and `docs` (the Sphinx build
-above, with warnings as errors).
+minimum coverage threshold via `pytest-cov`), `docs` (the Sphinx build
+above, with warnings as errors), and `audit` (`pip-audit` and `cargo
+audit`).
+
+## Reproducibility
+
+Both dependency graphs are locked (`uv.lock`, `Cargo.lock`) and every CI
+install passes `--locked`, so a stale lockfile fails the build instead of
+silently resolving new versions. The Rust compiler is pinned by
+`rust-toolchain.toml`, and CI pins its runner image and `uv` version. Random
+draws use seeded `np.random.default_rng`; ruff's `NPY002` rejects the legacy
+global `np.random` functions.
 
 ## Versioning
 

@@ -6,36 +6,43 @@ on:
   push:
     branches: [main]
 
+# Pinned runner image and a pinned uv keep CI reproducible; the Rust toolchain
+# is pinned by rust-toolchain.toml and the dependency graphs by uv.lock and
+# Cargo.lock. `--locked` on every install fails the build if a lockfile is
+# stale rather than silently resolving something new.
+env:
+  UV_VERSION: "0.8.17"
+
 jobs:
   lint:
     name: Lint & type-check (ruff, mypy)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
       - uses: dtolnay/rust-toolchain@stable
-      - run: pip install ".[dev]"
-      - run: ruff check .
-      - run: ruff format --check .
-      - run: mypy python/
+      - run: pip install "uv==${UV_VERSION}"
+      - run: uv sync --locked --extra dev
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy
 
   rust-lint:
     name: Rust lint & format (clippy, fmt)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
       - run: cargo fmt --check
-      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo clippy --locked --all-targets -- -D warnings
 
   rust-tests:
     name: Rust tests (cargo test)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -45,39 +52,59 @@ jobs:
 
   build:
     name: Python/Rust build (maturin)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - uses: dtolnay/rust-toolchain@stable
+      # Deliberately plain pip, not the lockfile: this job checks the path a
+      # fresh consumer takes when installing the package from source.
       - run: pip install .
       - name: Smoke-test phylo.oxiphylo is importable
         run: python -c "from phylo.oxiphylo import double; assert double(21) == 42"
 
   python-tests:
     name: Python tests (pytest)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
       - uses: dtolnay/rust-toolchain@stable
-      - run: pip install ".[test]"
-      - run: pytest --cov=phylo --cov-report=term-missing --cov-fail-under=90
+      - run: pip install "uv==${UV_VERSION}"
+      - run: uv sync --locked --extra test
+      - run: uv run pytest --cov=phylo --cov-report=term-missing --cov-fail-under=90
 
   docs:
     name: Docs build (Sphinx)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
       - uses: dtolnay/rust-toolchain@stable
-      - run: pip install ".[docs]"
-      - run: sphinx-build -b html docs/source docs/_build/html -W
+      - run: pip install "uv==${UV_VERSION}"
+      - run: uv sync --locked --extra docs
+      - run: uv run sphinx-build -b html docs/source docs/_build/html -W
+
+  audit:
+    name: Dependency audit (pip-audit, cargo audit)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+      - run: pip install "uv==${UV_VERSION}"
+      - run: uv sync --locked --extra dev
+      - name: Audit Python dependencies
+        run: uv run pip-audit
+      - name: Audit Rust dependencies
+        uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

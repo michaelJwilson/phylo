@@ -18,7 +18,7 @@ _finite = st.floats(
 )
 
 
-def _point_set(max_points: int = 6):
+def _point_set(max_points: int = 6) -> st.SearchStrategy[np.ndarray]:
     return st.integers(min_value=1, max_value=max_points).flatmap(
         lambda n: arrays(dtype=np.float64, shape=(n, 2), elements=_finite)
     )

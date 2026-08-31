@@ -13,7 +13,7 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: mypy python/
+        entry: mypy
         language: system
         pass_filenames: false
       - id: cargo-fmt
@@ -23,6 +23,22 @@ repos:
         pass_filenames: false
       - id: cargo-clippy
         name: cargo clippy
-        entry: cargo clippy --all-targets -- -D warnings
+        entry: cargo clippy --locked --all-targets -- -D warnings
+        language: system
+        pass_filenames: false
+
+  # Dependency audits. Both reach the network, so they add a few seconds per
+  # commit. cargo-audit is not part of the Rust toolchain: install it once with
+  # `cargo install cargo-audit --locked`.
+  - repo: local
+    hooks:
+      - id: pip-audit
+        name: pip-audit
+        entry: pip-audit
+        language: system
+        pass_filenames: false
+      - id: cargo-audit
+        name: cargo audit
+        entry: cargo audit
         language: system
         pass_filenames: false

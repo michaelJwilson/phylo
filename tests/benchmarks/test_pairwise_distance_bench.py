@@ -10,9 +10,9 @@ from tests._example_hotpath import pairwise_distance
 
 
 def test_pairwise_distance_benchmark(benchmark: BenchmarkFixture) -> None:
-    np.random.seed(0)
-    x = np.random.random((200, 3))
-    y = np.random.random((150, 3))
+    rng = np.random.default_rng(0)
+    x = rng.random((200, 3))
+    y = rng.random((150, 3))
 
     result = benchmark(pairwise_distance, x, y)
 
