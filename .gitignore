@@ -17,3 +17,6 @@ python/phylo/*.so
 python/phylo/*.pyd
 python/phylo/*.dylib
 
+# Sphinx build output
+docs/_build/
+
