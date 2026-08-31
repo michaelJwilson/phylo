@@ -31,10 +31,12 @@ importable from Python.
 
 ```
 pip install ".[test]"
-pytest      # Python: regression tests (tests/regression), a pytest-benchmark
-            # suite (tests/benchmarks), and an integration test that the Rust
+pytest      # Python: regression tests (tests/regression), property-based
+            # tests (tests/properties), a pytest-benchmark suite
+            # (tests/benchmarks), and an integration test that the Rust
             # extension imports correctly (tests/test_oxiphylo_bindings.py)
 cargo test  # Rust: unit tests for the PyO3 bindings (src/lib.rs)
+cargo bench # Rust: Criterion benchmarks (benches/)
 ```
 
 ## Linting & type checking
@@ -43,19 +45,24 @@ cargo test  # Rust: unit tests for the PyO3 bindings (src/lib.rs)
 pip install ".[dev]"
 ruff check .
 ruff format --check .
-mypy .
+mypy python/
+cargo clippy --all-targets -- -D warnings
+cargo fmt --check
 ```
 
-Python code in this repo is type-hinted; run `mypy` locally before pushing
-(it isn't yet a required CI check — see `CLAUDE.md`).
+Python code in this repo is type-hinted; `mypy` is the enforcement point
+for that (ruff's annotation-presence rules are intentionally off — see
+`CLAUDE.md`). Optionally run `pre-commit install` after `pip install
+".[dev]"` to run all of the above automatically on `git commit`.
 
 ## Continuous integration
 
-Every pull request against `main` runs four GitHub Actions jobs
-(`.github/workflows/ci.yml`) ahead of review: `lint` (`ruff check` and
-`ruff format --check`), `rust-tests` (`cargo test`), `build` (compiles the
+Every pull request against `main` runs five GitHub Actions jobs
+(`.github/workflows/ci.yml`) ahead of review: `lint` (`ruff check`, `ruff
+format --check`, `mypy`), `rust-lint` (`cargo clippy`, `cargo fmt --check`),
+`rust-tests` (`cargo test` and `cargo bench`), `build` (compiles the
 extension and smoke-imports `phylo.oxiphylo`), and `python-tests` (the full
-`pytest` suite).
+`pytest` suite, including the `hypothesis` property tests).
 
 ## Development approach
 

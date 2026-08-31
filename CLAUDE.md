@@ -33,14 +33,17 @@ source .venv/bin/activate
 
 ## Tooling
 
-- Lint/format with `ruff check .` and `ruff format --check .`; both are
-  enforced in CI (`.github/workflows/ci.yml`'s `lint` job) and should pass
-  before you push.
-- Type-check with `mypy` before pushing. It is not yet a required CI check
-  (only `ruff` is wired into `.github/workflows/ci.yml`'s `lint` job) —
-  ruff's `ANN` (annotation-presence) rules are intentionally disabled in
-  `pyproject.toml` in the meantime, since nothing else currently checks
-  type hints in CI.
+- Lint/format Python with `ruff check .` and `ruff format --check .`;
+  type-check with `mypy python/`. All three are enforced in CI
+  (`.github/workflows/ci.yml`'s `lint` job) — ruff's `ANN`
+  (annotation-presence) rules are intentionally disabled in
+  `pyproject.toml` since `mypy` is the enforcement point for type hints
+  here, not ruff.
+- Lint/format Rust with `cargo clippy --all-targets -- -D warnings` and
+  `cargo fmt --check`; both are enforced in CI (`rust-lint` job).
+- Optionally install `pre-commit` (`pip install ".[dev]"` includes it,
+  then `pre-commit install`) to run all of the above automatically on
+  `git commit`, catching issues before they reach CI.
 - `pytest-benchmark`'s baseline-comparison flags (`--benchmark-autosave`,
   `--benchmark-compare`, `--benchmark-compare-fail`) are deliberately not
   part of the shared pytest config or CI: GitHub-hosted runners vary in
@@ -48,7 +51,13 @@ source .venv/bin/activate
   flaky rather than a reliable regression signal. Use them locally instead,
   e.g. `pytest tests/benchmarks --benchmark-autosave` once to establish a
   baseline, then `--benchmark-compare=0001 --benchmark-compare-fail=mean:5%`
-  on later runs.
+  on later runs. `cargo bench` (Criterion) runs in CI unconditionally
+  (informational only, nothing is asserted against its timings, so it
+  can't flake); use `cargo bench` locally with Criterion's own
+  `--baseline`/`--save-baseline` for local regression comparison.
+- For invariants that should hold across many inputs (not just one fixed
+  regression case), prefer a `hypothesis` property test — see
+  `tests/properties/` — over hand-writing more fixed examples.
 
 ## Working with sub-agents
 
