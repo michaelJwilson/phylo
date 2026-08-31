@@ -1,3 +1,3 @@
-from ._phylo import double
+from .oxiphylo import double
 
 __all__ = ["double"]

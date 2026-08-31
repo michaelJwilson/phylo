@@ -10,10 +10,23 @@ fn double(x: i64) -> i64 {
     x * 2
 }
 
-/// `_phylo` is the compiled extension module imported from
-/// `python/phylo/__init__.py` (see `pyproject.toml`'s `module-name`).
+/// `oxiphylo` is the compiled extension module imported from
+/// `python/phylo/__init__.py` (see `pyproject.toml`'s `module-name`) as
+/// `phylo.oxiphylo`.
 #[pymodule]
-fn _phylo(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn oxiphylo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(double, m)?)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_double() {
+        assert_eq!(double(21), 42);
+        assert_eq!(double(0), 0);
+        assert_eq!(double(-3), -6);
+    }
 }
