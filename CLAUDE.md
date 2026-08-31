@@ -147,6 +147,50 @@ skip an item because it's inconvenient:
   `napoleon`); CI runs `sphinx-build -W` (warnings as errors) in the `docs`
   job. Write docstrings knowing they're rendered, not just read in-editor.
 
+## Known gaps
+
+Current as of the initial scaffolding. Don't assume any of this exists; close
+a gap deliberately, in its own PR, rather than assuming a past PR covered it.
+
+- **No real science yet.** Every function in the repo is a placeholder
+  (`double`, `pairwise_distance`). The coverage gate, benchmarks, and property
+  tests are calibrated against ~5 statements of trivial Python, so treat the
+  100% coverage figure as a smoke test, not evidence of a tested codebase.
+- **The Rust backend accelerates nothing.** The only numerical function lives
+  in `tests/`, in pure NumPy. Nothing yet demonstrates the intended pattern: a
+  kernel in Rust, called from Python, benchmarked against a NumPy reference,
+  with values pinned. Building that is the highest-value next step — it
+  exercises every part of this framework at once and gives contributors a
+  template.
+- **`python/phylo/` has no module structure.** It holds a re-export and a stub
+  CLI. There is no `core.py`-equivalent, so there is no established home or
+  naming pattern for real algorithms.
+- **Python dependencies are unlocked while Rust's are locked.** `Cargo.lock`
+  pins the Rust graph; the Python side resolves `>=` ranges fresh on every CI
+  run. Two runs months apart can use different NumPy versions, which sits badly
+  with reproducibility as the stated top priority.
+- **No RNG convention.** `tests/benchmarks/` calls the legacy
+  `np.random.seed`; ruff's `NPY002` (which flags exactly that) is disabled.
+  Pick `np.random.default_rng(seed)` and enforce it before real numerics land.
+- **Type hints are required but barely enforced.** `mypy` runs without
+  `--strict` (and without `disallow_untyped_defs`), so a fully unannotated
+  function passes CI despite the Conventions rule above.
+- **Tests are unlinted.** `pyproject.toml` sets `"tests/**" = ["ALL"]` in ruff's
+  per-file ignores, exempting the code where scientific correctness lives.
+- **Nothing detects performance regressions.** Benchmarks run in CI but assert
+  nothing (deliberately — runner hardware varies), and the
+  report-numbers-in-the-PR policy relies on human attention, not a mechanism.
+- **One platform, one Python version.** CI tests `ubuntu-latest` on 3.12 only,
+  while `requires-python` claims `>=3.12.2` — 3.13+ and macOS/Windows are
+  untested.
+- **No distributable artifact.** There is no wheel-building or publishing
+  workflow, so installing requires a Rust toolchain.
+- **`oxiphylo.pyi` can drift.** The stub is hand-written and nothing checks it
+  against the compiled module; `python -m mypy.stubtest phylo.oxiphylo` would.
+- **CI job names are load-bearing.** Branch protection matches required checks
+  by job name, so renaming a job silently drops its protection. Update the
+  branch-protection rule in the same change as any rename.
+
 ## Working with sub-agents
 
 - When a task naturally splits into pieces that touch disjoint files (e.g. a

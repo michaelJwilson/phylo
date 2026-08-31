@@ -1,7 +1,6 @@
-"""Regression test pinning expected output of the example hot function.
+"""Regression test pinning the example hot function's expected output.
 
-See tests/_example_hotpath.py -- this is example scaffolding, not a test
-of production numerical code (none exists in this repo yet).
+See tests/_example_hotpath.py for what this exercises and why it's scaffolding.
 """
 
 import numpy as np

@@ -96,11 +96,9 @@ MIT — see [LICENSE](LICENSE).
 
 ## Development approach
 
-The Rust backend scaffold and the Python test/benchmark harness were
-independent pieces of work touching disjoint files, so they were built by
-two sub-agents running in parallel — each in an isolated git worktree, each
-opening its own PR. The follow-up work (renaming the extension to
-`oxiphylo`, adding Rust-side tests, and wiring up CI across both stacks)
-touched both halves at once, so it was done sequentially in a single PR
-instead of another parallel split — see `CLAUDE.md` for when to prefer one
-approach over the other.
+The Rust backend scaffold and the Python test/benchmark harness touched
+disjoint files, so two sub-agents built them in parallel — each in its own git
+worktree, each opening its own PR. The follow-up work (renaming the extension
+to `oxiphylo`, adding Rust tests, wiring CI across both stacks) touched both
+halves at once, so a single sequential PR handled it instead. `CLAUDE.md`
+records when to prefer each approach.

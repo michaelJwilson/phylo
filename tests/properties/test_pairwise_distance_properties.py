@@ -1,10 +1,7 @@
 """Property-based tests for the example hot function.
 
-See tests/_example_hotpath.py -- this is example scaffolding for the
-property-testing pattern, not a test of production numerical code (none
-exists in this repo yet). Complements, rather than replaces, the fixed-input
-regression test in tests/regression/: hypothesis searches for edge cases
-that violate a stated invariant, instead of pinning one specific input.
+Where the regression test pins one input's output, these assert invariants that
+must hold across many generated inputs. See tests/_example_hotpath.py.
 """
 
 from __future__ import annotations
