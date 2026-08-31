@@ -7,6 +7,19 @@ on:
     branches: [main]
 
 jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+
   rust-tests:
     name: Rust tests (cargo test)
     runs-on: ubuntu-latest
@@ -38,6 +51,5 @@ jobs:
           python-version: "3.12"
           cache: pip
       - uses: dtolnay/rust-toolchain@stable
-      - run: pip install .
-      - run: pip install -r requirements-dev.txt
+      - run: pip install ".[test]"
       - run: pytest

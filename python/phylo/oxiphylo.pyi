@@ -1,0 +1,3 @@
+"""Type stub for the compiled `phylo.oxiphylo` Rust extension."""
+
+def double(x: int) -> int: ...

@@ -10,4 +10,10 @@ __pycache__/
 .pytest_cache/
 .benchmarks/
 *.egg-info/
+.ruff_cache/
+
+# In-place compiled extension from `pip install -e .`
+python/phylo/*.so
+python/phylo/*.pyd
+python/phylo/*.dylib
 
