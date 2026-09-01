@@ -46,9 +46,9 @@ compiled module does not rebuild itself.
 
 ```
 pytest      # Python: regression tests (tests/regression), a pytest-benchmark
-            # suite (tests/benchmarks), infrastructure tests (tests/infra),
-            # and an integration test that the Rust extension imports
-            # correctly (tests/test_oxiphylo_bindings.py)
+            # suite (tests/benchmarks), and an integration test that the
+            # Rust extension imports correctly
+            # (tests/test_oxiphylo_bindings.py)
 cargo test  # Rust: unit tests for the PyO3 bindings (src/lib.rs)
 cargo bench # Rust: Criterion benchmarks (benches/)
 ```
