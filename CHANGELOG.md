@@ -35,6 +35,7 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
   pinned Rust toolchain (`rust-toolchain.toml`), and a pinned CI runner image
   and `uv` version. Every CI install uses `--locked`.
 - The four module directories are packages: `sim/`, `likelihood/`, `opt/`, and `search/` each have an `__init__.py`, so their `CLAUDE.md` loads when a session works in them and `DEV.md`'s layout table is true.
+- `.github/pull_request_template.md`: a Definition-of-Done checklist mirroring `CLAUDE.md`'s five items, a benchmark-numbers slot, and a Documentation Sync line, so the exit of a PR carries the same reminders the intake issue template already does. A template, not a CI gate — `DEV.md` records that every PR starts from it.
 
 ### Changed
 
