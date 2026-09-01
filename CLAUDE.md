@@ -119,17 +119,94 @@ background. Where an algorithm we implement appears in one of them, follow
 its formulation and notation, and state explicitly where and why we
 deviate.
 
+The split is by what a source informs: **infrastructure** — how the code is
+built, structured, and made fast — and **application** — the science it
+computes. Within each, sources are grouped by topic.
+
+### Infrastructure
+
+*Software craft*
+
+- Martin, *Clean Code* — naming, function size, and the structure that
+  keeps a change reviewable.
+- Blandy, Orendorff & Tindall, *Programming Rust* — ownership, lifetimes,
+  and the FFI boundary the `oxiphylo` backend crosses.
+
+*Systems and hardware*
+
+- Bryant & O'Hallaron, *Computer Systems: A Programmer's Perspective* —
+  memory hierarchy, caching, and where CPU time actually goes.
 - Hwu, Kirk & El Hajj, *Programming Massively Parallel Processors* — GPU
   kernels, memory hierarchy, occupancy, parallel reduction and scan.
+
+*Algorithms and discrete mathematics*
+
+- Cormen, Leiserson, Rivest & Stein, *Introduction to Algorithms* — data
+  structures, traversal, complexity analysis, branch and bound.
+- Rosen, *Discrete Mathematics and Its Applications* — counting, graphs,
+  and trees as combinatorial objects.
+
+*Numerical optimization*
+
+- Nocedal & Wright, *Numerical Optimization* — line search, trust region,
+  and quasi-Newton methods for fitting continuous parameters.
+
+### Application
+
+*Phylogenetics and sequence analysis*
+
+- Felsenstein, *Inferring Phylogenies* — substitution models, the pruning
+  algorithm, tree search, parsimony and likelihood criteria.
+- Durbin, Eddy, Krogh & Mitchison, *Biological Sequence Analysis* —
+  probabilistic models of sequences, hidden Markov models, alignment.
+- Compeau & Pevzner, *Bioinformatics Algorithms* — the algorithmic view of
+  assembly, alignment, and phylogeny construction.
+- Pachter & Sturmfels, *Algebraic Statistics for Computational Biology* —
+  the algebraic structure of phylogenetic models and their invariants.
+
+*Probabilistic inference and graphical models*
+
 - MacKay, *Information Theory, Inference, and Learning Algorithms* —
   inference, message passing, Monte Carlo, model comparison.
+- Koller & Friedman, *Probabilistic Graphical Models* — factor graphs and
+  the exact-inference machinery the pruning recursion instantiates.
+- Frey, *Graphical Models for Machine Learning and Digital Communication* —
+  belief propagation read across inference and coding.
+- Ortega, *Introduction to Graph Signal Processing* — spectral methods for
+  signals indexed by the vertices of a graph.
+
+*Statistical physics and Monte Carlo*
+
+- Mézard & Montanari, *Information, Physics, and Computation* — inference
+  on sparse graphs, and phase transitions in hard combinatorial problems.
+- Newman & Barkema, *Monte Carlo Methods in Statistical Physics* — sampling
+  algorithms, equilibration, and error estimates on correlated samples.
+
+*Information, coding, and quantum computation*
+
+- Blahut, *Algebraic Codes for Data Transmission* — algebraic coding, and
+  the encoding background for compact tree representations.
+- Nielsen & Chuang, *Quantum Computation and Quantum Information* — quantum
+  information and algorithms. Background only: nothing here targets quantum
+  hardware.
+
+*Geometry of statistical models*
+
+- Amari, *Information Geometry and Its Applications* — the statistical
+  manifold, the Fisher metric, and natural gradient.
+
+*Learning and decision making*
+
 - Goodfellow, Bengio & Courville, *Deep Learning*, and Prince,
   *Understanding Deep Learning* — architectures, optimization, automatic
   differentiation.
 - Sutton & Barto, *Reinforcement Learning: An Introduction* — MDPs, value
   and policy methods, exploration, search.
-- Felsenstein, *Inferring Phylogenies* — substitution models, the pruning
-  algorithm, tree search, parsimony and likelihood criteria.
+- Lapan, *Deep Reinforcement Learning Hands-On* — implementation practice
+  for the methods Sutton & Barto derive.
+- Raschka, *Build a Large Language Model (From Scratch)* — transformer
+  internals, tokenization, and training loops, for the sequence models the
+  roadmap proposes over Newick strings.
 
 ## Writing style
 
