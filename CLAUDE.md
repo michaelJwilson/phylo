@@ -208,6 +208,13 @@ a gap deliberately, in its own PR, rather than assuming a past PR covered it.
 
 ## Working with sub-agents
 
+- **Estimate the work first.** Before starting a request, estimate its
+  wall-clock effort and state that estimate, the split decision below, and the
+  reason for it in the PR description. The estimate is what decides the next
+  two rules; guessing after the fact defeats them.
+- **Over ~3 minutes and independent → split.** "Independent" means the pieces
+  touch disjoint files and no piece's output decides another's. Cap concurrent
+  agents at 4 to bound cost.
 - When a task naturally splits into pieces that touch disjoint files (e.g. a
   Rust extension scaffold vs. a Python test harness), prefer parallel
   sub-agents, each in its own isolated git worktree, each opening its own

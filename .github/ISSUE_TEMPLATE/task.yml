@@ -1,0 +1,69 @@
+name: Task
+description: Propose a change to phylo
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fill in what you want to be different and how anyone would know it
+        worked. A maintainer triages from here — see "Raising a ticket" in the
+        README for what happens next.
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: What should be true once this is done?
+      placeholder: |
+        `pairwise_distance` runs on the Rust backend and matches the NumPy
+        reference to 1e-12.
+    validations:
+      required: true
+
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why it matters
+      description: The problem this solves. Numbers beat adjectives.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and non-goals
+      description: >
+        Files or areas you expect this to touch, and anything deliberately left
+        out. Narrow scope makes for a reviewable PR.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Suggested topic
+      description: >
+        A starting point only — triage sets the final `topic:*` label, which
+        also decides which batch the work lands in.
+      options:
+        - "science — numerical or phylogenetics behaviour"
+        - "infra — build, packaging, dependencies"
+        - "ci — workflows and required checks"
+        - "tests — regression, property, or benchmark coverage"
+        - "docs — README, docstrings, Sphinx"
+        - "claude-md — conventions and agent guidance"
+        - "not sure"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: acknowledgements
+    attributes:
+      label: Before submitting
+      options:
+        - label: >
+            I searched open issues for a duplicate.
+          required: true
+        - label: >
+            This change affects numerical output, so it will need a pinned
+            regression test (leave unticked if it does not).
+          required: false

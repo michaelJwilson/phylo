@@ -85,6 +85,35 @@ Open `docs/_build/html/index.html`. CI builds these docs with `-W`
 (warnings treated as errors) on every PR, so a broken docstring or a Sphinx
 warning fails the build rather than shipping silently.
 
+## Raising a ticket
+
+Open an issue with the [Task template](.github/ISSUE_TEMPLATE/task.yml). A
+maintainer triages it and applies two labels:
+
+- **`topic:*`** — what the change is about. Tickets sharing a topic are worked
+  and reviewed together, so this decides which batch yours lands in.
+- **`priority:low` \| `medium` \| `high`** — how soon it runs. New tickets start
+  at `low`; a maintainer promotes.
+
+`approved` is the gate: a ticket is only picked up once a maintainer applies it.
+Only repository collaborators' tickets are eligible; anything else is labelled
+`external` and needs a collaborator to sponsor it.
+
+### Roadmap
+
+Open issues grouped by topic — this is the roadmap; there is no separate file to
+drift out of date.
+
+| Topic | Open tickets |
+| --- | --- |
+| Numerical / phylogenetics behaviour | [`topic:science`](https://github.com/michaelJwilson/phylo/issues?q=is%3Aissue+is%3Aopen+label%3Atopic%3Ascience) |
+| Build, packaging, dependencies | [`topic:infra`](https://github.com/michaelJwilson/phylo/issues?q=is%3Aissue+is%3Aopen+label%3Atopic%3Ainfra) |
+| Workflows and required checks | [`topic:ci`](https://github.com/michaelJwilson/phylo/issues?q=is%3Aissue+is%3Aopen+label%3Atopic%3Aci) |
+| Test coverage | [`topic:tests`](https://github.com/michaelJwilson/phylo/issues?q=is%3Aissue+is%3Aopen+label%3Atopic%3Atests) |
+| Documentation | [`topic:docs`](https://github.com/michaelJwilson/phylo/issues?q=is%3Aissue+is%3Aopen+label%3Atopic%3Adocs) |
+| Conventions and agent guidance | [`topic:claude-md`](https://github.com/michaelJwilson/phylo/issues?q=is%3Aissue+is%3Aopen+label%3Atopic%3Aclaude-md) |
+| [Awaiting approval](https://github.com/michaelJwilson/phylo/issues?q=is%3Aissue+is%3Aopen+-label%3Aapproved+-label%3Aexternal) · [Approved, not yet started](https://github.com/michaelJwilson/phylo/issues?q=is%3Aissue+is%3Aopen+label%3Aapproved+-label%3Ain-progress) | |
+
 ## Continuous integration
 
 Every pull request against `main` runs seven GitHub Actions jobs
