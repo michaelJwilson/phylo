@@ -68,3 +68,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: pip install ".[test]"
       - run: pytest --cov=phylo --cov-report=term-missing --cov-fail-under=90
+
+  docs:
+    name: Docs build (Sphinx)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: dtolnay/rust-toolchain@stable
+      - run: pip install ".[docs]"
+      - run: sphinx-build -b html docs/source docs/_build/html -W

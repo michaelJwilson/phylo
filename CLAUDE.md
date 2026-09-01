@@ -36,6 +36,52 @@ source .venv/bin/activate
   see `README.md`'s Versioning section). Never hardcode a second version
   number anywhere.
 
+## Writing style
+
+Applies to docstrings, comments, commit messages, PR descriptions, and
+README/CLAUDE.md prose. Rooted in Strunk & White's *Elements of Style*,
+trimmed to what matters for technical writing, plus habits drawn from
+evidence-driven journalism (e.g. the New York Times) for backing claims:
+
+**Elements of Style**
+- Omit needless words.
+- Use active voice.
+- Prefer definite, specific, concrete language over vague generalities.
+- State things in positive form.
+- Express parallel/coordinate ideas in matching grammatical form.
+- Keep related words together.
+- Favor nouns and strong verbs; don't lean on adjectives/adverbs instead.
+- Avoid strings of loose, run-on clauses.
+- Do not overstate.
+- Avoid weak qualifiers ("very," "rather," "pretty," "little").
+- Do not over-explain — trust the reader.
+- Write plainly; skip inflated vocabulary and jargon for its own sake.
+- Revise before committing — first drafts are rarely final.
+- Keep opinion out of factual/technical writing unless explicitly asked for.
+
+**Evidence & clarity (from evidence-driven journalism)**
+- Lead with the most important fact or conclusion first.
+- State early why a change matters.
+- Back every claim with evidence — test output, benchmark numbers, a
+  reproduction — not bare assertion (e.g. "3 passed, 100% coverage," not
+  "should work now").
+- Prefer precise facts/numbers over vague intensifiers ("40% faster," not
+  "much faster").
+- Keep a neutral, measured tone — no hype or marketing language.
+- Favor short paragraphs and sentences for scannability.
+- Cut anything that doesn't advance the point.
+- Apply one consistent style throughout (naming, terminology, formatting)
+  — enforced here via ruff/mypy/clippy/fmt rather than left to habit.
+
+(Dropped from the source material as not relevant to technical/code
+writing: fine-grained punctuation mechanics like the possessive-'s and
+comma-splice rules — general English grammar, not particular to writing
+about code; "place the emphatic word at the end" — a rhetorical device for
+narrative prose, superseded here by leading with the key fact instead;
+quoting sources — there are no interview subjects in code; and writing
+for auditory rhythm — code docs optimize for scanning, not being read
+aloud.)
+
 ## Definition of done for new or changed functionality
 
 Beyond "it works," a PR that adds or changes package behavior (not a
@@ -90,6 +136,9 @@ skip an item because it's inconvenient:
   (informational only, nothing is asserted against its timings, so it
   can't flake); use `cargo bench` locally with Criterion's own
   `--baseline`/`--save-baseline` for local regression comparison.
+- API docs build with Sphinx (`docs/source/`, NumPy-style docstrings via
+  `napoleon`); CI runs `sphinx-build -W` (warnings as errors) in the `docs`
+  job. Write docstrings knowing they're rendered, not just read in-editor.
 
 ## Working with sub-agents
 
