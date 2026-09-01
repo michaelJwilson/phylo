@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 /// for this crate. It is not a phylogenetics algorithm; real numerical
 /// routines should replace/extend this once the Rust backend grows.
 #[pyfunction]
-fn double(x: i64) -> i64 {
+pub fn double(x: i64) -> i64 {
     x * 2
 }
 

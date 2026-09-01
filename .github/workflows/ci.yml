@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint:
-    name: Lint (ruff)
+    name: Lint & type-check (ruff, mypy)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,9 +16,22 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - uses: dtolnay/rust-toolchain@stable
       - run: pip install ".[dev]"
       - run: ruff check .
       - run: ruff format --check .
+      - run: mypy python/
+
+  rust-lint:
+    name: Rust lint & format (clippy, fmt)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
 
   rust-tests:
     name: Rust tests (cargo test)
@@ -27,6 +40,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --locked
+      - name: Rust benchmark (informational, not gated)
+        run: cargo bench --locked
 
   build:
     name: Python/Rust build (maturin)
