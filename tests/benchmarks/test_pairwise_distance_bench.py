@@ -1,8 +1,6 @@
-"""Benchmark test for the example hot function.
+"""Benchmark for the example hot function.
 
-See tests/_example_hotpath.py -- this is example scaffolding for the
-benchmarking harness, not a benchmark of production numerical code
-(none exists in this repo yet).
+See tests/_example_hotpath.py for what this exercises and why it's scaffolding.
 """
 
 import numpy as np

@@ -1,11 +1,10 @@
-//! Criterion benchmark for the `oxiphylo` Rust bindings.
+//! Criterion benchmarks for the `oxiphylo` bindings.
 //!
-//! `double` is a placeholder binding, so this benchmark is placeholder
-//! scaffolding too -- it exists to establish the pattern (Cargo.toml's
-//! `[[bench]]` entry, `cargo bench`) for benchmarking real numerical
-//! kernels once they replace it. Run locally with `cargo bench`; CI only
-//! compile-checks this (`cargo bench --no-run`) since GitHub-hosted
-//! runners' variable hardware makes CI timing numbers unreliable.
+//! `double` is a placeholder, so this benchmark is scaffolding: it fixes the
+//! pattern (a `[[bench]]` entry in Cargo.toml, `cargo bench`) for real kernels
+//! to follow. CI runs `cargo bench` but asserts nothing against the timings,
+//! since GitHub-hosted runner hardware varies between runs. Compare locally
+//! with Criterion's `--save-baseline` and `--baseline`.
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use oxiphylo::double;

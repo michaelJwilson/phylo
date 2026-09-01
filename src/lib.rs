@@ -1,18 +1,16 @@
 use pyo3::prelude::*;
 
-/// Example PyO3 binding: doubles an integer.
+/// Doubles an integer.
 ///
-/// This is a placeholder demonstrating the Rust <-> Python binding pattern
-/// for this crate. It is not a phylogenetics algorithm; real numerical
-/// routines should replace/extend this once the Rust backend grows.
+/// Placeholder binding: it demonstrates the Rust-to-Python pattern that real
+/// numerical kernels will follow, and implements no phylogenetics itself.
 #[pyfunction]
 pub fn double(x: i64) -> i64 {
     x * 2
 }
 
-/// `oxiphylo` is the compiled extension module imported from
-/// `python/phylo/__init__.py` (see `pyproject.toml`'s `module-name`) as
-/// `phylo.oxiphylo`.
+/// The compiled extension module. `python/phylo/__init__.py` re-exports it as
+/// `phylo.oxiphylo` (see `module-name` in `pyproject.toml`).
 #[pymodule]
 fn oxiphylo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(double, m)?)?;

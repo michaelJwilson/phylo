@@ -13,10 +13,9 @@ authors = [{ name = "M. J. Wilson" }]
 license = "MIT"
 requires-python = ">=3.12.2"
 readme = "README.md"
-# Intentionally empty: no code under python/phylo/ imports an external
-# package yet. Add entries here only once real code depends on them (see
-# CLAUDE.md's "keep dependencies minimal" convention), rather than
-# front-loading an intended tech stack.
+# Intentionally empty: nothing under python/phylo/ imports an external package
+# yet. Add entries as real code depends on them, rather than front-loading an
+# intended stack (see CLAUDE.md, "keep dependencies minimal").
 dependencies = []
 
 [project.optional-dependencies]

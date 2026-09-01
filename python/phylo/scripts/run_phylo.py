@@ -1,15 +1,14 @@
 """Command-line entry point for phylo.
 
-Placeholder: registered as the ``run_phylo`` console script
-(see pyproject.toml's [project.scripts]) so the entry point resolves to a
-real, importable function. No subcommands exist yet.
+Stub: pyproject.toml registers it as the ``run_phylo`` console script, so the
+entry point resolves to a real function. No subcommands exist yet.
 """
 
 from __future__ import annotations
 
 
 def main() -> None:
-    """Print a placeholder message until a real CLI is implemented."""
+    """Print a placeholder message until the CLI exists."""
     print("phylo: no commands implemented yet")
 
 

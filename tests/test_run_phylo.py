@@ -1,8 +1,7 @@
-"""Test for the run_phylo console-script placeholder.
+"""Test for the run_phylo console-script entry point.
 
-See python/phylo/scripts/run_phylo.py -- this is a stub pending a real CLI;
-this test just confirms it's wired up correctly (importable, runs, prints
-something), matching pyproject.toml's [project.scripts] entry point.
+Confirms pyproject.toml's [project.scripts] target is importable and runs. The
+CLI itself is still a stub.
 """
 
 from __future__ import annotations
