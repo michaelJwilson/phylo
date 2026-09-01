@@ -4,7 +4,7 @@ What exists, what is recorded as intent, and what is untouched. This file
 stands in for a project board: one place to see coverage, versioned with the
 code it describes.
 
-**Verified at `01ddb9a`** by reading the tree, not from memory.
+**Verified at `7569bf4`** by reading the tree, not from memory.
 
 | Marker | Meaning |
 | --- | --- |
@@ -59,8 +59,8 @@ in a pull-request description is not coverage.
 | Item | Status | Notes |
 | --- | --- | --- |
 | Application concerns separable from infrastructure | done | The module split, the reference taxonomy, and per-section `[infra]`/`[app]` markers in `DEV.md` |
-| `sim/`, `likelihood/`, `opt/`, `search/`, `infra/` | done | Directories exist; no code in them yet, deliberately |
-| Per-submodule `CLAUDE.md` | done | Five files, each pinning what is local to its module |
+| `sim/`, `likelihood/`, `opt/`, `search/`, `infra/` | done | Packages exist, each with an `__init__.py` and a `CLAUDE.md`; no science in them yet, deliberately |
+| Per-submodule `CLAUDE.md` | done | Five files, each carrying only what is local; repository-wide rules stay in the root file |
 | One set of interfaces serving an HMM and a Potts model in an external field, with test cases and benchmarks for both | — | This is what stops the interfaces silently becoming phylogenetics-only, so it wants writing down before they exist |
 
 ## Requirements
@@ -124,6 +124,24 @@ in a pull-request description is not coverage.
 
 The reference list in `CLAUDE.md` carries 25 books and no papers, so adding
 these means a new subsection rather than new entries.
+
+## Scaffolding gaps
+
+The repository today is scaffolding, and these are the ways in which that is
+true. They lived in `CLAUDE.md`'s "Known Gaps" until this file took over the
+job, so that one ledger carries the update rule above rather than two
+disagreeing.
+
+| Item | Status | Notes |
+| --- | --- | --- |
+| Real science in the package | — | 100% coverage is a smoke test over `double` and `pairwise_distance` |
+| Tests that assert validity rather than shape | — | The benchmark and CLI tests assert shapes and print statements, which `CLAUDE.md` forbids |
+| Component-wise simulated fixtures, and the plots and tables for `docs/tex/` | — | The QA framework the Testing section requires does not exist |
+| A numerical function accelerated in `oxiphylo` | — | The Rust backend builds and is bound, but nothing scientific runs through it |
+| Performance regression detection in CI | — | Benchmarks run; nothing compares them, deliberately (`DEV.md`, CI budget) |
+| Multi-platform and multi-version CI | — | Ubuntu and 3.12 only |
+| Distributable wheel artifacts | — | `build` proves `pip install .` works; nothing publishes |
+| `oxiphylo.pyi` checked against the module | — | `python -m mypy.stubtest phylo.oxiphylo` would close it; the stub can drift silently |
 
 ## Known inconsistencies
 

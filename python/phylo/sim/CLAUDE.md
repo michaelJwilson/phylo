@@ -22,7 +22,5 @@ simulator takes a `Q` and does not care which name it carries.
 - **Truth ships with the data.** A dataset is `(alignment, Q, t, π, τ, seed)`
   or it is not a dataset. Losing the parameters that generated an alignment
   makes it useless for everything except a demo.
-- **Every draw is seeded** with `np.random.default_rng(seed)`, and the seed is
-  recorded, so any dataset is reproducible from its manifest alone.
 - **Statistical tests state their tolerance and their sample size.** "Within
   Monte Carlo error" is a number here, not a hope.

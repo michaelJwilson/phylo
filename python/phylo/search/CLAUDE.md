@@ -13,10 +13,10 @@ likelihood-versus-temperature curves used to judge exploration.
 
 ## Local rules
 
-- **Topological tests run at `n <= 10`.** At that size exhaustive enumeration
-  is available as the oracle, which is the point. A move test at `n = 50`
-  proves nothing extra and runs until the CI job times out. Scaling behavior
-  is measured on fixed hardware, never in GitHub Actions.
+- **Topological tests run at `n <= 10`**, because at that size exhaustive
+  enumeration is available as the oracle. A move test at `n = 50` proves
+  nothing extra. `DEV.md`'s CI budget states the limit; this is why it is the
+  right one.
 - **Neighbourhood generators are verified against counts.** NNI has
   `2(n - 3)` neighbours; multi-SPR at radius `k` is the `k`-ball. Where a
   closed form exists, the test uses it; otherwise exhaustive enumeration.
