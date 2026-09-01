@@ -60,6 +60,7 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 * **Reproducibility:** Pin environments entirely. Use `--locked` for CI installs, pin runner images (`ubuntu-24.04`), and strictly use `np.random.default_rng(seed)`.
 * **Versioning:** Maintained strictly in `Cargo.toml` (`[package].version`).
 * **Definition of Done:** Follow `CLAUDE.md`'s checklist. A PR must also update the item's status in `STATUS.md`.
+* **PR Template:** Every PR starts from `.github/pull_request_template.md`, which carries the Definition-of-Done checklist, a benchmark-numbers slot, and a Documentation Sync line as a reminder, not a CI gate.
 * **Agentic Approach:** Use parallel git worktrees/PRs for disjoint tasks. Use single sequential PRs for coupled changes.
 
 ### Dependency Management
