@@ -5,7 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 `phylo` is a high-performance scientific Python package with a Rust-accelerated
-backend (`phylo.oxiphylo`, via [PyO3](https://pyo3.rs)/[maturin](https://www.maturin.rs)).
+backend (`phylo.oxiphylo`, via [PyO3](https://pyo3.rs)/[maturin](https://www.maturin.rs))
+for modern phylogenetic inference. 
 
 Its goal is to solve the large parsimony problem — the search over
 phylogenetic tree topologies — with reinforcement learning, scoring candidate
