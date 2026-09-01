@@ -24,7 +24,10 @@ jobs:
           python-version: "3.12"
       - uses: dtolnay/rust-toolchain@stable
       - run: pip install "uv==${UV_VERSION}"
-      - run: uv sync --locked --extra dev
+      # The test extra is needed as well as dev: mypy is configured to check
+      # tests/, which imports numpy and pytest, and strict mode fails on an
+      # unresolvable import rather than ignoring it.
+      - run: uv sync --locked --extra dev --extra test
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy
@@ -91,6 +94,36 @@ jobs:
       - run: uv sync --locked --extra docs
       - run: uv run sphinx-build -b html docs/source docs/_build/html -W
 
+  technical-doc:
+    name: Technical document (LaTeX)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      # TeX Live from the Ubuntu archive rather than a third-party action:
+      # these five packages are what the document needs, and no new GitHub
+      # Action joins the supply chain.
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            latexmk \
+            texlive-latex-base \
+            texlive-latex-recommended \
+            texlive-fonts-recommended \
+            texlive-science
+      - name: Build the PDF
+        working-directory: docs/tex
+        run: latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
+      # latexmk exits 0 on unresolved references and citations, so the log is
+      # checked explicitly -- the LaTeX counterpart of the docs job's -W.
+      - name: Fail on undefined references or citations
+        working-directory: docs/tex
+        run: |
+          if grep -nE 'There were undefined references|Citation .* undefined|Reference .* undefined' main.log; then
+            echo "::error::LaTeX reported undefined references or citations"
+            exit 1
+          fi
+
   audit:
     name: Dependency audit (pip-audit, cargo audit)
     runs-on: ubuntu-24.04
@@ -104,7 +137,11 @@ jobs:
       - run: uv sync --locked --extra dev
       - name: Audit Python dependencies
         run: uv run pip-audit
+      # `--locked` builds cargo-audit from its own lockfile. Without it the
+      # resolve floats, and a transitive dependency that raises its minimum
+      # rustc past the version rust-toolchain.toml pins breaks the job --
+      # which is what happened with kstring 2.0.4 requiring rustc 1.96.0.
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
       - name: Audit Rust dependencies
-        uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        run: cargo audit

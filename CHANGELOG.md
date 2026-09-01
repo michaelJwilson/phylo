@@ -17,6 +17,11 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
 - Rust test suite: `cargo test` unit tests and a `criterion` benchmark
   (`benches/`).
 - Sphinx API docs (`docs/`), built in CI with warnings as errors.
+- Technical document (`docs/tex/`): a LaTeX PDF covering the substitution
+  model, the Felsenstein likelihood and pruning algorithm, simulation, tree
+  search with NNI and SPR move sets, gradients, the reinforcement-learning
+  formulation, and the computational structure behind them. Built in CI,
+  which fails on undefined references or citations.
 - GitHub Actions CI, required on every PR: Python lint/type-check (`ruff`,
   strict `mypy`), Rust lint/format (`clippy`, `cargo fmt`), Rust tests +
   benchmark, a combined Python/Rust build check, the Python test suite, the
@@ -41,6 +46,15 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
   ["ALL"]` exemption is gone.
 - Benchmarks seed via `np.random.default_rng` rather than the legacy global
   `np.random.seed`, and ruff's `NPY002` now enforces that.
+
+### Fixed
+
+- CI's `lint` job installed only the `dev` extra while `mypy` checks
+  `tests/`, so every run failed on unresolvable `numpy` and `pytest`
+  imports. It now installs `dev` and `test`.
+- CI's Rust audit built `cargo-audit` from a floating resolve, which broke
+  when a transitive dependency raised its minimum `rustc` above the pinned
+  1.94.1. It now installs with `--locked`.
 
 ### Security
 
