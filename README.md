@@ -99,6 +99,9 @@ maintainer triages it and applies two labels:
 Only repository collaborators' tickets are eligible; anything else is labelled
 `external` and needs a collaborator to sponsor it.
 
+Maintainers: `./.github/labels.sh` creates or refreshes the whole label set
+(idempotent, needs the `gh` CLI).
+
 ### Roadmap
 
 Open issues grouped by topic — this is the roadmap; there is no separate file to
