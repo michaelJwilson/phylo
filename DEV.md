@@ -110,9 +110,11 @@ configuration:
 | Require branches up to date before merging | Branch protection, `main` | off unless a merge queue is enabled |
 | Force pushes and deletions | Branch protection, `main` | blocked |
 | Default `GITHUB_TOKEN` permissions | Settings → Actions → General | read-only, elevated per job where needed |
-| Allowed actions | Settings → Actions → General | `actions/*` and `dtolnay/rust-toolchain` only |
+| Allowed actions | Settings → Actions → General | `actions/*`, `dtolnay/rust-toolchain`, `anthropics/claude-code-action@*` |
+| `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` | Settings → Secrets → Actions | one of the two, for the ticket workflows |
+| `TICKET_PR_TOKEN` | Settings → Secrets → Actions | optional; without it CI does not run on agent-opened pull requests |
 
-Four of these carry a rationale worth keeping:
+Five of these carry a rationale worth keeping:
 
 - **Deleting head branches on merge** prevents a merged branch from being
   revived. A stale branch that outlives its merged PR still points at
@@ -126,6 +128,11 @@ Four of these carry a rationale worth keeping:
   those runs.
 - **Required check names are load-bearing**, as above: renaming a job
   without updating the protection rule drops its protection silently.
+- **The allowed-actions list is the supply-chain boundary.** Everything on
+  it can run code against this repository's token, so it is short and each
+  entry was added deliberately. `anthropics/claude-code-action` is the one
+  third-party entry, admitted for the ticket workflows and pinned there to a
+  commit rather than a tag — a tag can be moved by whoever controls it.
 
 ## CI budget [infra]
 
@@ -229,12 +236,30 @@ the web interface.
 | `priority:low` | Runs outside 09:00–17:00 Princeton time. Applied by default |
 | `module:*` | Tags the submodule, so tickets batch against the roadmap |
 | `approved` | A maintainer has approved the posted plan |
+| `agent:running` | A run is implementing the ticket. Applied and cleared by CI |
+| `agent:blocked` | A run failed; approval withdrawn so the queue stops retrying |
 
-`infra/CLAUDE.md` carries the approval policy: `/approve` opens a pull request
-implementing a plan already posted to the thread, and a flawed plan gets a
-revised plan in-thread rather than a silent correction. The workflow that
-automates it is not built — it needs an action the allowed list does not yet
-permit.
+A ticket becomes a plan before it becomes code. Opening one posts a plan to
+the thread; `/edit <correction>` posts a revised plan as a **new** comment,
+never as an edit to the old one, so the thread records what changed and why;
+`/approve` implements the latest revision. All three are maintainer-only,
+checked before a runner starts, and `/approve` refuses a ticket carrying no
+plan — the rule that a pull request implements a plan already posted is
+enforced rather than trusted.
+
+Priority decides when an approved ticket starts, not whether it does:
+`priority:high` immediately, `priority:medium` at the next two-hourly sweep,
+`priority:low` at the first sweep outside 09:00–17:00 Princeton time. The
+decision lives in `infra/schedule.py` with tests, because the window is
+daylight-saving-sensitive and a fixed offset gets the summer half of the year
+wrong.
+
+Four workflows implement this — `ticket-plan`, `ticket-approve`,
+`ticket-queue`, and the reusable `ticket-run`. `infra/TICKETING.md` documents
+the loop, the guards, the manual setup, and the limits, of which one matters
+before you rely on it: without a `TICKET_PR_TOKEN` secret, GitHub raises no
+workflow events for a pull request opened with `GITHUB_TOKEN`, so those pull
+requests arrive with no CI.
 
 ## Definition of done
 

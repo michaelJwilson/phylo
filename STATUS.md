@@ -4,7 +4,7 @@ What exists, what is recorded as intent, and what is untouched. This file
 stands in for a project board: one place to see coverage, versioned with the
 code it describes.
 
-**Verified at `01ddb9a`** by reading the tree, not from memory.
+**Verified at `e41bc7b`** by reading the tree, not from memory.
 
 | Marker | Meaning |
 | --- | --- |
@@ -77,13 +77,13 @@ in a pull-request description is not coverage.
 
 | Item | Status | Notes |
 | --- | --- | --- |
-| Priorities: high immediate, medium at token refresh, low outside 09:00–17:00 Princeton, low by default | done | Policy in `infra/CLAUDE.md`; labels defined in `.github/labels.yml`, applied by running the Labels workflow |
-| `/approve` posts a plan, then opens a PR implementing it | done | Policy only; the workflow is not built |
-| A flawed plan gets a revised plan in-thread, not a silent fix | done | `infra/CLAUDE.md` |
-| Tickets tagged by submodule | done | Policy only |
-| Tickets batched and staged against the roadmap | done | Policy only; no batching mechanism |
-| The `/approve` workflow itself | — | Blocked on approving `anthropic/claude-code-action`; `infra/TICKETING.md` states what it would do |
-| Issue templates and label definitions | done | `.github/ISSUE_TEMPLATE/task.yml` and `.github/labels.yml`, applied by the Labels workflow. PR #13 carries an older scheme on stale history |
+| Priorities: high immediate, medium at token refresh, low outside 09:00–17:00 Princeton, low by default | done | Enforced by `infra/schedule.py` and `.github/workflows/ticket-queue.yml`, not policy alone |
+| `/approve` posts a plan, then opens a PR implementing it | done | `.github/workflows/ticket-approve.yml` and `ticket-run.yml`. Refuses a ticket with no posted plan |
+| A flawed plan gets a revised plan in-thread, not a silent fix | done | `/edit` in `.github/workflows/ticket-plan.yml`; posts a new comment, never an edit |
+| Tickets tagged by submodule | done | Policy plus the `module:*` labels; the issue form asks for the submodule |
+| Tickets batched and staged against the roadmap | done | Policy only; the queue sweeps by priority, but nothing batches by `module:*` |
+| The `/approve` workflow itself | done | Four workflows on `anthropics/claude-code-action`, pinned to a commit. Setup steps in `infra/TICKETING.md` |
+| Issue templates and label definitions | done | `.github/ISSUE_TEMPLATE/task.yml` and `.github/labels.yml` (13 labels), applied by the Labels workflow |
 | Standing ticket: `CLAUDE.md` ingestion | — | Filing it is a manual step; see `infra/TICKETING.md` |
 | Standing ticket: roadmap ingestion | — | Filing it is a manual step; see `infra/TICKETING.md` |
 | Standing ticket: redundancy sweep — duplicate likelihood evaluations, fragmented canonicalization, code paths that drifted apart across PRs | — | |

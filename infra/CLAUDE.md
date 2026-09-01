@@ -38,8 +38,18 @@ from its manifest is an anecdote.
   rather than sprawling across it.
 - **`/approve` by a maintainer** opens a pull request, and may do so
   unattended provided the PR implements a plan already posted to the thread.
-  A plan that turns out to be flawed gets a revised plan posted in the
-  thread, not a silent correction.
+  The workflow enforces this: it refuses a ticket with no comment beginning
+  `<!-- phylo-plan -->`.
+- **`/edit <correction>` posts a revised plan**, as a new comment. A plan
+  that turns out to be flawed is never silently corrected and never edited in
+  place; the thread is the record of what changed and why, and `/approve`
+  implements the last revision.
+- **A run that fails withdraws its own approval**, swapping `approved` for
+  `agent:blocked`. Retrying an unattended failure on a schedule spends tokens
+  to reproduce it.
+
+`infra/TICKETING.md` documents the loop end to end; `infra/schedule.py`
+decides when a priority may start.
 
 ## Required checks
 

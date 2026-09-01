@@ -1,0 +1,118 @@
+name: Ticket plan
+
+# Turns a ticket into a plan, in the thread, before any code exists.
+#
+# Fires when a maintainer opens an issue, and on `/plan` or `/edit`. `/edit`
+# posts a revised plan as a new comment rather than editing the old one:
+# infra/CLAUDE.md requires that a flawed plan gets a revision in the thread,
+# not a silent correction, so the thread records what changed and why.
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+# Read-only by default; the one job below asks for what it needs.
+permissions: {}
+
+# One agent per ticket. Queued rather than cancelled, so an `/edit` sent while
+# a plan is still being written revises that plan instead of replacing a
+# half-posted one.
+concurrency:
+  group: ticket-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+env:
+  # Pinned like every other version here. A retired identifier is a build
+  # break to fix deliberately, which is the point of pinning.
+  CLAUDE_MODEL: claude-opus-5
+
+jobs:
+  plan:
+    name: Draft or revise the plan
+    # Maintainers only. author_association is set by GitHub from the actor's
+    # standing in the repository, so it cannot be spoofed by comment text, and
+    # checking it here means a drive-by issue never starts a runner.
+    if: >-
+      !github.event.issue.pull_request &&
+      (
+        (github.event_name == 'issues' &&
+         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+                  github.event.issue.author_association))
+        ||
+        (github.event_name == 'issue_comment' &&
+         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+                  github.event.comment.author_association) &&
+         (startsWith(github.event.comment.body, '/plan') ||
+          startsWith(github.event.comment.body, '/edit')))
+      )
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned to the commit `v1` pointed at on 2026-09-01. A moving tag on a
+      # third-party action is a standing supply-chain hole: whoever can move
+      # the tag runs code against this repository's token. Bump the SHA in a
+      # pull request, the way uv.lock is bumped.
+      - uses: anthropics/claude-code-action@27b8e7eca30eafe14166f89e09ea0cc1e98683b1 # v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Exactly one of these is set; the other expands to empty.
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: |
+            --model ${{ env.CLAUDE_MODEL }}
+            --max-turns 25
+            --allowedTools "Read,Write,Glob,Grep,Bash(gh issue view:*),Bash(gh issue comment:*)"
+          prompt: |
+            Draft an implementation plan for ticket #${{ github.event.issue.number }}
+            and post it as a comment. Do not write code, do not create a
+            branch, and do not open a pull request.
+
+            Mode: ${{ github.event_name == 'issues' && 'plan' || 'edit' }}
+
+            1. Read the ticket and everything said on it:
+               `gh issue view ${{ github.event.issue.number }} --comments`.
+            2. Read CLAUDE.md, DEV.md, ROADMAP.md, STATUS.md, and the
+               CLAUDE.md of the submodule the ticket names. They bind the
+               plan. Where the ticket and CLAUDE.md disagree, say so in the
+               plan rather than choosing silently.
+            3. In `edit` mode the triggering comment carries a maintainer's
+               correction. Post a new, complete, revised plan; never edit or
+               delete an earlier one. Open it with a sentence saying what the
+               correction changed.
+            4. Write the plan to a file and post it with
+               `gh issue comment ${{ github.event.issue.number }} --body-file <file>`.
+
+            The plan's first line must be exactly `<!-- phylo-plan -->`.
+            `/approve` refuses to run on a ticket with no comment carrying
+            that marker, so a plan without it cannot be implemented.
+
+            Cover these headings, in this order, and nothing else:
+
+            - **Files** — every path added or changed, a line each on what
+              changes in it.
+            - **Validation** — the analytic result, brute-force computation,
+              or exhaustive enumeration each assertion is pinned against, and
+              the tolerance. CLAUDE.md forbids shape-only and
+              runs-without-raising tests; a plan proposing one is a plan to
+              reject.
+            - **Benchmark** — for a new or materially changed hot function,
+              what is measured and against which reference.
+            - **Documentation** — which of README.md, CLAUDE.md, DEV.md,
+              ROADMAP.md, docs/tex/ this obliges; the changelog.d/ fragment;
+              and the STATUS.md rows it moves.
+            - **Non-goals** — what this deliberately leaves alone.
+            - **Risks** — what would make this the wrong plan, including
+              anything in the ticket you had to guess at.
+
+            Under 400 words. CLAUDE.md's Writing Style section applies to the
+            plan itself: concrete, neutral, no hedging and no marketing.
+
+            End with exactly:
+            `Reply /edit <what to change> to revise this plan, or /approve to implement it.`

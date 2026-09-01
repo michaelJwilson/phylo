@@ -31,3 +31,7 @@ docs/tex/*.out
 docs/tex/*.pdf
 docs/tex/*.toc
 
+
+# Coverage data, written by pytest --cov.
+.coverage
+.coverage.*

@@ -5,8 +5,13 @@ body:
   - type: markdown
     attributes:
       value: |
+        A plan is posted to this thread once the ticket is filed. Reply
+        `/edit <what to change>` to revise it, `/approve` to implement it.
+
         Priority defaults to `low`. Change the label after filing if the work
         should run sooner; `DEV.md` explains what each priority schedules.
+        What you write below is what the plan is drawn from, so state the
+        outcome precisely enough to be checked.
   - type: textarea
     id: outcome
     attributes:

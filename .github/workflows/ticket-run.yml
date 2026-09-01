@@ -1,0 +1,168 @@
+name: Ticket run
+
+# Implements the plan approved on a ticket and opens a pull request.
+#
+# Called by Ticket approve (priority:high, immediately) and by Ticket queue
+# (everything else, at its scheduled slot). workflow_dispatch is the manual
+# path; it needs write access to the repository, so it is maintainer-only by
+# construction.
+on:
+  workflow_call:
+    inputs:
+      issue:
+        description: "Ticket number to implement"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "Ticket number to implement"
+        required: true
+        type: string
+
+permissions: {}
+
+# Never two agents on one ticket, and never cancel one mid-push: a cancelled
+# run can leave a branch pushed with no pull request and the labels wrong.
+concurrency:
+  group: ticket-run-${{ inputs.issue }}
+  cancel-in-progress: false
+
+env:
+  CLAUDE_MODEL: claude-opus-5
+  UV_VERSION: "0.8.17"
+
+jobs:
+  implement:
+    name: Implement ticket #${{ inputs.issue }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    steps:
+      # The guard infra/TICKETING.md asks for: approval is carried by a label,
+      # not by the fact that something dispatched this workflow, so a manual
+      # dispatch cannot start work nobody approved.
+      - name: Require the approved label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = await github.rest.issues.get({
+              ...context.repo, issue_number: ${{ inputs.issue }},
+            });
+            const labels = issue.data.labels.map(l => l.name);
+            if (!labels.includes('approved')) {
+              core.setFailed(
+                `#${{ inputs.issue }} is not labelled 'approved'. ` +
+                'Comment /approve on the ticket instead of dispatching this workflow.'
+              );
+              return;
+            }
+            await github.rest.issues.addLabels({
+              ...context.repo, issue_number: ${{ inputs.issue }},
+              labels: ['agent:running'],
+            });
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+      - run: pip install "uv==${UV_VERSION}"
+
+      # Same pin as Ticket plan; bump both together.
+      - uses: anthropics/claude-code-action@27b8e7eca30eafe14166f89e09ea0cc1e98683b1 # v1
+        env:
+          # GitHub does not run workflows on events raised by GITHUB_TOKEN, so
+          # a pull request opened with it arrives with no CI. Setting
+          # TICKET_PR_TOKEN to a fine-grained PAT (contents: write,
+          # pull-requests: write) makes the checks run; without it they have to
+          # be started by hand. infra/TICKETING.md carries the trade-off.
+          GH_TOKEN: ${{ secrets.TICKET_PR_TOKEN || secrets.GITHUB_TOKEN }}
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Empty unless the secret is set, in which case the action uses its
+          # own short-lived Claude GitHub App token.
+          github_token: ${{ secrets.TICKET_PR_TOKEN }}
+          claude_args: |
+            --model ${{ env.CLAUDE_MODEL }}
+            --max-turns 120
+            --allowedTools "Read,Write,Edit,Glob,Grep,Bash(git:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh pr create:*),Bash(uv:*),Bash(cargo:*),Bash(python:*),Bash(rm:*),Bash(mkdir:*),Bash(ls:*),Bash(cat:*)"
+          prompt: |
+            Implement the approved plan on ticket #${{ inputs.issue }} and open
+            a pull request.
+
+            1. `gh issue view ${{ inputs.issue }} --comments`. The plan is the
+               LAST comment whose first line is `<!-- phylo-plan -->`. Earlier
+               ones are superseded revisions; ignore them. Implement that plan
+               and nothing beyond it — anything it does not describe belongs
+               in its own ticket.
+            2. Branch from `main` as `claude/ticket-${{ inputs.issue }}`.
+            3. `uv sync --locked --all-extras`, then do the work.
+            4. Before committing, run every check CI runs, and make them pass:
+
+                   uv run ruff check . && uv run ruff format --check .
+                   uv run mypy
+                   uv run pytest --cov=phylo --cov-report=term-missing --cov-fail-under=90
+                   cargo fmt --check
+                   cargo clippy --locked --all-targets -- -D warnings
+                   cargo test --locked
+
+            5. Add a changelog fragment — `changelog.d/<id>.<category>.md`,
+               `id` being this ticket number — then `python -m infra.changelog --check`.
+            6. Update the STATUS.md rows this moves and the documents the plan
+               listed. DEV.md's Definition of done is the checklist.
+            7. Commit, push, and `gh pr create`. The body states what changed
+               and why, carries the evidence CLAUDE.md requires (test output,
+               benchmark numbers against the reference), links the plan
+               comment, and ends with `Closes #${{ inputs.issue }}`.
+
+            Not negotiable, whatever the plan says:
+
+            - Never push to `main`, never force-push, never rewrite history.
+            - Never skip, disable, weaken, or delete a test to get a check
+              green, and never lower the coverage gate.
+            - A new dependency needs explicit permission. If the plan needs
+              one that is not already in pyproject.toml or Cargo.toml, stop,
+              say so on the ticket, and open nothing.
+            - If a check cannot be made to pass, stop and say why on the
+              ticket. A red pull request is worse than none.
+
+      # Approval is spent once the run ends. On success the ticket is waiting
+      # on review, so only the running marker is cleared. On failure the
+      # approval is withdrawn as well: leaving it would have the next sweep
+      # pick the ticket straight back up and fail it again, indefinitely.
+      - name: Release the ticket
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const number = ${{ inputs.issue }};
+            const drop = async (name) => {
+              try {
+                await github.rest.issues.removeLabel({ ...context.repo, issue_number: number, name });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            };
+            await drop('agent:running');
+            if ('${{ job.status }}' === 'success') return;
+            await drop('approved');
+            await github.rest.issues.addLabels({
+              ...context.repo, issue_number: number, labels: ['agent:blocked'],
+            });
+            await github.rest.issues.createComment({
+              ...context.repo, issue_number: number,
+              body:
+                'The run implementing this ticket did not finish: ' +
+                process.env.RUN_URL + '\n\n' +
+                'Approval has been withdrawn so the queue does not retry it on a loop. ' +
+                'Fix what it hit, or `/edit` the plan, then `/approve` again.',
+            });

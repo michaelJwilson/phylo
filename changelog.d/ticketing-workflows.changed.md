@@ -1,0 +1,1 @@
+Priority labels are enforced rather than documented: `priority:low` waits for a sweep outside 09:00-17:00 Princeton time, evaluated with daylight saving. Two labels added, `agent:running` and `agent:blocked`.

@@ -1,0 +1,84 @@
+name: Ticket queue
+
+# Sweeps approved tickets and starts the ones their priority now allows.
+#
+# `/approve` starts priority:high immediately; everything else waits here.
+# priority:medium starts at the next sweep, priority:low at the first sweep
+# outside 09:00-17:00 Princeton time. Two hours between sweeps keeps a
+# low-priority ticket approved at 09:05 from waiting the whole working day
+# plus a full cycle.
+#
+# GitHub disables scheduled workflows after 60 days without repository
+# activity, and delays them under load. Neither loses a ticket: approval is
+# carried by the `approved` label, so a missed sweep is picked up by the next
+# one, and this workflow can be run by hand.
+on:
+  schedule:
+    - cron: "23 */2 * * *"
+  workflow_dispatch:
+
+# The cap for the reusable workflow called below. The select job narrows this
+# to what it needs.
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  select:
+    name: Select the tickets due
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      tickets: ${{ steps.due.outputs.tickets }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: List approved tickets
+        id: approved
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              ...context.repo, state: 'open', labels: 'approved', per_page: 100,
+            });
+            const waiting = issues
+              .filter(issue => !issue.pull_request)
+              .map(issue => ({ number: issue.number, labels: issue.labels.map(l => l.name) }))
+              // agent:running is a run already in flight; agent:blocked is one
+              // that failed and had its approval withdrawn.
+              .filter(t => !t.labels.includes('agent:running')
+                        && !t.labels.includes('agent:blocked'));
+            core.setOutput('tickets', JSON.stringify(waiting));
+
+      - name: Keep the ones their priority allows now
+        id: due
+        run: |
+          tickets=$(printf '%s' "${APPROVED}" | python -m infra.schedule filter)
+          echo "tickets=${tickets}" >> "$GITHUB_OUTPUT"
+          echo "due now: ${tickets}"
+        env:
+          APPROVED: ${{ steps.approved.outputs.tickets }}
+
+  implement:
+    needs: select
+    if: needs.select.outputs.tickets != '[]'
+    strategy:
+      # One at a time. These runs push branches and open pull requests; a
+      # burst of them is harder to review than a queue that drains.
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        issue: ${{ fromJSON(needs.select.outputs.tickets) }}
+    uses: ./.github/workflows/ticket-run.yml
+    with:
+      # format() rather than the bare number: the reusable workflow declares a
+      # string input, because workflow_dispatch has no number type.
+      issue: ${{ format('{0}', matrix.issue) }}
+    secrets: inherit

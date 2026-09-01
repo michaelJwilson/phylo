@@ -1,0 +1,1 @@
+A ticketing workflow that turns an issue into a plan, `/edit` into a revised plan, and `/approve` into a pull request. Four GitHub Actions workflows on `anthropics/claude-code-action`, pinned to a commit; `infra/schedule.py` decides when a priority may start, and `infra/TICKETING.md` documents the loop and its setup.
