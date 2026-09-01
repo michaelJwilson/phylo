@@ -10,7 +10,7 @@ the irreducibly manual steps are left to memory.
 | Piece | File | State |
 | --- | --- | --- |
 | Issue form: outcome, why, submodule, scope, validation | `.github/ISSUE_TEMPLATE/task.yml` | ready |
-| Label definitions — priorities, submodules, `approved`, `skip-changelog` | `.github/labels.yml` | ready |
+| Label definitions — priorities, submodules, `approved` | `.github/labels.yml` | ready |
 | Workflow that applies those definitions | `.github/workflows/labels.yml` | ready, run manually |
 | Priority semantics and the approval policy | `infra/CLAUDE.md`, `DEV.md` | ready |
 | The `/approve` workflow itself | — | blocked, see below |

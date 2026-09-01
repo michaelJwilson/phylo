@@ -34,6 +34,7 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
 - Locked, reproducible environments: `uv.lock` alongside `Cargo.lock`, a
   pinned Rust toolchain (`rust-toolchain.toml`), and a pinned CI runner image
   and `uv` version. Every CI install uses `--locked`.
+- The four module directories are packages: `sim/`, `likelihood/`, `opt/`, and `search/` each have an `__init__.py`, so their `CLAUDE.md` loads when a session works in them and `DEV.md`'s layout table is true.
 
 ### Changed
 
@@ -72,8 +73,6 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
   for search, and the closed-form `k`-state Jukes–Cantor transition
   probabilities, which give the simulator an oracle independent of the
   likelihood code.
-
-
 - `ROADMAP.md` states requirements: problem size (`n` 10–1000, `L`
   100–10 000, general `k`), accuracy (normalized RF ≤ 0.05, `Δ ln L`
   competitive with IQ-TREE 2 and RAxML-NG at equal wall clock), runtime
@@ -81,7 +80,6 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
   (`O(n × L × k)` within 16 GB unified or 24 GB GPU), hardware (CUDA and
   Metal both first-class, with an efficient CPU path), and a cross-device
   numerical tolerance policy.
-
 - `pre-commit` no longer runs `pip-audit` and `cargo audit`. They reach the
   network and build `cargo-audit`, which is too slow for every commit; CI
   runs them when a lockfile changes and weekly on `main`.
@@ -91,7 +89,6 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
   the repository — branch auto-deletion, protection rules, required checks,
   token permissions — and the CI budget rules: cap test sizes, never rank
   performance on shared runners, release-gate long tests.
-
 - Module skeleton: `sim/`, `likelihood/`, `opt/`, `search/`, and `infra/`,
   each carrying a `CLAUDE.md` for the concerns local to it — the analytic
   oracle simulation validates against, the cross-device tolerance policy and
@@ -106,13 +103,16 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
 - Robinson–Foulds distance will be implemented in-repo and tested against
   hand-computed cases; an external implementation is noted as a future
   cross-check rather than adopted as a dependency.
-
 - `STATUS.md`: coverage of every planned item — done, planned, in an open
   PR, or untouched — standing in for a project board, with the rule that
   the PR changing an item's status updates its row. Records three live
   cross-document inconsistencies: the reward is defined twice and
   differently, the cross-device tolerance policy states no number, and an
   accuracy target names baseline tools nothing can currently run.
+- `DEV.md` and `INSTALL.md` separate portable infrastructure from
+  phylogenetics-specific guidance, and `README.md`'s documentation map records
+  which axis each document sits on.
+- Guidance is no longer duplicated across files. Root `CLAUDE.md` gained the infrastructure/application split, a map of the other documents, and the two decisions that were stranded in submodule files (PyTorch, the cross-device tolerance policy); the submodule `CLAUDE.md` files keep only what is local to them. `STATUS.md` absorbed `CLAUDE.md`'s "Known Gaps" as a Scaffolding gaps section, so one ledger carries the rule that keeps it accurate.
 
 ### Fixed
 
@@ -122,6 +122,13 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
 - CI's Rust audit built `cargo-audit` from a floating resolve, which broke
   when a transitive dependency raised its minimum `rustc` above the pinned
   1.94.1. It now installs with `--locked`, at a pinned version, from a cache.
+
+### Removed
+
+- Changelog fragments (`changelog.d/`) and the CI enforcement around them.
+  `CHANGELOG.md` is now a plain, manually-edited file under `[Unreleased]`;
+  the fragment-per-PR assembly step (`infra/changelog.py`) and its
+  `--check`/`--assemble` CI steps are gone.
 
 ### Security
 

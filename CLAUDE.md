@@ -22,7 +22,7 @@ This file is authoritative. The rest exist so it does not have to carry everythi
 | `DEV.md` | Layout, the CI jobs, repository settings, the CI budget, how a change is reviewed |
 | `ROADMAP.md` | The scientific goal, requirements, and milestones |
 | `STATUS.md` | Coverage: what is done, planned, or untouched — in place of a project board |
-| `CHANGELOG.md` | What has landed, assembled from `changelog.d/` fragments |
+| `CHANGELOG.md` | What has landed, edited directly under `[Unreleased]` |
 | `docs/tex/` | The technical document: background, equations, algorithms |
 
 `python/phylo/sim/`, `likelihood/`, `opt/`, `search/`, and `infra/` each carry their own `CLAUDE.md`. Those add what applies only inside one module; they never override this file. A rule that binds the whole repository belongs here, not in one of them.
@@ -38,7 +38,7 @@ This file is authoritative. The rest exist so it does not have to carry everythi
 
 ## Conventions
 *   **Hot Paths:** Prefer vectorized implementations over pure Python (see Performance).
-*   **Documentation Sync:** Any change affecting behavior, CI, dev setup, or math models must update, in the same PR, whichever of these it makes untrue: `README.md`, `CLAUDE.md` (including a module's), `DEV.md`, `INSTALL.md`, `ROADMAP.md`, `docs/tex/`. Add a `changelog.d/` fragment if the change is user-visible, and update the `STATUS.md` row if it changes an item's status.
+*   **Documentation Sync:** Any change affecting behavior, CI, dev setup, or math models must update, in the same PR, whichever of these it makes untrue: `README.md`, `CLAUDE.md` (including a module's), `DEV.md`, `INSTALL.md`, `ROADMAP.md`, `docs/tex/`. Add a `CHANGELOG.md` entry under `[Unreleased]` if the change is user-visible, and update the `STATUS.md` row if it changes an item's status.
 *   **Single Version Source:** The package version lives exclusively in `Cargo.toml`'s `[package].version`.
 *   **Code Standards:** Use type hints on all Python functions. Do not introduce silent behavior changes (e.g., default parameters). Keep dependencies minimal and justify additions.
 
