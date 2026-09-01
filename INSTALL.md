@@ -73,8 +73,10 @@ cargo clippy --locked --all-targets -- -D warnings
 cargo fmt --check
 ```
 
-`pre-commit install` runs the same checks, plus the dependency audits below,
-on every `git commit`.
+`pre-commit install` runs these same checks on every `git commit`. It does
+not run the dependency audits below: they reach the network and build
+`cargo-audit`, which is too slow to pay on every commit, and CI runs them
+when a lockfile changes.
 
 ## Dependency audits
 

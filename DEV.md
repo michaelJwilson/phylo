@@ -62,6 +62,56 @@ Three details worth knowing before editing the workflow:
   The marker is written only after both audits pass, and `actions/cache`
   saves it only when the job succeeds, so a failure records nothing.
 
+## Repository settings
+
+Some of what keeps CI smooth lives in GitHub's settings rather than in this
+repository, so it is invisible to `git log` and easy to lose. The intended
+configuration:
+
+| Setting | Where | Value |
+| --- | --- | --- |
+| Automatically delete head branches | Settings → General → Pull Requests | on |
+| Allow auto-merge | Settings → General → Pull Requests | on |
+| Merge strategy | Settings → General → Pull Requests | exactly one of squash / merge commit enabled |
+| Require a pull request before merging | Branch protection, `main` | on |
+| Required status checks | Branch protection, `main` | the eight job names above |
+| Require branches up to date before merging | Branch protection, `main` | off unless a merge queue is enabled |
+| Force pushes and deletions | Branch protection, `main` | blocked |
+| Default `GITHUB_TOKEN` permissions | Settings → Actions → General | read-only, elevated per job where needed |
+| Allowed actions | Settings → Actions → General | `actions/*` and `dtolnay/rust-toolchain` only |
+
+Four of these carry a rationale worth keeping:
+
+- **Deleting head branches on merge** prevents a merged branch from being
+  revived. A stale branch that outlives its merged PR still points at
+  pre-merge history, and a PR opened from it silently reverts whatever
+  landed in the meantime.
+- **One merge strategy, not two.** With several enabled, the shape of the
+  history depends on which button the merger happens to click.
+- **"Up to date before merging" is off deliberately.** With eight required
+  checks it serializes merges and re-runs the full suite for every PR ahead
+  in the queue. Enable it only together with a merge queue, which batches
+  those runs.
+- **Required check names are load-bearing**, as above: renaming a job
+  without updating the protection rule drops its protection silently.
+
+## CI budget
+
+CI exists to catch mistakes, not to measure performance, and the two want
+opposite things from a runner.
+
+- **Cap the size of what CI runs.** Topological move tests belong at n ≤ 10,
+  where exhaustive enumeration is the oracle. A scaling test at n = 50 buys
+  no additional correctness and can run until the job times out.
+- **Never rank performance on GitHub runners.** Their hardware varies
+  between runs, which is why benchmarks run in CI without asserting on
+  their timings. Scaling and comparison runs belong on fixed hardware.
+- **Long-running scientific validity tests are release-gated**, not run per
+  pull request. A test that takes an hour is worth having and worth not
+  running fifty times a day.
+- **Superseded runs are cancelled.** The workflow groups by ref, so pushing
+  again to a branch cancels the previous run rather than paying for both.
+
 ## Reproducibility
 
 Reproducibility ranks above convenience here, so the environment is pinned end

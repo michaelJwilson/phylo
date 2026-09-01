@@ -12,6 +12,13 @@ on:
     # waiting for someone to touch a lockfile.
     - cron: "17 6 * * 1"
 
+# Pushing again to a branch cancels that branch's previous run rather than
+# paying for both. `main` is excluded: its runs record the state of the
+# default branch and populate the audit caches PRs restore from.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 # Pinned runner image and a pinned uv keep CI reproducible; the Rust toolchain
 # is pinned by rust-toolchain.toml and the dependency graphs by uv.lock and
 # Cargo.lock. `--locked` on every install fails the build if a lockfile is
