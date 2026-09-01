@@ -44,10 +44,12 @@ Sections not marked are about this document or the repository as a whole.
 | `docs/tex/` | LaTeX source for the technical document |
 
 Each of those directories carries its own `CLAUDE.md` stating the concerns
-local to it — the analytic oracle `sim/` validates against, the tolerance
-policy and NumPy reference `likelihood/` keeps, the constraint handling in
-`opt/`, the `n <= 10` test bound in `search/`, and the CI limits and ticket
-policy in `infra/`. The root `CLAUDE.md` still governs; these add what only
+local to it — the analytic oracle `sim/` validates against, the NumPy
+reference `likelihood/` keeps, the constraint handling in `opt/`, why `n <= 10`
+is the right bound in `search/`, and experiment tracking and the ticket policy
+in `infra/`. They stack with the root `CLAUDE.md` rather than overriding it,
+and they load when a session works with files in that directory. A rule that
+binds the whole repository belongs in the root file; these carry only what
 applies inside one module.
 
 ## The two-language build [infra]
@@ -238,15 +240,9 @@ permit.
 
 ## Definition of done
 
-A PR that adds or changes behavior is expected to leave the repo with: a
-regression test that pins values and tests validity, a benchmark for any new
-or materially changed hot function (numbers in the PR description), coverage
-no lower than the CI gate, lint/type/format clean locally, a CI job covering
-any new category of code, updated docs (`README.md`, `CLAUDE.md`,
-`CHANGELOG.md`, and the technical document where relevant), and dependency
-hygiene per the rules above. `CLAUDE.md` carries the full list.
-
-A PR that changes whether something exists also updates its row in
+`CLAUDE.md`'s Definition of Done is the checklist, and restating it here
+would only give it somewhere to go stale. One addition belongs to this file:
+a PR that changes whether something exists also updates its row in
 [STATUS.md](STATUS.md). That file stands in for a project board, so it is
 only worth having while it is accurate.
 

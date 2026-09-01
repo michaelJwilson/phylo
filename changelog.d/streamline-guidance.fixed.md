@@ -1,0 +1,1 @@
+The CI check requiring a changelog fragment no longer fails on pull requests that have one. `actions/checkout` fetches a pull request at depth 1, so the depth-1 fetch of the base branch shared no ancestry with it and `git diff base...HEAD` died with "no merge base"; the file list now comes from the API.

@@ -5,24 +5,47 @@ Guidance for Claude Code when working in this repository.
 ## Project
 `phylo` is a high-performance scientific repository. Correctness and reproducibility of numerical/scientific results take priority over convenience.
 
+Two separable things live here, and keeping them separable is a constraint rather than an observation:
+
+*   **Infrastructure:** the build, the checks, the release process, the agentic workflow. None of it mentions phylogenetics; all of it would transplant to an unrelated scientific project unchanged.
+*   **Application:** substitution models, likelihoods, tree search, and the standards that make claims about them credible. Specific to this science.
+
+An infrastructure rule that acquires a phylogenetic assumption stops being liftable; an application rule hidden in build configuration stops being reviewable by someone who knows the science. `DEV.md` marks each of its sections accordingly.
+
+## Repository Map
+This file is authoritative. The rest exist so it does not have to carry everything, and each has one job:
+
+| Document | Job |
+| --- | --- |
+| `README.md` | What the project is, and where everything else lives |
+| `INSTALL.md` | Installing, building, running the tests locally |
+| `DEV.md` | Layout, the CI jobs, repository settings, the CI budget, how a change is reviewed |
+| `ROADMAP.md` | The scientific goal, requirements, and milestones |
+| `STATUS.md` | Coverage: what is done, planned, or untouched — in place of a project board |
+| `CHANGELOG.md` | What has landed, assembled from `changelog.d/` fragments |
+| `docs/tex/` | The technical document: background, equations, algorithms |
+
+`python/phylo/sim/`, `likelihood/`, `opt/`, `search/`, and `infra/` each carry their own `CLAUDE.md`. Those add what applies only inside one module; they never override this file. A rule that binds the whole repository belongs here, not in one of them.
+
 ## Environment & Tooling
 *   **Python (3.12):** Manage via `uv`. Run `uv sync --locked --all-extras`. Regenerate locks with `uv lock` and commit `uv.lock` in the same PR.
 *   **Rust:** Compiler pinned via `rust-toolchain.toml`. Lockfile is `Cargo.lock`. Update with `cargo update` and commit.
 *   **Lint/Format (Python):** `ruff check .` and `ruff format --check .`
-*   **Type Check (Python):** `mypy --strict` on `python/` and `tests/`.
+*   **Type Check (Python):** `mypy --strict`, over the paths in `pyproject.toml`'s `files` (`python/`, `tests/`, `infra/`).
 *   **Lint/Format (Rust):** `cargo clippy --all-targets -- -D warnings` and `cargo fmt --check`.
 *   **Audit:** `pip-audit` (Python) and `cargo audit` (Rust).
 *   **Docs:** Build with `sphinx-build -W` in `docs/source/`.
 
 ## Conventions
 *   **Hot Paths:** Prefer vectorized implementations over pure Python (see Performance).
-*   **Documentation Sync:** Any change affecting behavior, CI, dev setup, or math models must update `README.md`, `CLAUDE.md`, a `changelog.d/` fragment (if user-visible), `STATUS.md` (if it changes an item's status), and/or `docs/tex/` in the same PR.
+*   **Documentation Sync:** Any change affecting behavior, CI, dev setup, or math models must update, in the same PR, whichever of these it makes untrue: `README.md`, `CLAUDE.md` (including a module's), `DEV.md`, `INSTALL.md`, `ROADMAP.md`, `docs/tex/`. Add a `changelog.d/` fragment if the change is user-visible, and update the `STATUS.md` row if it changes an item's status.
 *   **Single Version Source:** The package version lives exclusively in `Cargo.toml`'s `[package].version`.
 *   **Code Standards:** Use type hints on all Python functions. Do not introduce silent behavior changes (e.g., default parameters). Keep dependencies minimal and justify additions.
 
 ## Performance
 *   **GPU (PyTorch, Triton, JAX):** Target if the hot path is data-parallel and earns $\ge 10\times$ speedup over vectorized NumPy at realistic problem sizes.
 *   **Rust Backend (`oxiphylo`):** Target for CPU-bound hot paths (control flow, tree traversal, irregular memory access, small sizes).
+*   **Autodiff:** **PyTorch**, decided. Its MPS backend is the mature path on Apple Silicon, which `ROADMAP.md` targets alongside CUDA. Not yet a dependency: it is added by the first PR whose code imports it.
 *   **Measurement:** Benchmark candidates against the NumPy reference before committing to a port. Report both numbers in the PR.
 *   **The Oracle:** Every accelerated kernel keeps its pure Python/NumPy implementation as an oracle. Regression tests must pin the accelerated output against it within an explicit tolerance.
 
@@ -30,7 +53,8 @@ Guidance for Claude Code when working in this repository.
 *   **Simulate Component-Wise:** Build fixtures by simulating from a known generative model with an explicitly seeded generator (`np.random.default_rng(seed)`). Test components individually.
 *   **Pin to Independent Sources:** Validate expected values against analytic results, brute-force computations, or secondary implementations with stated tolerances.
 *   **Check Math Invariants:** Ensure rows of transition matrices sum to 1, models satisfy detailed balance, gradients match finite differences, and likelihood increases monotonically.
-*   **No Coverage Theatre:** Tests asserting only output shapes or successful execution without exceptions are forbidden. Leave gaps unwritten and log them in "Known Gaps" rather than writing meaningless tests.
+*   **Cross-Device Agreement Is a Tolerance:** `float32` and `float64` behave differently across CPU, CUDA, and Metal, and deep recursions accumulate that. Agreement is checked against a tolerance stated once in the technical document, never bitwise. A discrepancy inside it is not a bug and must not be "fixed".
+*   **No Coverage Theatre:** Tests asserting only output shapes or successful execution without exceptions are forbidden. Leave gaps unwritten and record them in `STATUS.md` rather than writing meaningless tests.
 *   **Scientific Outputs:** The suite must emit plots and tables for the LaTeX technical document. Update the LaTeX captions concurrently.
 
 ## Technical Document & Reference Sources
@@ -63,7 +87,7 @@ Guidance for Claude Code when working in this repository.
 1.  **Regression Test:** Asserts scientific validity (not just shape/execution) and pins expected output.
 2.  **Benchmark:** New/changed hot functions include a `pytest-benchmark` (Python) or `criterion` bench (Rust). Baseline numbers reported in PR.
 3.  **Coverage:** `--cov-fail-under` gate is maintained or raised. Never lower it to pass a PR.
-4.  **Docs & Tooling:** CI covers the new code. `ruff`, `mypy`, and `cargo` checks pass locally.
+4.  **Docs & Tooling:** CI covers the new code. `ruff`, `mypy`, and `cargo` checks pass locally. Documentation Sync above is satisfied.
 5.  **Dependency Hygiene:** Follows OSI-license and external tools rules.
 
 ## Dependencies & External Tools
@@ -72,13 +96,7 @@ Guidance for Claude Code when working in this repository.
 *   Flag any proposed dependency with $<1,000$ GitHub stars (or equivalent ecosystem metric) for explicit review.
 
 ## Known Gaps
-*   **No real science:** 100% coverage is currently a smoke test on placeholder functions (`double`, `pairwise_distance`).
-*   **Invalid test patterns:** Current benchmark/CLI tests assert only shapes or print statements.
-*   **Missing QA framework:** Component-wise simulated fixtures and plot generation do not exist yet.
-*   **Rust backend inactive:** No numerical function is currently accelerated in `oxiphylo`.
-*   **No module structure:** `python/phylo/` lacks a `core.py` equivalent.
-*   **Missing CI:** No performance regression detection, no multi-platform/version tests (currently only 3.12/Ubuntu), no distributable wheel artifacts.
-*   **Stub drift:** `oxiphylo.pyi` is unchecked (`python -m mypy.stubtest` needed).
+`STATUS.md` is the single ledger of what exists, what is only recorded as intent, and what is untouched — including the gaps in the current scaffolding. It carries the rule that keeps it honest: the PR that changes an item's status updates its row. Do not keep a second list here.
 
 ## Working with Sub-Agents
 *   **Parallel:** Use isolated git worktrees/PRs for disjoint tasks (e.g., Rust extension scaffold vs. Python test harness).

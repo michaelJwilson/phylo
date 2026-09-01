@@ -3,20 +3,10 @@
 CI/CD, the agentic workflow, and experiment tracking. Nothing scientific
 lives here; everything that decides whether the science is believable does.
 
-Root `CLAUDE.md` holds the repository-wide rules. `DEV.md` documents the
-repository settings and CI budget. These are local.
-
-## Hard bounds on what CI runs
-
-These are limits, not defaults, and a PR does not get to raise them:
-
-- **Topological move tests: `n <= 10`.** Exhaustive enumeration is the oracle
-  at that size. Larger cases hang the runner and prove nothing more.
-- **No performance ranking in GitHub Actions.** Runner hardware varies
-  between runs. Benchmarks may execute there; their timings are never
-  asserted on and never ranked.
-- **Long-running validity tests are release-gated.** An hour-long test is
-  worth having and worth not running fifty times a day.
+Root `CLAUDE.md` holds the repository-wide rules. `DEV.md` holds the CI
+budget, the repository settings, and the eight CI jobs — including the two
+that bind hardest here: topological tests are capped at `n <= 10`, and
+performance is never ranked on GitHub runners. These are local.
 
 ## Experiment tracking
 
@@ -40,9 +30,3 @@ from its manifest is an anecdote.
   unattended provided the PR implements a plan already posted to the thread.
   A plan that turns out to be flawed gets a revised plan posted in the
   thread, not a silent correction.
-
-## Required checks
-
-Branch protection matches required checks by name, so renaming a CI job
-drops its protection silently. Rename and update the protection rule in the
-same change.

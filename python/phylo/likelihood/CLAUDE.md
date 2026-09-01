@@ -20,10 +20,10 @@ reference, an efficient CPU path, CUDA, and Metal/MPS.
 - **Correctness comes from brute force, not from another backend.** Direct
   marginalization over internal states at `n <= 6` is the test. Two backends
   agreeing proves nothing if both are wrong.
-- **Cross-device agreement is a tolerance, not bitwise equality.** `float32`
-  and `float64` behave differently across CPU, CUDA, and Metal, and a deep
-  recursion accumulates that. The tolerance is stated once in the technical
-  document; a discrepancy inside it is not a bug and must not be "fixed".
+- **The pruning recursion is where the tolerance policy bites.** Root
+  `CLAUDE.md` states it; here it means a backend is accepted when it agrees
+  with the NumPy reference inside that tolerance, and rejected outside it —
+  never adjusted until it matches.
 - **Rescaling must stay differentiable.** Partial likelihoods underflow, so
   they are rescaled with the log of the scaling accumulated separately. That
   transformation sits inside the autodiff graph.
