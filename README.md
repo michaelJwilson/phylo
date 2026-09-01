@@ -10,12 +10,9 @@ for modern phylogenetic inference.
 
 Its goal is to solve the large parsimony problem — the search over
 phylogenetic tree topologies — with reinforcement learning, scoring candidate
-trees by the Felsenstein likelihood under a substitution model. That rests on
-fast simulation, fast likelihood evaluation, and automatic differentiation;
-[ROADMAP.md](ROADMAP.md) sets out the plan and the milestones.
+trees by the Felsenstein likelihood under a substitution model. 
 
-The repository today is scaffolding. Every function in it is a placeholder,
-and the science described in the roadmap is not implemented yet.
+[ROADMAP.md](ROADMAP.md) sets out the plan and the milestones.
 
 ## Quick start
 
@@ -36,15 +33,10 @@ audits, and building the docs.
 | [INSTALL.md](INSTALL.md) | Installing, building, running the tests, and working locally | infrastructure |
 | [DEV.md](DEV.md) | Repository layout, CI jobs, conventions, and how a change is reviewed | both, marked per section |
 | [ROADMAP.md](ROADMAP.md) | The long-term scientific goal, requirements, and milestones | application |
-| [STATUS.md](STATUS.md) | Coverage: what is done, planned, or untouched — in place of a project board | both |
-| [CHANGELOG.md](CHANGELOG.md) | What has landed so far, assembled from `changelog.d/` | infrastructure |
+| [CHANGELOG.md](CHANGELOG.md) | What has landed so far | infrastructure |
 | `CLAUDE.md` | The authoritative conventions, including performance and testing policy | both |
 | `docs/source/` | Sphinx API documentation, built from the docstrings | infrastructure |
 | `docs/tex/` | LaTeX source for the technical document: background, equations, algorithms | application |
-
-**Infrastructure** would transplant to an unrelated scientific project
-unchanged; **application** is specific to phylogenetics. Keeping the two
-separable is a constraint, not an observation — `DEV.md` explains why.
 
 ## License
 
