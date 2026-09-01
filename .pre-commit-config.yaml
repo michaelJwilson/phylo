@@ -1,0 +1,28 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # mypy and the Rust checks run against the tools already installed via
+  # `pip install ".[dev]"` / rustup, rather than pre-commit-managed envs,
+  # to avoid a second, separately-versioned copy of each toolchain.
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: mypy python/
+        language: system
+        pass_filenames: false
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --check
+        language: system
+        pass_filenames: false
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy --all-targets -- -D warnings
+        language: system
+        pass_filenames: false
