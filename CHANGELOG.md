@@ -35,6 +35,7 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
   pinned Rust toolchain (`rust-toolchain.toml`), and a pinned CI runner image
   and `uv` version. Every CI install uses `--locked`.
 - The four module directories are packages: `sim/`, `likelihood/`, `opt/`, and `search/` each have an `__init__.py`, so their `CLAUDE.md` loads when a session works in them and `DEV.md`'s layout table is true.
+- Package surface convention (#47): `python/phylo/__init__.py` re-exports nothing beyond the package's own top-level utilities (currently `double`); submodule contents are imported explicitly (`from phylo.likelihood import ...`). Recorded in root `CLAUDE.md` and the package docstring. `docs/source/index.rst` autodocs `phylo.sim`, `phylo.likelihood`, `phylo.opt`, and `phylo.search` individually instead of relying on the flat top-level `automodule:: phylo` directive.
 
 ### Changed
 
