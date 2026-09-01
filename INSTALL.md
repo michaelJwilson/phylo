@@ -4,6 +4,11 @@ Everything needed to get a working checkout: the environment, the build, the
 test suites, and the checks CI will run against your branch. For how the
 project is developed in broader terms — layout, CI, conventions — see [DEV.md](DEV.md).
 
+Everything here is infrastructure: none of it assumes phylogenetics, and the
+same steps would serve any `uv` plus `maturin` project. The one exception is
+noted where it appears. What the science requires lives in
+[ROADMAP.md](ROADMAP.md) and `CLAUDE.md`.
+
 ## Prerequisites
 
 | Tool | Version | Notes |
@@ -46,10 +51,14 @@ compiled module does not rebuild itself.
 
 ## Running the tests
 
+The one application-specific note in this file: what the suite contains is
+phylogenetics, even though how it is run is not.
+
 ```
 pytest      # Python: regression tests (tests/regression), a pytest-benchmark
-            # suite (tests/benchmarks), and an integration test that the Rust
-            # extension imports correctly (tests/test_oxiphylo_bindings.py)
+            # suite (tests/benchmarks), infrastructure tests (tests/infra),
+            # and an integration test that the Rust extension imports
+            # correctly (tests/test_oxiphylo_bindings.py)
 cargo test  # Rust: unit tests for the PyO3 bindings (src/lib.rs)
 cargo bench # Rust: Criterion benchmarks (benches/)
 ```
@@ -71,6 +80,14 @@ ruff format --check .
 mypy                                       # strict, over python/ and tests/
 cargo clippy --locked --all-targets -- -D warnings
 cargo fmt --check
+```
+
+Add a changelog fragment for the change as well — `DEV.md` describes the
+format, and CI requires one:
+
+```
+echo "What changed, in a sentence." > changelog.d/<pr-number>.added.md
+python -m infra.changelog --check
 ```
 
 `pre-commit install` runs these same checks on every `git commit`. It does

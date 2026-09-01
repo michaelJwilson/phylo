@@ -16,7 +16,7 @@ Guidance for Claude Code when working in this repository.
 
 ## Conventions
 *   **Hot Paths:** Prefer vectorized implementations over pure Python (see Performance).
-*   **Documentation Sync:** Any change affecting behavior, CI, dev setup, or math models must update `README.md`, `CLAUDE.md`, `CHANGELOG.md` (if user-visible), and/or `docs/tex/` in the same PR.
+*   **Documentation Sync:** Any change affecting behavior, CI, dev setup, or math models must update `README.md`, `CLAUDE.md`, a `changelog.d/` fragment (if user-visible), `STATUS.md` (if it changes an item's status), and/or `docs/tex/` in the same PR.
 *   **Single Version Source:** The package version lives exclusively in `Cargo.toml`'s `[package].version`.
 *   **Code Standards:** Use type hints on all Python functions. Do not introduce silent behavior changes (e.g., default parameters). Keep dependencies minimal and justify additions.
 

@@ -4,7 +4,7 @@ What exists, what is recorded as intent, and what is untouched. This file
 stands in for a project board: one place to see coverage, versioned with the
 code it describes.
 
-**Verified at `63cb516`** by reading the tree, not from memory.
+**Verified at `01ddb9a`** by reading the tree, not from memory.
 
 | Marker | Meaning |
 | --- | --- |
@@ -20,7 +20,7 @@ the same thing. Where a rule exists but nothing enforces it, the note says so.
 
 A status file that lies is worse than none, and this one goes stale the moment
 a PR merges. So it follows the rule already applied to `README.md`,
-`CLAUDE.md`, and `CHANGELOG.md`: **the PR that changes an item's status
+`CLAUDE.md`, and the changelog: **the PR that changes an item's status
 updates its row, in the same PR.** A PR that closes a gap and leaves the row
 reading "—" is incomplete.
 
@@ -58,7 +58,7 @@ in a pull-request description is not coverage.
 
 | Item | Status | Notes |
 | --- | --- | --- |
-| Application concerns separable from infrastructure | done | The module split, and the same axis in the reference taxonomy |
+| Application concerns separable from infrastructure | done | The module split, the reference taxonomy, and per-section `[infra]`/`[app]` markers in `DEV.md` |
 | `sim/`, `likelihood/`, `opt/`, `search/`, `infra/` | done | Directories exist; no code in them yet, deliberately |
 | Per-submodule `CLAUDE.md` | done | Five files, each pinning what is local to its module |
 | One set of interfaces serving an HMM and a Potts model in an external field, with test cases and benchmarks for both | — | This is what stops the interfaces silently becoming phylogenetics-only, so it wants writing down before they exist |
@@ -77,18 +77,18 @@ in a pull-request description is not coverage.
 
 | Item | Status | Notes |
 | --- | --- | --- |
-| Priorities: high immediate, medium at token refresh, low outside 09:00–17:00 Princeton, low by default | done | Policy in `infra/CLAUDE.md`; no labels exist |
+| Priorities: high immediate, medium at token refresh, low outside 09:00–17:00 Princeton, low by default | done | Policy in `infra/CLAUDE.md`; labels defined in `.github/labels.yml`, applied by running the Labels workflow |
 | `/approve` posts a plan, then opens a PR implementing it | done | Policy only; the workflow is not built |
 | A flawed plan gets a revised plan in-thread, not a silent fix | done | `infra/CLAUDE.md` |
 | Tickets tagged by submodule | done | Policy only |
 | Tickets batched and staged against the roadmap | done | Policy only; no batching mechanism |
-| The `/approve` workflow itself | — | Needs `anthropics/claude-code-action`, which the allowed-actions list does not permit |
-| Issue templates and label definitions | — | PR #13 carries an older scheme on stale history |
-| Standing ticket: `CLAUDE.md` ingestion | — | |
-| Standing ticket: roadmap ingestion | — | |
+| The `/approve` workflow itself | — | Blocked on approving `anthropic/claude-code-action`; `infra/TICKETING.md` states what it would do |
+| Issue templates and label definitions | done | `.github/ISSUE_TEMPLATE/task.yml` and `.github/labels.yml`, applied by the Labels workflow. PR #13 carries an older scheme on stale history |
+| Standing ticket: `CLAUDE.md` ingestion | — | Filing it is a manual step; see `infra/TICKETING.md` |
+| Standing ticket: roadmap ingestion | — | Filing it is a manual step; see `infra/TICKETING.md` |
 | Standing ticket: redundancy sweep — duplicate likelihood evaluations, fragmented canonicalization, code paths that drifted apart across PRs | — | |
 | Fortnightly release: pull requests reviewed individually *and collectively* by a stronger model | — | |
-| A changelog that survives parallel merges | — | Fragments were declined; `CHANGELOG.md` has now conflicted on three separate merges |
+| A changelog that survives parallel merges | done | Fragments in `changelog.d/`, assembled by `infra/changelog.py`. No dependency; Towncrier was declined |
 
 ## CI guardrails
 

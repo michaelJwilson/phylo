@@ -30,16 +30,20 @@ audits, and building the docs.
 
 ## Documentation
 
-| Document | Contents |
-| --- | --- |
-| [INSTALL.md](INSTALL.md) | Installing, building, running the tests, and working locally |
-| [DEV.md](DEV.md) | Repository layout, CI jobs, conventions, and how a change is reviewed |
-| [ROADMAP.md](ROADMAP.md) | The long-term scientific goal and its milestones |
-| [STATUS.md](STATUS.md) | Coverage: what is done, planned, or untouched — in place of a project board |
-| [CHANGELOG.md](CHANGELOG.md) | What has landed so far |
-| `CLAUDE.md` | The authoritative conventions, including performance and testing policy |
-| `docs/source/` | Sphinx API documentation, built from the docstrings |
-| `docs/tex/` | LaTeX source for the technical document: background, equations, algorithms |
+| Document | Contents | Axis |
+| --- | --- | --- |
+| [INSTALL.md](INSTALL.md) | Installing, building, running the tests, and working locally | infrastructure |
+| [DEV.md](DEV.md) | Repository layout, CI jobs, conventions, and how a change is reviewed | both, marked per section |
+| [ROADMAP.md](ROADMAP.md) | The long-term scientific goal, requirements, and milestones | application |
+| [STATUS.md](STATUS.md) | Coverage: what is done, planned, or untouched — in place of a project board | both |
+| [CHANGELOG.md](CHANGELOG.md) | What has landed so far, assembled from `changelog.d/` | infrastructure |
+| `CLAUDE.md` | The authoritative conventions, including performance and testing policy | both |
+| `docs/source/` | Sphinx API documentation, built from the docstrings | infrastructure |
+| `docs/tex/` | LaTeX source for the technical document: background, equations, algorithms | application |
+
+**Infrastructure** would transplant to an unrelated scientific project
+unchanged; **application** is specific to phylogenetics. Keeping the two
+separable is a constraint, not an observation — `DEV.md` explains why.
 
 ## License
 

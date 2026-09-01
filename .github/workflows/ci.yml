@@ -45,6 +45,21 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy
+      # Fragment names are validated always; presence is required unless the
+      # pull request is labelled skip-changelog.
+      - run: python -m infra.changelog --check
+      - name: Require a changelog fragment
+        if: >-
+          github.event_name == 'pull_request' &&
+          !contains(github.event.pull_request.labels.*.name, 'skip-changelog')
+        run: |
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" \
+             | grep -q '^changelog.d/[^/]*\.md$'; then
+            exit 0
+          fi
+          echo "::error::No changelog fragment. Add changelog.d/<id>.<category>.md, or label the PR skip-changelog."
+          exit 1
 
   rust-lint:
     name: Rust lint & format (clippy, fmt)
