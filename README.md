@@ -35,9 +35,8 @@ importable from Python.
 
 ```
 pip install ".[test]"
-pytest      # Python: regression tests (tests/regression), property-based
-            # tests (tests/properties), a pytest-benchmark suite
-            # (tests/benchmarks), and an integration test that the Rust
+pytest      # Python: regression tests (tests/regression), a pytest-benchmark
+            # suite (tests/benchmarks), and an integration test that the Rust
             # extension imports correctly (tests/test_oxiphylo_bindings.py)
 cargo test  # Rust: unit tests for the PyO3 bindings (src/lib.rs)
 cargo bench # Rust: Criterion benchmarks (benches/)
@@ -66,8 +65,7 @@ Every pull request against `main` runs five GitHub Actions jobs
 format --check`, `mypy`), `rust-lint` (`cargo clippy`, `cargo fmt --check`),
 `rust-tests` (`cargo test` and `cargo bench`), `build` (compiles the
 extension and smoke-imports `phylo.oxiphylo`), and `python-tests` (the full
-`pytest` suite, including the `hypothesis` property tests, gated on a
-minimum coverage threshold via `pytest-cov`).
+`pytest` suite, gated on a minimum coverage threshold via `pytest-cov`).
 
 ## Versioning
 

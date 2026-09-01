@@ -44,10 +44,6 @@ touches — use judgment on what's proportionate to the PR's size, but don't
 skip an item because it's inconvenient:
 
 - **Regression test**: pins expected output per the Conventions above.
-- **Property test**: for anything with a stateable invariant (symmetry,
-  non-negativity, idempotence, a conservation law, etc.), add a
-  `hypothesis` test in `tests/properties/` alongside the fixed-input
-  regression test — don't rely on one example alone for numerical code.
 - **Benchmark**: any new or materially changed hot function gets a
   `pytest-benchmark` test (Python) or a `criterion` benchmark in `benches/`
   (Rust), and the resulting numbers get reported in the PR description as
@@ -94,9 +90,6 @@ skip an item because it's inconvenient:
   (informational only, nothing is asserted against its timings, so it
   can't flake); use `cargo bench` locally with Criterion's own
   `--baseline`/`--save-baseline` for local regression comparison.
-- For invariants that should hold across many inputs (not just one fixed
-  regression case), prefer a `hypothesis` property test — see
-  `tests/properties/` — over hand-writing more fixed examples.
 
 ## Working with sub-agents
 
