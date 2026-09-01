@@ -42,6 +42,15 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
 - Benchmarks seed via `np.random.default_rng` rather than the legacy global
   `np.random.seed`, and ruff's `NPY002` now enforces that.
 
+### Fixed
+
+- CI's `lint` job installed only the `dev` extra while `mypy` checks
+  `tests/`, so every run failed on unresolvable `numpy` and `pytest`
+  imports. It now installs `dev` and `test`.
+- CI's Rust audit built `cargo-audit` from a floating resolve, which broke
+  when a transitive dependency raised its minimum `rustc` above the pinned
+  1.94.1. It now installs with `--locked`.
+
 ### Security
 
 - Raised the `pytest` floor to `>=9.0.3` for PYSEC-2026-1845. The previous
