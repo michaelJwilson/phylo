@@ -72,13 +72,8 @@ cargo clippy --locked --all-targets -- -D warnings
 cargo fmt --check
 ```
 
-Add a changelog fragment for the change as well — `DEV.md` describes the
-format, and CI requires one:
-
-```
-echo "What changed, in a sentence." > changelog.d/<pr-number>.added.md
-python -m infra.changelog --check
-```
+Add an entry to `CHANGELOG.md` under `[Unreleased]` for the change as well,
+if it is user-visible.
 
 `pre-commit install` runs these same checks on every `git commit`. It does
 not run the dependency audits below:  CI runs them when a lockfile changes.

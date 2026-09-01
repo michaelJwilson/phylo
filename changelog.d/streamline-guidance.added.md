@@ -1,1 +1,0 @@
-The four module directories are packages: `sim/`, `likelihood/`, `opt/`, and `search/` each have an `__init__.py`, so their `CLAUDE.md` loads when a session works in them and `DEV.md`'s layout table is true.

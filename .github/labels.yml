@@ -34,6 +34,3 @@
 - name: "approved"
   color: "0e8a16"
   description: "A maintainer has approved the posted plan."
-- name: "skip-changelog"
-  color: "ededed"
-  description: "No changelog fragment required for this pull request."

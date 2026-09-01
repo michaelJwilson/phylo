@@ -88,11 +88,3 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 2. **Validate:** Must use OSI-approved licenses. Flag items with $<1000$ GitHub stars.
 3. **Lock:** Run `uv lock` or update `Cargo.lock` and commit in the same PR.
 4. **Justify:** Explain the inclusion in the PR description.
-
-### Changelog Workflow
-
-Do not edit `CHANGELOG.md` directly. Add fragment files to `changelog.d/` named `<pr-number>.<category>.md`. CI requires a fragment or a `skip-changelog` label.
-
-* **Add:** `echo "Description" > changelog.d/42.added.md`
-* **Check:** `python -m infra.changelog --check`
-* **Assemble (Release):** `python -m infra.changelog --assemble`
