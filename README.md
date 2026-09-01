@@ -35,6 +35,7 @@ audits, and building the docs.
 | [INSTALL.md](INSTALL.md) | Installing, building, running the tests, and working locally |
 | [DEV.md](DEV.md) | Repository layout, CI jobs, conventions, and how a change is reviewed |
 | [ROADMAP.md](ROADMAP.md) | The long-term scientific goal and its milestones |
+| [STATUS.md](STATUS.md) | Coverage: what is done, planned, or untouched — in place of a project board |
 | [CHANGELOG.md](CHANGELOG.md) | What has landed so far |
 | `CLAUDE.md` | The authoritative conventions, including performance and testing policy |
 | `docs/source/` | Sphinx API documentation, built from the docstrings |

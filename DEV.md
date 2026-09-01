@@ -187,6 +187,10 @@ any new category of code, updated docs (`README.md`, `CLAUDE.md`,
 `CHANGELOG.md`, and the technical document where relevant), and dependency
 hygiene per the rules above. `CLAUDE.md` carries the full list.
 
+A PR that changes whether something exists also updates its row in
+[STATUS.md](STATUS.md). That file stands in for a project board, so it is
+only worth having while it is accurate.
+
 ## Development approach
 
 The Rust backend scaffold and the Python test/benchmark harness touched

@@ -107,6 +107,13 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
   hand-computed cases; an external implementation is noted as a future
   cross-check rather than adopted as a dependency.
 
+- `STATUS.md`: coverage of every planned item — done, planned, in an open
+  PR, or untouched — standing in for a project board, with the rule that
+  the PR changing an item's status updates its row. Records three live
+  cross-document inconsistencies: the reward is defined twice and
+  differently, the cross-device tolerance policy states no number, and an
+  accuracy target names baseline tools nothing can currently run.
+
 ### Fixed
 
 - CI's `lint` job installed only the `dev` extra while `mypy` checks
