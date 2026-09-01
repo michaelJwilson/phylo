@@ -73,6 +73,15 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
   probabilities, which give the simulator an oracle independent of the
   likelihood code.
 
+
+- `ROADMAP.md` states requirements: problem size (`n` 10–1000, `L`
+  100–10 000, general `k`), accuracy (normalized RF ≤ 0.05, `Δ ln L`
+  competitive with IQ-TREE 2 and RAxML-NG at equal wall clock), runtime
+  (sub-second gradient updates at `n = 100`, amortized search), memory
+  (`O(n × L × k)` within 16 GB unified or 24 GB GPU), hardware (CUDA and
+  Metal both first-class, with an efficient CPU path), and a cross-device
+  numerical tolerance policy.
+
 - `pre-commit` no longer runs `pip-audit` and `cargo audit`. They reach the
   network and build `cargo-audit`, which is too slow for every commit; CI
   runs them when a lockfile changes and weekly on `main`.

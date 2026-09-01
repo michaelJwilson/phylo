@@ -14,6 +14,59 @@ rearrangements and keeping the ones that score better. The proposal policy in
 those tools is fixed and hand-designed. This project asks whether a learned
 policy does better.
 
+## Requirements
+
+Targets, so that "does it work" has an answer. Every number below is a
+target to be measured, not a claim about the current code, which implements
+none of this.
+
+### Problem size
+
+| Dimension | Range |
+| --- | --- |
+| Taxa `n` | 10 to 1000 |
+| Sites `L` | 100 to 10 000 |
+| States `k` | 4 (nucleotide), 20 (amino acid), general `k` |
+
+### Accuracy
+
+- **Topology.** Normalized Robinson–Foulds distance to the ground-truth
+  simulated topology ≤ 0.05.
+- **Likelihood.** `Δ ln L` competitive with or exceeding IQ-TREE 2 and
+  RAxML-NG *under identical wall-clock constraints* — an untimed likelihood
+  comparison measures patience, not method.
+
+### Runtime
+
+- **Sub-second Felsenstein gradient updates at `n = 100`.**
+- **Amortized search.** Inference must repay the cost of training and
+  proposal: total time to resolve a tree lower than classical hill-climbing
+  on comparable hardware. A faster per-move policy that needs more moves has
+  gained nothing.
+
+### Memory
+
+Partial likelihoods scale as `O(n × L × k)` (times rate categories), and
+must fit **16 GB of unified Apple Silicon memory or a 24 GB NVIDIA GPU**.
+That ceiling, not the arithmetic, is what bounds the largest workable
+problem, so it constrains the compression work in workstream 2 directly.
+
+### Hardware
+
+- **CUDA and Metal/MPS are both first-class.** Neither is the fallback.
+- **An efficient CPU path is required**, not merely a correct one: it is
+  what CI and any developer without a GPU actually run.
+
+### Numerical tolerance
+
+`float32` and `float64` behave differently across CPU, CUDA, and Metal,
+and a deep pruning recursion accumulates those differences. Cross-device
+agreement is therefore specified as a **tolerance, fixed once and stated in
+the technical document**, not as bitwise equality. Without that, a
+discrepancy of order 10⁻⁶ between CPU and GPU reads as a bug, and chasing it
+produces an endless series of fixes for something that was never broken. The
+oracle for correctness stays the analytic result, not another device.
+
 ## The model
 
 A candidate is scored by its likelihood under a continuous-time Markov model
