@@ -3,29 +3,25 @@
 ## The goal
 
 Solve the large parsimony problem — the search over phylogenetic tree
-topologies — with reinforcement learning, scoring candidate trees by the
-Felsenstein likelihood.
+topologies — with reinforcement learning, scoring (compressed) candidate trees
+by the (an approximate) likelihood.
 
-The search space is the obstacle. The number of unrooted binary topologies on
-`n` taxa is `(2n − 5)!!`: about 2×10⁶ for 10 taxa, 2×10²⁰ for 20, and 3×10⁷⁴
-for 50. Exhaustive evaluation is hopeless past a handful of taxa, so
-established tools hill-climb from a starting tree, proposing local
-rearrangements and keeping the ones that score better. The proposal policy in
-those tools is fixed and hand-designed. This project asks whether a learned
+Motivation: the search space is the obstacle. The number of unrooted binary topologies on
+`n` taxa is `(2n − 5)!!`, i.e. 3×10⁷⁴ for n=50. Exhaustive evaluation is hopeless so tools
+hill-climb from a starting tree, proposing local rearrangements and keeping the best. The 
+proposal policy in those tools is fixed and hand-designed. This project asks whether a learned
 policy does better.
 
 ## Requirements
 
-Targets, so that "does it work" has an answer. Every number below is a
-target to be measured, not a claim about the current code, which implements
-none of this.
+Targets:  so that "does it work" has an answer. Every number below is a target to be measured.
 
 ### Problem size
 
 | Dimension | Range |
 | --- | --- |
-| Taxa `n` | 10 to 1000 |
-| Sites `L` | 100 to 10 000 |
+| Taxa `n` | 10 to 1_000 |
+| Sites `L` | 100 to 1_1000 |
 | States `k` | 4 (nucleotide), 20 (amino acid), general `k` |
 
 ### Accuracy
@@ -33,8 +29,7 @@ none of this.
 - **Topology.** Normalized Robinson–Foulds distance to the ground-truth
   simulated topology ≤ 0.05.
 - **Likelihood.** `Δ ln L` competitive with or exceeding IQ-TREE 2 and
-  RAxML-NG *under identical wall-clock constraints* — an untimed likelihood
-  comparison measures patience, not method.
+  RAxML-NG *under similar wall-clock constraints*.
 
 ### Runtime
 
