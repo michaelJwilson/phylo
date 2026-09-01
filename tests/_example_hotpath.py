@@ -1,4 +1,4 @@
-"""Example hot function shared by the regression, property, and benchmark tests.
+"""Example hot function shared by the regression and benchmark tests.
 
 Scaffolding, not production code: it gives the test harness something concrete
 to exercise until real numerical kernels land.

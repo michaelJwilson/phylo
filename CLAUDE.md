@@ -90,10 +90,6 @@ touches — use judgment on what's proportionate to the PR's size, but don't
 skip an item because it's inconvenient:
 
 - **Regression test**: pins expected output per the Conventions above.
-- **Property test**: for anything with a stateable invariant (symmetry,
-  non-negativity, idempotence, a conservation law, etc.), add a
-  `hypothesis` test in `tests/properties/` alongside the fixed-input
-  regression test — don't rely on one example alone for numerical code.
 - **Benchmark**: any new or materially changed hot function gets a
   `pytest-benchmark` test (Python) or a `criterion` benchmark in `benches/`
   (Rust), and the resulting numbers get reported in the PR description as
@@ -140,9 +136,6 @@ skip an item because it's inconvenient:
   (informational only, nothing is asserted against its timings, so it
   can't flake); use `cargo bench` locally with Criterion's own
   `--baseline`/`--save-baseline` for local regression comparison.
-- For invariants that should hold across many inputs (not just one fixed
-  regression case), prefer a `hypothesis` property test — see
-  `tests/properties/` — over hand-writing more fixed examples.
 - API docs build with Sphinx (`docs/source/`, NumPy-style docstrings via
   `napoleon`); CI runs `sphinx-build -W` (warnings as errors) in the `docs`
   job. Write docstrings knowing they're rendered, not just read in-editor.
@@ -153,9 +146,9 @@ Current as of the initial scaffolding. Don't assume any of this exists; close
 a gap deliberately, in its own PR, rather than assuming a past PR covered it.
 
 - **No real science yet.** Every function in the repo is a placeholder
-  (`double`, `pairwise_distance`). The coverage gate, benchmarks, and property
-  tests are calibrated against ~5 statements of trivial Python, so treat the
-  100% coverage figure as a smoke test, not evidence of a tested codebase.
+  (`double`, `pairwise_distance`). The coverage gate and benchmarks are
+  calibrated against ~5 statements of trivial Python, so treat the 100%
+  coverage figure as a smoke test, not evidence of a tested codebase.
 - **The Rust backend accelerates nothing.** The only numerical function lives
   in `tests/`, in pure NumPy. Nothing yet demonstrates the intended pattern: a
   kernel in Rust, called from Python, benchmarked against a NumPy reference,

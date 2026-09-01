@@ -1,8 +1,7 @@
 """Integration test for the compiled Rust extension.
 
 Requires the package to be built and installed (`pip install .`), unlike the
-pure-Python tests under tests/regression, tests/properties, and
-tests/benchmarks.
+pure-Python tests under tests/regression and tests/benchmarks.
 """
 
 from phylo.oxiphylo import double
