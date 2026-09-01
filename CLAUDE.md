@@ -10,7 +10,7 @@ Two separable things live here, and keeping them separable is a constraint rathe
 *   **Infrastructure:** the build, the checks, the release process, the agentic workflow. None of it mentions phylogenetics; all of it would transplant to an unrelated scientific project unchanged.
 *   **Application:** substitution models, likelihoods, tree search, and the standards that make claims about them credible. Specific to this science.
 
-An infrastructure rule that acquires a phylogenetic assumption stops being liftable; an application rule hidden in build configuration stops being reviewable by someone who knows the science. `DEV.md` marks each of its sections accordingly.
+An infrastructure rule that acquires a phylogenetic assumption stops being liftable; an application rule hidden in build configuration stops being reviewable by someone who knows the science. `DEV.md` and `README.md` carry this structurally — infrastructure content ordered before application content, rather than labeled row by row — and file placement (`infra/` vs. `python/phylo/*`, `docs/tex/`) does the rest.
 
 ## Repository Map
 This file is authoritative. The rest exist so it does not have to carry everything, and each has one job:

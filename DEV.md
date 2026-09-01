@@ -2,45 +2,25 @@
 
 This document outlines repository structure, CI enforcement, and contribution rules. For setup, see `INSTALL.md`; for project trajectory, see `ROADMAP.md`. **`CLAUDE.md` is the authoritative source for conventions; in any conflict, `CLAUDE.md` prevails.**
 
-## Domain Separation
-
-Rules and components are strictly separated into two domains. This separation is a deliberate architectural constraint:
-
-* **Application:** Phylogenetics, substitution models, likelihoods, and scientific standards. Specific to this science and strictly non-portable.
-* **Infrastructure:** Builds, CI/CD checks, release processes, and agentic workflows. Completely portable to unrelated projects.
-
 ## Repository Layout
 
-| Path | Domain | Contents |
-| --- | --- | --- |
-| `python/phylo/` | Application | Python package: re-exports, typed extension stubs, stub CLI. |
-| `python/phylo/sim/` | Application | Data generation and ground-truth retention. |
-| `python/phylo/likelihood/` | Application | Felsenstein pruning; CPU, CUDA, and Metal dispatch. |
-| `python/phylo/opt/` | Application | Continuous parameter fitting via autodiff (PyTorch). |
-| `python/phylo/search/` | Application | Move sets, RL agents, temperature schedules. |
-| `src/lib.rs` | Application | Rust extension (`oxiphylo`), exposed through PyO3. |
-| `docs/tex/` | Application | LaTeX source for the technical document. |
-| `infra/` | Infrastructure | CI/CD, agentic workflow, experiment tracking (Aim). |
-| `benches/`, `tests/` | Infrastructure | Criterion benchmarks (Rust), pytest suite, and integration tests. |
-| `docs/source/` | Infrastructure | Sphinx API documentation. |
+Infrastructure paths first, application paths after — the grouping below
+carries the domain; `CLAUDE.md` states why keeping it liftable matters.
+
+| Path | Contents |
+| --- | --- |
+| `infra/` | CI/CD, agentic workflow, experiment tracking (Aim). |
+| `benches/`, `tests/` | Criterion benchmarks (Rust), pytest suite, and integration tests. |
+| `docs/source/` | Sphinx API documentation. |
+| `python/phylo/` | Python package: re-exports, typed extension stubs, stub CLI. |
+| `python/phylo/sim/` | Data generation and ground-truth retention. |
+| `python/phylo/likelihood/` | Felsenstein pruning; CPU, CUDA, and Metal dispatch. |
+| `python/phylo/opt/` | Continuous parameter fitting via autodiff (PyTorch). |
+| `python/phylo/search/` | Move sets, RL agents, temperature schedules. |
+| `src/lib.rs` | Rust extension (`oxiphylo`), exposed through PyO3. |
+| `docs/tex/` | LaTeX source for the technical document. |
 
 *Note: Each directory contains a localized `CLAUDE.md` defining specific constraints (e.g., `sim/` oracles, `search/` constraints). These append to, rather than override, the root `CLAUDE.md`.*
-
----
-
-## Application Standards
-
-### Performance
-
-Accelerate hot paths via GPU (PyTorch/Triton/JAX) *only* if benchmarking proves a $\ge 10x$ speedup over vectorized NumPy at realistic sizes. Otherwise, use Rust. The pure Python implementation must be retained as a pinned regression oracle.
-
-### Testing
-
-Assert scientific validity. Generate fixtures via component-wise simulation under known generative models. Shape-only or runs-without-raising assertions are strictly forbidden.
-
-### Technical Document
-
-`docs/tex/` is versioned as code. Update it in the same PR that alters a model, equation, algorithm, or QA figure.
 
 ---
 
@@ -88,3 +68,19 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 2. **Validate:** Must use OSI-approved licenses. Flag items with $<1000$ GitHub stars.
 3. **Lock:** Run `uv lock` or update `Cargo.lock` and commit in the same PR.
 4. **Justify:** Explain the inclusion in the PR description.
+
+---
+
+## Application Standards
+
+### Performance
+
+Accelerate hot paths via GPU (PyTorch/Triton/JAX) *only* if benchmarking proves a $\ge 10x$ speedup over vectorized NumPy at realistic sizes. Otherwise, use Rust. The pure Python implementation must be retained as a pinned regression oracle.
+
+### Testing
+
+Assert scientific validity. Generate fixtures via component-wise simulation under known generative models. Shape-only or runs-without-raising assertions are strictly forbidden.
+
+### Technical Document
+
+`docs/tex/` is versioned as code. Update it in the same PR that alters a model, equation, algorithm, or QA figure.

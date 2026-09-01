@@ -28,15 +28,18 @@ audits, and building the docs.
 
 ## Documentation
 
-| Document | Contents | Axis |
-| --- | --- | --- |
-| [INSTALL.md](INSTALL.md) | Installing, building, running the tests, and working locally | infrastructure |
-| [DEV.md](DEV.md) | Repository layout, CI jobs, conventions, and how a change is reviewed | both, marked per section |
-| [ROADMAP.md](ROADMAP.md) | The long-term scientific goal, requirements, and milestones | application |
-| [CHANGELOG.md](CHANGELOG.md) | What has landed so far | infrastructure |
-| `CLAUDE.md` | The authoritative conventions, including performance and testing policy | both |
-| `docs/source/` | Sphinx API documentation, built from the docstrings | infrastructure |
-| `docs/tex/` | LaTeX source for the technical document: background, equations, algorithms | application |
+Infrastructure documents first, application documents last; `DEV.md` and
+`CLAUDE.md` span both and sit between.
+
+| Document | Contents |
+| --- | --- |
+| [INSTALL.md](INSTALL.md) | Installing, building, running the tests, and working locally |
+| [CHANGELOG.md](CHANGELOG.md) | What has landed so far |
+| `docs/source/` | Sphinx API documentation, built from the docstrings |
+| [DEV.md](DEV.md) | Repository layout, CI jobs, conventions, and how a change is reviewed |
+| `CLAUDE.md` | The authoritative conventions, including performance and testing policy |
+| [ROADMAP.md](ROADMAP.md) | The long-term scientific goal, requirements, and milestones |
+| `docs/tex/` | LaTeX source for the technical document: background, equations, algorithms |
 
 ## License
 

@@ -38,6 +38,17 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
 
 ### Changed
 
+- Doc reorganization for structural infra/application separation (#32):
+  dropped the explicit `Domain`/`Axis` label columns from `DEV.md`'s
+  repository-layout table and `README.md`'s documentation table, and
+  reordered both tables and `DEV.md`'s top-level sections
+  infrastructure-first, application-last, so file placement and ordering
+  carry the domain instead of a narrated label. `infra/`, the per-module
+  `CLAUDE.md` files, `.pre-commit-config.yaml`, and `.github/workflows/ci.yml`
+  were audited and confirmed free of phylogenetic assumptions outside the
+  two expected application hooks (`--cov=phylo`, the `oxiphylo` smoke
+  import).
+
 - Documentation split by audience: `README.md` is an overview, `INSTALL.md`
   covers installing and working locally, `DEV.md` covers repository layout,
   CI, and conventions, and `ROADMAP.md` states the long-term scientific goal.
