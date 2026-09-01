@@ -83,8 +83,10 @@ pip-audit    # Python, from the dev extra
 cargo audit  # Rust; install once with `cargo install cargo-audit --locked`
 ```
 
-Both run in CI's `audit` job, so a newly disclosed advisory against a pinned
-dependency fails the build.
+Both run in CI's `audit` job when `uv.lock` or `Cargo.lock` changed, and
+weekly on `main` regardless, so a newly disclosed advisory against a pinned
+dependency fails the build without every run paying for an audit of an
+unchanged graph. [DEV.md](DEV.md) describes the caching.
 
 ## Building the documentation
 

@@ -5,6 +5,12 @@ on:
     branches: [main]
   push:
     branches: [main]
+  schedule:
+    # The audit job below skips when the dependency graph is unchanged, but
+    # advisories are disclosed against dependencies that never change. This
+    # weekly run audits main regardless, so a new advisory surfaces without
+    # waiting for someone to touch a lockfile.
+    - cron: "17 6 * * 1"
 
 # Pinned runner image and a pinned uv keep CI reproducible; the Rust toolchain
 # is pinned by rust-toolchain.toml and the dependency graphs by uv.lock and
@@ -12,6 +18,7 @@ on:
 # stale rather than silently resolving something new.
 env:
   UV_VERSION: "0.8.17"
+  CARGO_AUDIT_VERSION: "0.22.2"
 
 jobs:
   lint:
@@ -103,15 +110,56 @@ jobs:
         with:
           python-version: "3.12"
       - uses: dtolnay/rust-toolchain@stable
-      - run: pip install "uv==${UV_VERSION}"
-      - run: uv sync --locked --extra dev
+
+      # What an audit examines is fixed by the two lockfiles, so their hash
+      # decides whether one is needed. A restored marker means this exact
+      # dependency graph already passed, and every step below is skipped. The
+      # ISO week in the key rotates it, so an unchanged graph is still
+      # re-checked against a freshly fetched advisory database each week.
+      - name: Stamp the ISO week
+        id: week
+        run: echo "stamp=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+      - name: Look for an earlier audit of this dependency graph
+        id: audited
+        uses: actions/cache@v4
+        with:
+          path: .audited
+          key: audited-${{ steps.week.outputs.stamp }}-${{ hashFiles('uv.lock', 'Cargo.lock') }}
+
+      - name: Install uv
+        if: steps.audited.outputs.cache-hit != 'true'
+        run: pip install "uv==${UV_VERSION}"
+      - name: Install the dev extra
+        if: steps.audited.outputs.cache-hit != 'true'
+        run: uv sync --locked --extra dev
       - name: Audit Python dependencies
+        if: steps.audited.outputs.cache-hit != 'true'
         run: uv run pip-audit
+
+      # Building cargo-audit costs about four minutes, so the binary is cached
+      # against the version pinned above: only the first run after a version
+      # bump pays for it.
+      - name: Restore cargo-audit
+        if: steps.audited.outputs.cache-hit != 'true'
+        id: cargo_audit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-audit
+          key: cargo-audit-${{ env.CARGO_AUDIT_VERSION }}-ubuntu-24.04
       # `--locked` builds cargo-audit from its own lockfile. Without it the
       # resolve floats, and a transitive dependency that raises its minimum
       # rustc past the version rust-toolchain.toml pins breaks the job --
       # which is what happened with kstring 2.0.4 requiring rustc 1.96.0.
       - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
+        if: steps.audited.outputs.cache-hit != 'true' && steps.cargo_audit.outputs.cache-hit != 'true'
+        run: cargo install cargo-audit --locked --version "${CARGO_AUDIT_VERSION}"
       - name: Audit Rust dependencies
+        if: steps.audited.outputs.cache-hit != 'true'
         run: cargo audit
+
+      # Written only after both audits pass, and saved by actions/cache when
+      # the job succeeds -- so a failed audit records nothing and the next run
+      # repeats it.
+      - name: Record that this dependency graph passed
+        if: steps.audited.outputs.cache-hit != 'true'
+        run: date -u > .audited
