@@ -37,6 +37,9 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
 
 ### Changed
 
+- Documentation split by audience: `README.md` is an overview, `INSTALL.md`
+  covers installing and working locally, `DEV.md` covers repository layout,
+  CI, and conventions, and `ROADMAP.md` states the long-term scientific goal.
 - `mypy` now runs in `strict` mode over `python/` and `tests/`, so an
   unannotated signature fails CI.
 - Tests are linted like the rest of the repo; ruff's blanket `"tests/**" =

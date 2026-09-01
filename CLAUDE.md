@@ -24,9 +24,11 @@ the updated `uv.lock` in the same PR.
 ## Conventions
 
 - Prefer vectorized (NumPy/array-based) implementations over Python loops on
-  hot paths; justify any deviation with a comment.
+  hot paths; justify any deviation with a comment. See Performance below for
+  which accelerator a hot path graduates to.
 - Any change affecting numerical output must include or update a test that
-  pins expected values (or tolerances).
+  pins expected values (or tolerances). See Testing below for what counts as
+  a test here.
 - Keep dependencies minimal — new dependencies should be justified in the PR
   description.
 - Do not silently change default parameters of scientific algorithms.
@@ -39,6 +41,95 @@ the updated `uv.lock` in the same PR.
   `[package].version` (`pyproject.toml` reads it dynamically via maturin —
   see `README.md`'s Versioning section). Never hardcode a second version
   number anywhere.
+
+## Performance
+
+Hot paths get the fastest implementation that keeps the numbers correct and
+the code reviewable. Pick the target in this order:
+
+- **GPU, where the arithmetic earns it.** When a hot path is data-parallel
+  and a GPU kernel plausibly buys 10x or more over the vectorized NumPy
+  reference at the problem sizes we actually run, put it on the GPU through
+  the standard Python ecosystem — PyTorch, Triton, or JAX — rather than
+  hand-written CUDA. Those frameworks already carry autodiff, batching, and
+  device portability, all of which a bespoke kernel would have to
+  reimplement and maintain.
+- **Otherwise the Rust backend.** A hot path that stays on the CPU — control
+  flow, tree traversal, irregular memory access, small problem sizes — moves
+  into `oxiphylo` (Rust, via PyO3), not into hand-tuned Python.
+- **10x is a measurement, not a hunch.** Benchmark the candidate against the
+  NumPy reference at realistic sizes before committing to a GPU port, and
+  report both numbers in the PR description. A speedup that only appears at
+  sizes we never run does not justify the port.
+- **Every accelerated kernel keeps its reference.** The NumPy (or pure-Python)
+  implementation stays as the oracle, and a regression test pins the
+  accelerated output against it within an explicit tolerance. A kernel that
+  is fast and wrong is a regression, not an optimization.
+- **Benchmark what you accelerate.** New or materially changed hot functions
+  get a `pytest-benchmark` test (Python/GPU) or a `criterion` benchmark in
+  `benches/` (Rust), per the Definition of done below.
+
+PyTorch, Triton, and JAX are not dependencies of this project today. This
+section records where they belong when the work arrives; adding one still
+needs explicit permission first, per Dependencies & external tools below.
+
+## Testing
+
+Tests establish scientific validity. A test that cannot fail for a
+scientific reason does not belong in the suite.
+
+- **Simulate component-wise.** Build fixtures by simulating from a known
+  generative model — rate matrix, branch lengths, root distribution, tree —
+  with an explicitly seeded generator, then test each component against the
+  value that model implies. Simulating the whole pipeline and checking only
+  the end-to-end output hides which component broke.
+- **Pin numbers against an independent source.** Expected values come from
+  an analytic result, a brute-force computation, or a second implementation
+  — not from recording what the code printed on the day it was written.
+  State the tolerance explicitly.
+- **Check the invariants the mathematics guarantees.** Rows of a transition
+  matrix sum to one; a reversible model satisfies detailed balance
+  (`π_i q_ij = π_j q_ji`); pruning-algorithm likelihoods match brute-force
+  marginalization on small trees; autodiff gradients match finite
+  differences; likelihood increases monotonically under optimization.
+- **Keep the QA framework current.** The suite emits scientific-style plots
+  and tables (parameter recovery, likelihood surfaces, convergence,
+  timings). Their captions live in the LaTeX technical document (see
+  Technical document below) and are updated in the same PR that changes the
+  figure — a plot whose caption describes an older experiment is worse than
+  no plot.
+- **Never write a test that obfuscates validity.** Asserting only that an
+  array has a given shape or dtype, that a call returns without raising, or
+  that a placeholder prints something is coverage theatre, not testing. If
+  the science is not implemented yet, leave the test unwritten and record
+  the gap under Known gaps instead of banking coverage against a stub.
+
+## Technical document
+
+`docs/tex/` holds the LaTeX source for the project's technical PDF: the
+scientific background, model definitions, equations, and algorithm
+statements behind the code. Treat it as part of the code, not an appendix
+to it — a PR that adds or changes a model, an equation, an algorithm, or a
+QA figure updates the document in the same PR.
+
+## Reference sources
+
+Cite these texts in the technical document wherever they cover the
+background. Where an algorithm we implement appears in one of them, follow
+its formulation and notation, and state explicitly where and why we
+deviate.
+
+- Hwu, Kirk & El Hajj, *Programming Massively Parallel Processors* — GPU
+  kernels, memory hierarchy, occupancy, parallel reduction and scan.
+- MacKay, *Information Theory, Inference, and Learning Algorithms* —
+  inference, message passing, Monte Carlo, model comparison.
+- Goodfellow, Bengio & Courville, *Deep Learning*, and Prince,
+  *Understanding Deep Learning* — architectures, optimization, automatic
+  differentiation.
+- Sutton & Barto, *Reinforcement Learning: An Introduction* — MDPs, value
+  and policy methods, exploration, search.
+- Felsenstein, *Inferring Phylogenies* — substitution models, the pruning
+  algorithm, tree search, parsimony and likelihood criteria.
 
 ## Writing style
 
@@ -93,7 +184,9 @@ docs/CI-only change) should leave the repo in this state for the code it
 touches — use judgment on what's proportionate to the PR's size, but don't
 skip an item because it's inconvenient:
 
-- **Regression test**: pins expected output per the Conventions above.
+- **Regression test**: pins expected output per the Conventions above, and
+  tests scientific validity per Testing above — shape-only or
+  runs-without-raising assertions do not satisfy this item.
 - **Benchmark**: any new or materially changed hot function gets a
   `pytest-benchmark` test (Python) or a `criterion` benchmark in `benches/`
   (Rust), and the resulting numbers get reported in the PR description as
@@ -112,7 +205,9 @@ skip an item because it's inconvenient:
   build target, or category of code that none of the existing CI jobs
   would exercise, add or extend a CI job for it in the same PR — don't
   leave a new category of code untested "for a follow-up."
-- **Docs**: see the Conventions bullet above (README/CLAUDE.md/CHANGELOG).
+- **Docs**: see the Conventions bullet above (README/CLAUDE.md/CHANGELOG),
+  plus the technical document when the PR changes a model, equation,
+  algorithm, or QA figure caption (see Technical document above).
 - **Dependency hygiene**: any new dependency follows the Dependencies &
   external tools rules below.
 
@@ -176,6 +271,14 @@ a gap deliberately, in its own PR, rather than assuming a past PR covered it.
   (`double`, `pairwise_distance`). The coverage gate and benchmarks are
   calibrated against ~5 statements of trivial Python, so treat the 100%
   coverage figure as a smoke test, not evidence of a tested codebase.
+- **The current suite violates the Testing rules above.** The benchmark test
+  asserts only an output shape, and the CLI test asserts only that a
+  placeholder printed something. They date from the scaffolding and are
+  exactly the pattern Testing forbids. Replace them with validity tests as
+  the science lands; do not copy them as a template.
+- **No simulation or QA framework yet.** Nothing generates the
+  component-wise simulated fixtures Testing requires, and no test emits the
+  plots or tables whose captions the technical document is meant to carry.
 - **The Rust backend accelerates nothing.** The only numerical function lives
   in `tests/`, in pure NumPy. Nothing yet demonstrates the intended pattern: a
   kernel in Rust, called from Python, benchmarked against a NumPy reference,
