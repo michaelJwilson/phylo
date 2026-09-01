@@ -4,9 +4,13 @@ build-backend = "maturin"
 
 [project]
 name = "phylo"
-version = "0.1.0"
+# Single source of truth for the version is Cargo.toml's [package].version;
+# maturin reads it from there when `dynamic = ["version"]` is set, so the
+# two files can't silently drift out of sync.
+dynamic = ["version"]
 description = ""
 authors = [{ name = "M. J. Wilson" }]
+license = "MIT"
 requires-python = ">=3.12.2"
 readme = "README.md"
 # Intentionally empty: no code under python/phylo/ imports an external
@@ -26,7 +30,6 @@ test = [
     "pytest-cov>=4.0.0",
     "pytest-xdist>=3.0.0",
     "pytest-benchmark>=4",
-    "hypothesis>=6.100",
     "numpy>=1.26.0",
 ]
 
@@ -87,3 +90,12 @@ unfixable = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["phylo"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]

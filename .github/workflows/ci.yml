@@ -67,4 +67,4 @@ jobs:
           cache: pip
       - uses: dtolnay/rust-toolchain@stable
       - run: pip install ".[test]"
-      - run: pytest
+      - run: pytest --cov=phylo --cov-report=term-missing --cov-fail-under=90

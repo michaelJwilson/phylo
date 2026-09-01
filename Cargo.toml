@@ -2,6 +2,8 @@
 name = "oxiphylo"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/michaelJwilson/phylo"
 
 [lib]
 # "rlib" (alongside "cdylib") lets benches/ and tests/ link this crate

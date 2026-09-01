@@ -1,5 +1,9 @@
 # phylo
 
+[![CI](https://github.com/michaelJwilson/phylo/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelJwilson/phylo/actions/workflows/ci.yml)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 `phylo` is a high-performance scientific Python package with an optional
 Rust-accelerated backend (`phylo.oxiphylo`, via
 [PyO3](https://pyo3.rs)/[maturin](https://www.maturin.rs)).
@@ -31,9 +35,8 @@ importable from Python.
 
 ```
 pip install ".[test]"
-pytest      # Python: regression tests (tests/regression), property-based
-            # tests (tests/properties), a pytest-benchmark suite
-            # (tests/benchmarks), and an integration test that the Rust
+pytest      # Python: regression tests (tests/regression), a pytest-benchmark
+            # suite (tests/benchmarks), and an integration test that the Rust
             # extension imports correctly (tests/test_oxiphylo_bindings.py)
 cargo test  # Rust: unit tests for the PyO3 bindings (src/lib.rs)
 cargo bench # Rust: Criterion benchmarks (benches/)
@@ -62,7 +65,17 @@ Every pull request against `main` runs five GitHub Actions jobs
 format --check`, `mypy`), `rust-lint` (`cargo clippy`, `cargo fmt --check`),
 `rust-tests` (`cargo test` and `cargo bench`), `build` (compiles the
 extension and smoke-imports `phylo.oxiphylo`), and `python-tests` (the full
-`pytest` suite, including the `hypothesis` property tests).
+`pytest` suite, gated on a minimum coverage threshold via `pytest-cov`).
+
+## Versioning
+
+The package version lives in one place, `Cargo.toml`'s `[package].version`;
+`pyproject.toml` declares it `dynamic` and maturin reads it from there, so
+the two can't silently drift out of sync.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
 
 ## Development approach
 
