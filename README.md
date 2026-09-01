@@ -84,16 +84,29 @@ Open `docs/_build/html/index.html`. CI builds these docs with `-W`
 (warnings treated as errors) on every PR, so a broken docstring or a Sphinx
 warning fails the build rather than shipping silently.
 
+The technical document — scientific background, model definitions,
+equations, and algorithms — is LaTeX under `docs/tex/`:
+
+```
+sudo apt-get install -y --no-install-recommends latexmk texlive-latex-base \
+  texlive-latex-recommended texlive-fonts-recommended texlive-science
+cd docs/tex && latexmk -pdf main.tex
+```
+
+Open `docs/tex/main.pdf`. CI builds it on every PR and fails on undefined
+references or citations. The PDF is a build artifact and is not committed.
+
 ## Continuous integration
 
-Every pull request against `main` runs seven GitHub Actions jobs
+Every pull request against `main` runs eight GitHub Actions jobs
 (`.github/workflows/ci.yml`) ahead of review: `lint` (`ruff check`, `ruff
 format --check`, strict `mypy`), `rust-lint` (`cargo clippy`, `cargo fmt
 --check`), `rust-tests` (`cargo test` and `cargo bench`), `build` (compiles
 the extension and smoke-imports `phylo.oxiphylo`), `python-tests` (the full
 `pytest` suite, gated on a minimum coverage threshold via `pytest-cov`),
-`docs` (the Sphinx build above, with warnings as errors), and `audit`
-(`pip-audit` and `cargo audit`).
+`docs` (the Sphinx build above, with warnings as errors), `technical-doc`
+(the LaTeX build above, failing on undefined references or citations), and
+`audit` (`pip-audit` and `cargo audit`).
 
 ## Reproducibility
 

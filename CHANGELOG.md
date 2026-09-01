@@ -17,6 +17,11 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
 - Rust test suite: `cargo test` unit tests and a `criterion` benchmark
   (`benches/`).
 - Sphinx API docs (`docs/`), built in CI with warnings as errors.
+- Technical document (`docs/tex/`): a LaTeX PDF covering the substitution
+  model, the Felsenstein likelihood and pruning algorithm, simulation, tree
+  search with NNI and SPR move sets, gradients, the reinforcement-learning
+  formulation, and the computational structure behind them. Built in CI,
+  which fails on undefined references or citations.
 - GitHub Actions CI, required on every PR: Python lint/type-check (`ruff`,
   strict `mypy`), Rust lint/format (`clippy`, `cargo fmt`), Rust tests +
   benchmark, a combined Python/Rust build check, the Python test suite, the
