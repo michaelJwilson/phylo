@@ -41,15 +41,26 @@ Eight jobs (`.github/workflows/ci.yml`) run on every pull request against
 | `python-tests` | the `pytest` suite, gated on a minimum coverage threshold |
 | `docs` | the Sphinx build with warnings as errors |
 | `technical-doc` | the LaTeX build, failing on undefined references or citations |
-| `audit` | `pip-audit` and `cargo audit` |
+| `audit` | `pip-audit` and `cargo audit`, when the locked dependency graph changed |
 
-Two details worth knowing before editing the workflow:
+Three details worth knowing before editing the workflow:
 
 - **The `build` job deliberately uses plain `pip`**, not the lockfile. It
   exercises the path a fresh consumer takes, which no lockfile covers.
 - **Job names are load-bearing.** Branch protection matches required checks by
   name, so renaming a job silently drops its protection. Update the
   protection rule in the same change as any rename.
+- **The `audit` job skips its own work when nothing it audits has changed.**
+  What an audit examines is fixed by `uv.lock` and `Cargo.lock`, so a cache
+  marker keyed on their hash records that this exact graph passed, and the
+  job exits early on a hit. Building `cargo-audit` costs about four minutes,
+  so the binary is cached separately against the version pinned in the
+  workflow's `env`. Two consequences: the key carries the ISO week, so an
+  unchanged graph is still re-checked weekly against a freshly fetched
+  advisory database, and a `schedule:` trigger audits `main` weekly so a
+  newly disclosed advisory surfaces without waiting on a lockfile change.
+  The marker is written only after both audits pass, and `actions/cache`
+  saves it only when the job succeeds, so a failure records nothing.
 
 ## Reproducibility
 

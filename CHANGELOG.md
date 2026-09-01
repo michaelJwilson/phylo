@@ -46,6 +46,11 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
   ["ALL"]` exemption is gone.
 - Benchmarks seed via `np.random.default_rng` rather than the legacy global
   `np.random.seed`, and ruff's `NPY002` now enforces that.
+- CI audits only the dependency graphs that changed: a marker keyed on the
+  hash of `uv.lock` and `Cargo.lock` skips the `audit` job's work when that
+  exact graph already passed. The key carries the ISO week, and a weekly
+  scheduled run audits `main`, so advisories disclosed against unchanged
+  pins still surface.
 
 ### Fixed
 
@@ -54,7 +59,7 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
   imports. It now installs `dev` and `test`.
 - CI's Rust audit built `cargo-audit` from a floating resolve, which broke
   when a transitive dependency raised its minimum `rustc` above the pinned
-  1.94.1. It now installs with `--locked`.
+  1.94.1. It now installs with `--locked`, at a pinned version, from a cache.
 
 ### Security
 
