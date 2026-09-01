@@ -1,8 +1,8 @@
-# Installing and running phylo locally
+# Installing and running locally
 
 Everything needed to get a working checkout: the environment, the build, the
 test suites, and the checks CI will run against your branch. For how the
-project is developed — layout, CI, conventions — see [DEV.md](DEV.md).
+project is developed in broader terms — layout, CI, conventions — see [DEV.md](DEV.md).
 
 ## Prerequisites
 
