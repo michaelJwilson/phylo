@@ -24,7 +24,10 @@ jobs:
           python-version: "3.12"
       - uses: dtolnay/rust-toolchain@stable
       - run: pip install "uv==${UV_VERSION}"
-      - run: uv sync --locked --extra dev
+      # The test extra is needed as well as dev: mypy is configured to check
+      # tests/, which imports numpy and pytest, and strict mode fails on an
+      # unresolvable import rather than ignoring it.
+      - run: uv sync --locked --extra dev --extra test
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy
@@ -134,7 +137,11 @@ jobs:
       - run: uv sync --locked --extra dev
       - name: Audit Python dependencies
         run: uv run pip-audit
+      # `--locked` builds cargo-audit from its own lockfile. Without it the
+      # resolve floats, and a transitive dependency that raises its minimum
+      # rustc past the version rust-toolchain.toml pins breaks the job --
+      # which is what happened with kstring 2.0.4 requiring rustc 1.96.0.
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
       - name: Audit Rust dependencies
-        uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        run: cargo audit
