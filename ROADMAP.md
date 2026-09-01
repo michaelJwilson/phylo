@@ -187,9 +187,10 @@ distribution for an assumed tree, efficiently, on realistic simulated data.
   recursion, in log space with per-node rescaling that must itself stay
   differentiable. Branch-length derivatives use the eigendecomposition of a
   reversible `Q`, so one decomposition serves every branch.
-- **Frameworks.** PyTorch or JAX, per `CLAUDE.md`'s Performance section.
-  Neither is a dependency of this project today, and adding one needs
-  explicit permission first.
+- **Framework.** PyTorch, decided: its MPS backend is the mature path on
+  Apple Silicon, which the memory requirement above targets alongside CUDA.
+  It enters `pyproject.toml` with the first code that imports it, not
+  before.
 - **Optimizer.** A quasi-Newton or trust-region method for the standalone
   fit; a first-order method when the fit sits inside an RL training loop.
 - **Done when** gradients match central finite differences, simulated
@@ -253,8 +254,10 @@ One record per run, for both the fixed-tree problem and the search.
   time, evaluation counts, the final tree as a canonical Newick string, and
   the figures and tables the QA framework emits.
 - **Storage.** A run directory plus a machine-readable manifest this
-  repository owns. A third-party tracker (MLflow, Weights & Biases) is a
-  dependency decision that needs explicit permission, not a default.
+  repository owns, and **Aim** for tracking curves across many runs —
+  decided for being open source and self-hostable, so likelihood- and
+  temperature-versus-episode curves need no hosted account. Aim arrives with
+  the first code that records a run.
 - **Done when** a recorded run replays from its manifest alone and produces
   the same numbers — bitwise where seed and hardware permit, within stated
   tolerance otherwise — and the QA figures are generated from the run store
@@ -271,7 +274,11 @@ Rank variants, and keep a defensible current best.
   `k`, and rate heterogeneity, plus standard public alignments, each with a
   fixed likelihood-evaluation budget.
 - **Metrics.** For the fixed-tree task: parameter error against the known
-  truth, and time per likelihood-and-gradient evaluation. For search: best
+  truth, and time per likelihood-and-gradient evaluation. Topological error
+  is the normalized Robinson–Foulds distance, implemented here and tested
+  against hand-computed cases; an external implementation such as DendroPy
+  is worth adopting later as an independent cross-check, but is not a
+  dependency now. For search: best
   log-likelihood reached at a fixed evaluation budget, and evaluations
   needed to reach a target likelihood. Budget-matched, because every method
   wins given unbounded evaluations.
