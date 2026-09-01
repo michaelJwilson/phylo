@@ -23,12 +23,14 @@ dev = [
     "ruff>=0.9.9,<0.10",
     "mypy>=1.0.0",
     "pre-commit>=3.5.0",
+    "pip-audit>=2.7",
 ]
 docs = [
     "sphinx>=7,<9",
 ]
 test = [
-    "pytest>=8.3.5,<9",
+    # >=9.0.3 is the fix for PYSEC-2026-1845; the previous <9 cap blocked it.
+    "pytest>=9.0.3",
     "pytest-cov>=4.0.0",
     "pytest-xdist>=3.0.0",
     "pytest-benchmark>=4",
@@ -50,9 +52,10 @@ ignore = [
   "G004", # f-string in logger
   "T201", # print statements
   "PLR2004", # magic value in assert
-  "NPY002", # legacy numpy calls
-  "ANN",  # type-annotation presence is enforced by mypy, not ruff, here
+  "ANN",  # annotation presence is enforced by mypy --strict, not ruff
 ]
+# NPY002 (legacy np.random calls) is deliberately NOT ignored: seeded
+# `np.random.default_rng` is the reproducibility convention here.
 
 extend-select = [
   "B",           # flake8-bugbear
@@ -88,7 +91,21 @@ unfixable = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["ALL"]
+# Tests are linted like the rest of the repo -- scientific correctness lives
+# here. Only rules that fight normal pytest style are relaxed.
+"tests/**" = [
+  "S101",    # asserts are the point of a test
+  "PLR2004", # literal expected values are the point of a regression test
+]
+
+[tool.mypy]
+strict = true
+files = ["python", "tests"]
+
+[[tool.mypy.overrides]]
+# pytest-benchmark ships no py.typed marker.
+module = "pytest_benchmark.*"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

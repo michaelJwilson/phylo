@@ -7,7 +7,6 @@ CLI itself is still a stub.
 from __future__ import annotations
 
 import pytest
-
 from phylo.scripts.run_phylo import main
 
 
