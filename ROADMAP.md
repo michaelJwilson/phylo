@@ -80,8 +80,8 @@ This rests on the canonical form defined in workstream 2 below: raw Newick is
 not unique, and feeding a model many spellings of one topology teaches it
 distinctions that carry no phylogenetic meaning.
 
-The technical document states all three precisely; `CLAUDE.md`'s reference
-list groups the sources they draw on.
+The technical document states all three precisely; `CLAUDE.md`'s Technical
+Document & Reference Sources section groups the sources they draw on.
 
 ## What it rests on
 
@@ -93,7 +93,7 @@ the engineering effort goes:
   needs this at scale.
 - **Fast likelihood evaluation.** Every proposed move costs at least one
   likelihood evaluation, so the pruning algorithm sits on the hottest path in
-  the project. Per `CLAUDE.md`'s Performance rules, it goes to the GPU
+  the project. Per `CLAUDE.md`'s Performance section, it goes to the GPU
   (PyTorch, Triton, or JAX) if the arithmetic earns 10x over the vectorized
   NumPy reference, and to the Rust backend otherwise.
 - **Automatic differentiation.** Branch lengths, rate-matrix parameters, and
@@ -103,7 +103,7 @@ the engineering effort goes:
 - **Validity, not plausibility.** Every layer is tested against simulated data
   with known parameters, and against independent computations — brute-force
   marginalization on small trees, finite-difference checks on gradients. See
-  `CLAUDE.md`'s Testing section.
+  `CLAUDE.md`'s Testing & Quality Assurance section.
 
 ## Work breakdown
 
@@ -187,7 +187,7 @@ distribution for an assumed tree, efficiently, on realistic simulated data.
   recursion, in log space with per-node rescaling that must itself stay
   differentiable. Branch-length derivatives use the eigendecomposition of a
   reversible `Q`, so one decomposition serves every branch.
-- **Frameworks.** PyTorch or JAX, per the performance rule in `CLAUDE.md`.
+- **Frameworks.** PyTorch or JAX, per `CLAUDE.md`'s Performance section.
   Neither is a dependency of this project today, and adding one needs
   explicit permission first.
 - **Optimizer.** A quasi-Newton or trust-region method for the standalone
@@ -317,12 +317,11 @@ for the baseline it has to beat, and on 8 for the harness that judges it.
 ## Background reading
 
 The technical document (`docs/tex/`) develops the theory and cites its
-sources, which `CLAUDE.md` groups in full: **infrastructure** — software
-craft, systems and hardware, algorithms and discrete mathematics, numerical
-optimization — and **application** — phylogenetics and sequence analysis,
-probabilistic inference and graphical models, statistical physics and Monte
-Carlo, information and coding theory, the geometry of statistical models, and
-learning and decision making. Felsenstein's *Inferring Phylogenies* carries
-the substitution models and tree search, Sutton & Barto the RL formulation,
-MacKay and Koller & Friedman the inference machinery, and *Programming
-Massively Parallel Processors* the GPU kernels.
+sources, which `CLAUDE.md` groups as a routing table: **infrastructure**
+(software craft, systems and hardware), **optimization** (algorithms and
+discrete mathematics, numerical optimization, probabilistic inference,
+statistical physics, information geometry, learning and RL), and
+**application** (phylogenetics, information and quantum). Felsenstein's
+*Inferring Phylogenies* carries the substitution models and tree search,
+Sutton & Barto the RL formulation, MacKay and Koller & Friedman the inference
+machinery, and *Programming Massively Parallel Processors* the GPU kernels.

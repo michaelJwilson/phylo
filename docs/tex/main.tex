@@ -548,13 +548,12 @@ go.
 
 \section{Sources}
 
-The texts this project works from, split by what each informs:
-\emph{infrastructure} --- how the code is built, structured, and made fast
---- and \emph{application} --- the science it computes. Where an algorithm
-we implement appears in one of them, this document follows its formulation
-and notation and says where it deviates.
+The texts this project works from, grouped as \texttt{CLAUDE.md} groups them
+--- a routing table keyed on what each informs, rather than a reading list.
+Where an algorithm we implement appears in one of them, this document
+follows its formulation and notation and says where it deviates.
 
-\subsection{Infrastructure}
+\subsection{Infrastructure: build, structure, and speed}
 
 \begin{description}
   \item[Software craft.] \citet{martin2008} on the structure that keeps a
@@ -563,47 +562,53 @@ and notation and says where it deviates.
   \item[Systems and hardware.] \citet{bryant2015} on the memory hierarchy
     and where CPU time goes; \citet{pmpp2022} on GPU kernels, occupancy,
     and parallel reduction and scan.
+\end{description}
+
+\subsection{Optimization: discrete and continuous}
+
+\begin{description}
   \item[Algorithms and discrete mathematics.] \citet{clrs2022} on data
     structures, traversal, complexity, and branch and bound;
     \citet{rosen2019} on the counting and graph theory behind tree space.
   \item[Numerical optimization.] \citet{nocedal2006} on line search, trust
     region, and quasi-Newton methods for the continuous parameters.
-\end{description}
-
-\subsection{Application}
-
-\begin{description}
-  \item[Phylogenetics and sequence analysis.] \citet{felsenstein2004} on
-    substitution models, pruning, tree search, and the parsimony and
-    likelihood criteria; \citet{durbin1998} on probabilistic models of
-    sequences; \citet{compeau2015} on the algorithmic view of alignment and
-    phylogeny construction; \citet{pachter2005} on the algebraic structure
-    of phylogenetic models and their invariants, which offer topology tests
-    that avoid likelihood optimization altogether.
-  \item[Probabilistic inference and graphical models.] \citet{mackay2003}
-    on inference, message passing, and Monte Carlo; \citet{koller2009} on
-    factor graphs and the exact-inference machinery that
-    \eqref{eq:pruning} instantiates; \citet{frey1998} on belief propagation
-    read across inference and coding; \citet{ortega2022} on spectral
-    methods for signals indexed by graph vertices.
-  \item[Statistical physics and Monte Carlo.] \citet{mezard2009} on
-    inference over sparse graphs and phase transitions in hard
-    combinatorial problems --- tree search being one; \citet{newman1999} on
-    sampling, equilibration, and error estimates from correlated samples.
-  \item[Information, coding, and quantum computation.] \citet{blahut2003}
-    on algebraic coding, which is the background for the compressed tree
-    encodings in Section~\ref{sec:extensions}; \citet{nielsen2010} on
-    quantum information and algorithms, background only --- nothing here
-    targets quantum hardware.
-  \item[Geometry of statistical models.] \citet{amari2016} on the
-    statistical manifold, the Fisher metric, and natural gradient.
-  \item[Learning and decision making.] \citet{goodfellow2016} and
+  \item[Probabilistic inference.] \citet{mackay2003} on inference, message
+    passing, and Monte Carlo; \citet{koller2009} on factor graphs and the
+    exact-inference machinery that \eqref{eq:pruning} instantiates;
+    \citet{frey1998} on belief propagation read across inference and
+    coding; \citet{ortega2022} on spectral methods for signals indexed by
+    graph vertices.
+  \item[Statistical physics.] \citet{mezard2009} on inference over sparse
+    graphs and phase transitions in hard combinatorial problems --- tree
+    search being one; \citet{newman1999} on sampling, equilibration, and
+    error estimates from correlated samples, which the benchmark harness
+    needs to rank variants rather than noise.
+  \item[Information geometry.] \citet{amari2016} on the statistical
+    manifold, the Fisher metric, and natural gradient.
+  \item[Learning and reinforcement learning.] \citet{goodfellow2016} and
     \citet{prince2023} on architectures, optimization, and automatic
     differentiation; \citet{suttonbarto2018} on MDPs, value and policy
     methods, and temporally extended actions; \citet{lapan2020} on
     implementation practice; \citet{raschka2024} on transformer internals
-    and tokenization, for the policy over Newick strings proposed in
-    Section~\ref{sec:extensions}.
+    and tokenization, for the policy over canonical Newick strings proposed
+    in Section~\ref{sec:extensions}.
+\end{description}
+
+\subsection{Application: the science}
+
+\begin{description}
+  \item[Phylogenetics.] \citet{felsenstein2004} on substitution models,
+    pruning, tree search, and the parsimony and likelihood criteria;
+    \citet{durbin1998} on probabilistic models of sequences;
+    \citet{compeau2015} on the algorithmic view of alignment and phylogeny
+    construction; \citet{pachter2005} on the algebraic structure of
+    phylogenetic models and their invariants, which offer topology tests
+    that avoid likelihood optimization altogether.
+  \item[Information and quantum.] \citet{blahut2003} on algebraic coding,
+    which is the background for the compressed tree encodings in
+    Section~\ref{sec:extensions}; \citet{nielsen2010} on quantum
+    information and algorithms, background only --- nothing here targets
+    quantum hardware.
 \end{description}
 
 \bibliographystyle{plainnat}
