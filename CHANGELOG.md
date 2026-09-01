@@ -12,9 +12,8 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
 - Rust backend via `maturin`/PyO3, importable as `phylo.oxiphylo` (currently
   one example binding, `double`).
 - `run_phylo` console-script entry point (placeholder).
-- Python test suite: fixed-input regression tests, `hypothesis`
-  property-based tests, and a `pytest-benchmark` suite (`tests/`), gated on
-  a minimum coverage threshold in CI.
+- Python test suite: fixed-input regression tests and a `pytest-benchmark`
+  suite (`tests/`), gated on a minimum coverage threshold in CI.
 - Rust test suite: `cargo test` unit tests and a `criterion` benchmark
   (`benches/`).
 - Sphinx API docs (`docs/`), built in CI with warnings as errors.
