@@ -1,13 +1,8 @@
 # Installing and running locally
 
 Everything needed to get a working checkout: the environment, the build, the
-test suites, and the checks CI will run against your branch. For how the
-project is developed in broader terms — layout, CI, conventions — see [DEV.md](DEV.md).
-
-Everything here is infrastructure: none of it assumes phylogenetics, and the
-same steps would serve any `uv` plus `maturin` project. The one exception is
-noted where it appears. What the science requires lives in
-[ROADMAP.md](ROADMAP.md) and `CLAUDE.md`.
+test suites, and the checks pre-commit will run against your branch. For how the
+project is community developed, see [DEV.md](DEV.md).
 
 ## Prerequisites
 
@@ -27,9 +22,7 @@ uv sync --locked --all-extras
 source .venv/bin/activate
 ```
 
-`--locked` fails if `uv.lock` has drifted from `pyproject.toml` rather than
-resolving new versions, so the environment matches CI's exactly. After
-changing a dependency, run `uv lock` and commit the updated lockfile in the
+After changing a dependency, run `uv lock` and commit the updated lockfile in the
 same PR.
 
 The extras are `dev` (ruff, mypy, pre-commit, pip-audit), `test` (pytest and
@@ -50,9 +43,6 @@ importable from Python. Reinstall after editing anything under `src/` — the
 compiled module does not rebuild itself.
 
 ## Running the tests
-
-The one application-specific note in this file: what the suite contains is
-phylogenetics, even though how it is run is not.
 
 ```
 pytest      # Python: regression tests (tests/regression), a pytest-benchmark
@@ -91,9 +81,7 @@ python -m infra.changelog --check
 ```
 
 `pre-commit install` runs these same checks on every `git commit`. It does
-not run the dependency audits below: they reach the network and build
-`cargo-audit`, which is too slow to pay on every commit, and CI runs them
-when a lockfile changes.
+not run the dependency audits below:  CI runs them when a lockfile changes.
 
 ## Dependency audits
 
@@ -129,9 +117,7 @@ cd docs/tex && latexmk -pdf main.tex
 ```
 
 Open `docs/tex/main.pdf`. CI builds it on every PR and fails on undefined
-references or citations, so a broken `\ref` or `\cite` fails there rather
-than shipping as a dangling "??" in the PDF. The PDF is a build artifact and
-is not committed.
+references or citations.
 
 ## Benchmarking locally
 
