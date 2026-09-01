@@ -149,6 +149,28 @@ $\Q$ through the normalization
 Without \eqref{eq:normalisation}, $\Q$ and $\branch$ trade off against each
 other and neither is identifiable.
 
+\subsection{The \texorpdfstring{$k$}{k}-state Jukes--Cantor model}
+\label{sec:jc}
+
+The most constrained case is worth stating in closed form, because it gives
+the simulator an oracle that owes nothing to our likelihood code. Take all
+exchange rates equal and $\bpi$ uniform on $k$ states. Under the
+normalization \eqref{eq:normalisation}, the transition probabilities over a
+branch of length $t$ are
+%
+\begin{equation}
+  P_{ii}(t) = \frac{1}{k} + \frac{k-1}{k}\, e^{-kt/(k-1)}, \qquad
+  P_{ij}(t) = \frac{1}{k} - \frac{1}{k}\, e^{-kt/(k-1)} \quad (i \neq j).
+  \label{eq:jc}
+\end{equation}
+%
+At $t = 0$ this gives the identity, and as $t \to \infty$ every entry tends
+to $1/k$, the stationary distribution. For $k = 4$ it is JC69
+\citep{felsenstein2004}. Simulated substitution frequencies are checked
+against \eqref{eq:jc} within Monte Carlo error, which tests the simulator
+independently of the pruning implementation --- if both were validated
+against each other, a shared error would pass unnoticed.
+
 \section{The likelihood}
 
 Sites are modelled as independent given $(\tree, \branch, \Q, \bpi)$, so the
@@ -308,6 +330,50 @@ and recomputing only the invalidated path is what makes tree search
 affordable, and is a design requirement on the likelihood engine rather than
 an optimization to add later.
 
+\subsection{Canonical serialization}
+\label{sec:canonical}
+
+Newick notation is not a unique encoding: one topology admits many strings,
+differing by the order in which children are written and by where the
+string is rooted. A search that keys on the raw string therefore fails to
+recognize a tree it has already scored, and a model trained on raw strings
+learns to distinguish spellings that carry no phylogenetic meaning.
+Algorithm~\ref{alg:canonical} removes both problems by fixing a
+representative.
+
+\begin{algorithm}[htbp]
+\caption{Canonical form of an unrooted binary tree with labelled leaves}
+\label{alg:canonical}
+\begin{algorithmic}[1]
+  \Require tree $\tree$ with leaves labelled from a totally ordered set
+  \Ensure a string identifying $\tree$'s topology uniquely
+  \State root $\tree$ at the leaf whose label is smallest in that order
+  \ForAll{nodes $u$ in post-order}
+    \If{$u$ is a leaf}
+      \State $\kappa(u) \gets \text{label}(u)$
+    \Else
+      \State sort the children $v$ of $u$ by $\kappa(v)$
+      \State $\kappa(u) \gets$ the concatenation of $\kappa(v)$ in that order
+    \EndIf
+  \EndFor
+  \State \Return $\kappa(\text{root})$, emitting children in sorted order
+\end{algorithmic}
+\end{algorithm}
+
+Rooting at the smallest label is well defined for any labelled tree, and the
+child order is fixed bottom-up by keys that depend only on the subtree
+below, so the output depends on the topology alone. Hashing the keys keeps
+the cost at $O(n \log n)$ \citep{clrs2022}. Branch lengths are carried
+separately, as a vector in canonical node order, so one topology under two
+length assignments shares a topology key --- which is what makes the key
+usable for memoizing likelihood evaluations across a search.
+
+Two properties are required of any implementation, and both are tested
+rather than assumed: two trees produce the same string exactly when they are
+the same topology, checked by randomly re-rooting and permuting the children
+of one tree and by comparing against distinct trees; and parsing a canonical
+string reproduces the tree that produced it.
+
 \subsection{Extensions to the move set}
 \label{sec:extensions}
 
@@ -342,14 +408,16 @@ likelihood evaluations for the same likelihood reached.
 
 \paragraph{A transformer policy over Newick strings.} A topology serializes
 to a Newick string, which a transformer can consume directly --- tokenize
-the (compressed) string, pretrain on simulated trees, then fine-tune the
-policy with the usual policy-gradient machinery
-\citep{raschka2024, lapan2020, suttonbarto2018}. One property of the
-encoding decides whether this works: Newick is not canonical. The same
-topology admits many strings, differing by child order and by the choice of
-root for the serialization, so either the encoding is canonicalized or the
-model is made invariant to those relabelings. Otherwise the policy learns
-distinctions that carry no phylogenetic meaning.
+the string, pretrain on simulated trees, then fine-tune the policy with the
+usual policy-gradient machinery
+\citep{raschka2024, lapan2020, suttonbarto2018}. The input is the canonical
+form of Section~\ref{sec:canonical}, which settles the encoding question:
+one topology, one string. The alternative, an architecture invariant to
+child order and root placement, buys the same property at greater cost and
+without supplying the memoization key the search needs anyway. Compression
+then applies on top, replacing recurring subtrees by dictionary symbols ---
+an extended alphabet over the canonical string \citep{blahut2003} --- which
+shortens the token sequence a transformer must attend over.
 
 \subsection{Parsimony and likelihood}
 
@@ -480,13 +548,12 @@ go.
 
 \section{Sources}
 
-The texts this project works from, split by what each informs:
-\emph{infrastructure} --- how the code is built, structured, and made fast
---- and \emph{application} --- the science it computes. Where an algorithm
-we implement appears in one of them, this document follows its formulation
-and notation and says where it deviates.
+The texts this project works from, grouped as \texttt{CLAUDE.md} groups them
+--- a routing table keyed on what each informs, rather than a reading list.
+Where an algorithm we implement appears in one of them, this document
+follows its formulation and notation and says where it deviates.
 
-\subsection{Infrastructure}
+\subsection{Infrastructure: build, structure, and speed}
 
 \begin{description}
   \item[Software craft.] \citet{martin2008} on the structure that keeps a
@@ -495,47 +562,53 @@ and notation and says where it deviates.
   \item[Systems and hardware.] \citet{bryant2015} on the memory hierarchy
     and where CPU time goes; \citet{pmpp2022} on GPU kernels, occupancy,
     and parallel reduction and scan.
+\end{description}
+
+\subsection{Optimization: discrete and continuous}
+
+\begin{description}
   \item[Algorithms and discrete mathematics.] \citet{clrs2022} on data
     structures, traversal, complexity, and branch and bound;
     \citet{rosen2019} on the counting and graph theory behind tree space.
   \item[Numerical optimization.] \citet{nocedal2006} on line search, trust
     region, and quasi-Newton methods for the continuous parameters.
-\end{description}
-
-\subsection{Application}
-
-\begin{description}
-  \item[Phylogenetics and sequence analysis.] \citet{felsenstein2004} on
-    substitution models, pruning, tree search, and the parsimony and
-    likelihood criteria; \citet{durbin1998} on probabilistic models of
-    sequences; \citet{compeau2015} on the algorithmic view of alignment and
-    phylogeny construction; \citet{pachter2005} on the algebraic structure
-    of phylogenetic models and their invariants, which offer topology tests
-    that avoid likelihood optimization altogether.
-  \item[Probabilistic inference and graphical models.] \citet{mackay2003}
-    on inference, message passing, and Monte Carlo; \citet{koller2009} on
-    factor graphs and the exact-inference machinery that
-    \eqref{eq:pruning} instantiates; \citet{frey1998} on belief propagation
-    read across inference and coding; \citet{ortega2022} on spectral
-    methods for signals indexed by graph vertices.
-  \item[Statistical physics and Monte Carlo.] \citet{mezard2009} on
-    inference over sparse graphs and phase transitions in hard
-    combinatorial problems --- tree search being one; \citet{newman1999} on
-    sampling, equilibration, and error estimates from correlated samples.
-  \item[Information, coding, and quantum computation.] \citet{blahut2003}
-    on algebraic coding, which is the background for the compressed tree
-    encodings in Section~\ref{sec:extensions}; \citet{nielsen2010} on
-    quantum information and algorithms, background only --- nothing here
-    targets quantum hardware.
-  \item[Geometry of statistical models.] \citet{amari2016} on the
-    statistical manifold, the Fisher metric, and natural gradient.
-  \item[Learning and decision making.] \citet{goodfellow2016} and
+  \item[Probabilistic inference.] \citet{mackay2003} on inference, message
+    passing, and Monte Carlo; \citet{koller2009} on factor graphs and the
+    exact-inference machinery that \eqref{eq:pruning} instantiates;
+    \citet{frey1998} on belief propagation read across inference and
+    coding; \citet{ortega2022} on spectral methods for signals indexed by
+    graph vertices.
+  \item[Statistical physics.] \citet{mezard2009} on inference over sparse
+    graphs and phase transitions in hard combinatorial problems --- tree
+    search being one; \citet{newman1999} on sampling, equilibration, and
+    error estimates from correlated samples, which the benchmark harness
+    needs to rank variants rather than noise.
+  \item[Information geometry.] \citet{amari2016} on the statistical
+    manifold, the Fisher metric, and natural gradient.
+  \item[Learning and reinforcement learning.] \citet{goodfellow2016} and
     \citet{prince2023} on architectures, optimization, and automatic
     differentiation; \citet{suttonbarto2018} on MDPs, value and policy
     methods, and temporally extended actions; \citet{lapan2020} on
     implementation practice; \citet{raschka2024} on transformer internals
-    and tokenization, for the policy over Newick strings proposed in
-    Section~\ref{sec:extensions}.
+    and tokenization, for the policy over canonical Newick strings proposed
+    in Section~\ref{sec:extensions}.
+\end{description}
+
+\subsection{Application: the science}
+
+\begin{description}
+  \item[Phylogenetics.] \citet{felsenstein2004} on substitution models,
+    pruning, tree search, and the parsimony and likelihood criteria;
+    \citet{durbin1998} on probabilistic models of sequences;
+    \citet{compeau2015} on the algorithmic view of alignment and phylogeny
+    construction; \citet{pachter2005} on the algebraic structure of
+    phylogenetic models and their invariants, which offer topology tests
+    that avoid likelihood optimization altogether.
+  \item[Information and quantum.] \citet{blahut2003} on algebraic coding,
+    which is the background for the compressed tree encodings in
+    Section~\ref{sec:extensions}; \citet{nielsen2010} on quantum
+    information and algorithms, background only --- nothing here targets
+    quantum hardware.
 \end{description}
 
 \bibliographystyle{plainnat}
