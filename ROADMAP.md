@@ -4,13 +4,12 @@
 
 Solve the large parsimony problem — the search over phylogenetic tree
 topologies — with reinforcement learning, scoring (compressed) candidate trees
-by the (an approximate) likelihood.
+by an (approximate) likelihood.
 
 Motivation: the search space is the obstacle. The number of unrooted binary topologies on
 `n` taxa is `(2n − 5)!!`, i.e. 3×10⁷⁴ for n=50. Exhaustive evaluation is hopeless so tools
-hill-climb from a starting tree, proposing local rearrangements and keeping the best. The 
-proposal policy in those tools is fixed and hand-designed. This project asks whether a learned
-policy does better.
+hill-climb from a starting tree, proposing local rearrangements and keeping the best. This
+project asks whether a learned policy does better.
 
 ## Requirements
 
@@ -28,12 +27,12 @@ Targets:  so that "does it work" has an answer. Every number below is a target t
 
 - **Topology.** Normalized Robinson–Foulds distance to the ground-truth
   simulated topology ≤ 0.05.
-- **Likelihood.** `Δ ln L` competitive with or exceeding IQ-TREE 2 and
-  RAxML-NG *under similar wall-clock constraints*.
+- **Likelihood.** `Δ ln L` competitive with or exceeding standard frameworks, e.g.
+  IQ-TREE 2 and RAxML-NG *under similar wall-clock and system constraints*.
 
 ### Runtime
 
-- **Sub-second Felsenstein gradient updates at `n = 100`.**
+- **Sub-second gradient updates at `n = 100`.**
 - **Amortized search.** Inference must repay the cost of training and
   proposal: total time to resolve a tree lower than classical hill-climbing
   on comparable hardware. A faster per-move policy that needs more moves has
@@ -57,10 +56,7 @@ problem, so it constrains the compression work in workstream 2 directly.
 `float32` and `float64` behave differently across CPU, CUDA, and Metal,
 and a deep pruning recursion accumulates those differences. Cross-device
 agreement is therefore specified as a **tolerance, fixed once and stated in
-the technical document**, not as bitwise equality. Without that, a
-discrepancy of order 10⁻⁶ between CPU and GPU reads as a bug, and chasing it
-produces an endless series of fixes for something that was never broken. The
-oracle for correctness stays the analytic result, not another device.
+the technical document**, not as bitwise equality.
 
 ## The model
 
@@ -72,21 +68,19 @@ of character substitution, parameterized by:
 - **a root distribution** `π`, the state probabilities at the root;
 - **an assumed tree** `τ`, the topology under evaluation.
 
-Branch transition probabilities follow `P(t) = exp(Qt)`, and the likelihood of
-the observed characters is computed by Felsenstein's pruning algorithm — a
-post-order traversal that marginalizes internal states in time linear in the
-number of taxa, rather than exponential.
+Branch transition probabilities follow `P(t) = exp(Qt)`, and the base likelihood of
+the observed characters is computed by Felsenstein's pruning algorithm.
 
 ## The search
 
-Moves come from the two standard rearrangement neighbourhoods:
+Potential move sets come from the standard rearrangement patterns:
 
 - **NNI** (nearest-neighbour interchange) — swap the subtrees adjacent to an
   internal edge. Small, cheap, local.
 - **SPR** (subtree prune and regraft) — detach a subtree and reattach it
   elsewhere. Larger neighbourhood, better at escaping local optima.
 
-Framed as a Markov decision process: the state is the current topology with
+Within RL, framed as a Markov decision process: the state is the current topology with
 its fitted continuous parameters and a summary of the alignment, an action is
 a move drawn from the NNI or SPR neighbourhood, and the reward is the
 improvement in maximized log-likelihood. An episode is one search trajectory
@@ -268,18 +262,11 @@ its own move set, and a local optimum under NNI need not be one under SPR.
 Only exhaustive enumeration, or branch and bound with a sound upper bound,
 guarantees the optimum.
 
-**Additional sets worth supporting**, and why:
-
 - **TBR** (tree bisection and reconnection) — a strict superset of SPR:
   fewer local optima, more cost per step. The natural next rung.
 - **Stochastic escape** — Metropolis-style accepted worsening steps, or
   ratchet-style site reweighting followed by re-search. Attacks local optima
   directly rather than by enlarging the neighbourhood.
-- **Guided restriction** — propose only around edges a cheap proxy flags
-  (parsimony change, quartet conflict). Efficiency rather than completeness:
-  it shrinks a neighbourhood we already know is connected.
-- **Recombination** — combine compatible splits from two good trees.
-  Population-based search rather than a walk.
 - **Exhaustive enumeration and branch and bound** — exact for small `n`, and
   the backstop that makes every other move set testable, since it supplies
   the true optimum to compare against.
