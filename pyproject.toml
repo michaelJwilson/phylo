@@ -100,7 +100,7 @@ unfixable = [
 
 [tool.mypy]
 strict = true
-files = ["python", "tests"]
+files = ["python", "tests", "infra"]
 
 [[tool.mypy.overrides]]
 # pytest-benchmark ships no py.typed marker.

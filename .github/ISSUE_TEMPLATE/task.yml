@@ -1,0 +1,50 @@
+name: Task
+description: A unit of work an agent can pick up and turn into a pull request.
+labels: ["priority:low"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Priority defaults to `low`. Change the label after filing if the work
+        should run sooner; `DEV.md` explains what each priority schedules.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: What is true once this is done, stated so it can be checked.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters
+      description: What this unblocks, or what breaks without it.
+    validations:
+      required: true
+  - type: dropdown
+    id: submodule
+    attributes:
+      label: Submodule
+      description: Which part of the repository this lands in.
+      options:
+        - "sim"
+        - "likelihood"
+        - "opt"
+        - "search"
+        - "infra"
+        - "docs"
+        - "cross-cutting"
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and non-goals
+      description: What this deliberately does not cover.
+  - type: textarea
+    id: validation
+    attributes:
+      label: How it will be validated
+      description: >
+        The analytic result, brute-force computation, or enumeration this is
+        checked against. Shape-only assertions do not count.

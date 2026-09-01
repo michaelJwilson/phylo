@@ -7,7 +7,27 @@ where the science is going, see [ROADMAP.md](ROADMAP.md).
 `CLAUDE.md` is the authoritative statement of the conventions summarized
 here. Where the two disagree, `CLAUDE.md` wins and this file needs fixing.
 
-## Layout
+## Two kinds of rule
+
+This repository holds two separable things, and keeping them separable is a
+deliberate constraint rather than an accident of layout:
+
+- **Infrastructure** — the build, the checks, the release process, the
+  agentic workflow. None of it mentions phylogenetics, and all of it would
+  transplant to an unrelated scientific project unchanged.
+- **Application** — substitution models, likelihoods, tree search, and the
+  standards that make claims about them credible. Portable to nothing;
+  specific to this science.
+
+Each section below is marked **[infra]** or **[app]**. The point is not
+tidiness: an infrastructure section that acquires a phylogenetic assumption
+stops being liftable, and an application section that hides in the build
+configuration stops being reviewable by someone who knows the science. When
+adding a section, decide which it is first.
+
+Sections not marked are about this document or the repository as a whole.
+
+## Layout [app]
 
 | Path | Contents |
 | --- | --- |
@@ -30,7 +50,7 @@ policy and NumPy reference `likelihood/` keeps, the constraint handling in
 policy in `infra/`. The root `CLAUDE.md` still governs; these add what only
 applies inside one module.
 
-## The two-language build
+## The two-language build [infra]
 
 `maturin` builds the Rust extension as part of a normal `pip install .`, so
 consumers need no separate build step — but they do need a Rust toolchain.
@@ -39,7 +59,7 @@ consumers need no separate build step — but they do need a Rust toolchain.
 into the compiled module. Nothing checks the stub against the module, so it
 can drift — `python -m mypy.stubtest phylo.oxiphylo` would close that.
 
-## Continuous integration
+## Continuous integration [infra]
 
 Eight jobs (`.github/workflows/ci.yml`) run on every pull request against
 `main`:
@@ -74,7 +94,7 @@ Three details worth knowing before editing the workflow:
   The marker is written only after both audits pass, and `actions/cache`
   saves it only when the job succeeds, so a failure records nothing.
 
-## Repository settings
+## Repository settings [infra]
 
 Some of what keeps CI smooth lives in GitHub's settings rather than in this
 repository, so it is invisible to `git log` and easy to lose. The intended
@@ -107,7 +127,7 @@ Four of these carry a rationale worth keeping:
 - **Required check names are load-bearing**, as above: renaming a job
   without updating the protection rule drops its protection silently.
 
-## CI budget
+## CI budget [infra]
 
 CI exists to catch mistakes, not to measure performance, and the two want
 opposite things from a runner.
@@ -124,7 +144,7 @@ opposite things from a runner.
 - **Superseded runs are cancelled.** The workflow groups by ref, so pushing
   again to a branch cancels the previous run rather than paying for both.
 
-## Reproducibility
+## Reproducibility [infra]
 
 Reproducibility ranks above convenience here, so the environment is pinned end
 to end: `uv.lock` and `Cargo.lock` pin both dependency graphs, every CI install
@@ -133,7 +153,7 @@ runner image (`ubuntu-24.04`) and `uv` version. Seed every random draw with
 `np.random.default_rng(seed)`; ruff's `NPY002` rejects the legacy global
 `np.random` functions.
 
-## Performance work
+## Performance work [app]
 
 A hot path goes to the GPU — through PyTorch, Triton, or JAX — when a kernel
 plausibly buys 10x or more over the vectorized NumPy reference at the sizes we
@@ -142,7 +162,7 @@ benchmarked measurement reported in the PR, not an expectation, and every
 accelerated kernel keeps its reference implementation as a pinned oracle.
 `CLAUDE.md`'s Performance section states the rule in full.
 
-## Testing
+## Testing [app]
 
 Tests exist to establish scientific validity: fixtures come from
 component-wise simulation under a known generative model, expected values come
@@ -151,7 +171,7 @@ mathematics guarantees. Shape-only and runs-without-raising assertions are not
 tests. `CLAUDE.md`'s Testing section states the rule in full, and the current
 scaffolding suite does not yet meet it — see its Known gaps.
 
-## The technical document
+## The technical document [app]
 
 `docs/tex/` holds the LaTeX source for the technical PDF: scientific
 background, model definitions, equations, and algorithm statements, plus the
@@ -159,7 +179,7 @@ captions for the figures and tables the QA suite emits. It is versioned with
 the code, and a PR that changes a model, an equation, an algorithm, or a
 figure updates it in the same PR.
 
-## Adding a dependency
+## Adding a dependency [infra]
 
 1. Ask first. New dependencies — Python packages, Rust crates, GitHub Actions,
    or other external tools — need explicit permission before they are added,
@@ -171,11 +191,50 @@ figure updates it in the same PR.
    commit the result in the same PR — CI's `--locked` installs fail otherwise.
 4. Justify it in the PR description.
 
-## Versioning
+## Versioning [infra]
 
 The version lives in exactly one place, `Cargo.toml`'s `[package].version`.
 `pyproject.toml` declares it `dynamic` and maturin reads it from the crate, so
 the two cannot drift. Never hardcode a second version number.
+
+## The changelog [infra]
+
+`CHANGELOG.md` is assembled, not edited. Each change adds a file to
+`changelog.d/` named `<id>.<category>.md` — the pull-request number and one of
+the Keep a Changelog headings — containing the entry text. Two pull requests
+never touch the same file, so the changelog cannot conflict on merge, which a
+shared file did three times in one week.
+
+```
+echo "What changed, in a sentence." > changelog.d/42.added.md
+python -m infra.changelog --check      # names and categories
+python -m infra.changelog --assemble   # at release: fold in, delete fragments
+```
+
+CI validates every fragment name, and requires a fragment on each pull request
+unless it carries the `skip-changelog` label.
+
+## Tickets and priorities [infra]
+
+Issues are filed from `.github/ISSUE_TEMPLATE/task.yml`, which asks for the
+outcome, why it matters, the submodule, and how the work will be validated.
+Labels are defined in `.github/labels.yml` and applied by the **Labels**
+workflow, so the taxonomy follows the file rather than whatever accumulated in
+the web interface.
+
+| Label | Schedules |
+| --- | --- |
+| `priority:high` | Runs immediately |
+| `priority:medium` | Runs at the next scheduled slot, when tokens refresh |
+| `priority:low` | Runs outside 09:00–17:00 Princeton time. Applied by default |
+| `module:*` | Tags the submodule, so tickets batch against the roadmap |
+| `approved` | A maintainer has approved the posted plan |
+
+`infra/CLAUDE.md` carries the approval policy: `/approve` opens a pull request
+implementing a plan already posted to the thread, and a flawed plan gets a
+revised plan in-thread rather than a silent correction. The workflow that
+automates it is not built — it needs an action the allowed list does not yet
+permit.
 
 ## Definition of done
 

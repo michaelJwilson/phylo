@@ -1,0 +1,37 @@
+name: Labels
+
+# Applies .github/labels.yml to the repository. Run it by hand after editing
+# that file; label state then follows the file rather than the other way round.
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  sync:
+    name: Sync labels from .github/labels.yml
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # gh is preinstalled on GitHub runners, so no action is needed here.
+      - name: Apply
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python - <<'PY' > labels.tsv
+          import re, pathlib
+          text = pathlib.Path(".github/labels.yml").read_text()
+          entries = re.findall(
+              r'- name: "(?P<n>[^"]+)"\s*\n\s*color: "(?P<c>[^"]+)"\s*\n\s*description: "(?P<d>[^"]*)"',
+              text,
+          )
+          for name, color, description in entries:
+              print(f"{name}\t{color}\t{description}")
+          PY
+          while IFS=$'\t' read -r name color description; do
+            gh label create "$name" --color "$color" --description "$description" --force
+          done < labels.tsv
