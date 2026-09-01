@@ -6,11 +6,12 @@ benchmarking harness, not a benchmark of production numerical code
 """
 
 import numpy as np
+from pytest_benchmark.fixture import BenchmarkFixture
 
 from tests._example_hotpath import pairwise_distance
 
 
-def test_pairwise_distance_benchmark(benchmark):
+def test_pairwise_distance_benchmark(benchmark: BenchmarkFixture) -> None:
     np.random.seed(0)
     x = np.random.random((200, 3))
     y = np.random.random((150, 3))

@@ -26,6 +26,29 @@ source .venv/bin/activate
 - Keep dependencies minimal — new dependencies should be justified in the PR
   description.
 - Do not silently change default parameters of scientific algorithms.
+- Use type hints on all Python function signatures (see Tooling below).
+- Any PR that changes behavior, conventions, or the dev/CI setup must update
+  `README.md` and/or `CLAUDE.md` in the same PR, so the docs never drift
+  from what's actually in the repo.
+
+## Tooling
+
+- Lint/format with `ruff check .` and `ruff format --check .`; both are
+  enforced in CI (`.github/workflows/ci.yml`'s `lint` job) and should pass
+  before you push.
+- Type-check with `mypy` before pushing. It is not yet a required CI check
+  (only `ruff` is wired into `.github/workflows/ci.yml`'s `lint` job) —
+  ruff's `ANN` (annotation-presence) rules are intentionally disabled in
+  `pyproject.toml` in the meantime, since nothing else currently checks
+  type hints in CI.
+- `pytest-benchmark`'s baseline-comparison flags (`--benchmark-autosave`,
+  `--benchmark-compare`, `--benchmark-compare-fail`) are deliberately not
+  part of the shared pytest config or CI: GitHub-hosted runners vary in
+  hardware between runs, so a fixed-baseline comparison there would be
+  flaky rather than a reliable regression signal. Use them locally instead,
+  e.g. `pytest tests/benchmarks --benchmark-autosave` once to establish a
+  baseline, then `--benchmark-compare=0001 --benchmark-compare-fail=mean:5%`
+  on later runs.
 
 ## Working with sub-agents
 

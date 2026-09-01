@@ -4,7 +4,7 @@
 from phylo.oxiphylo import double
 
 
-def test_double():
+def test_double() -> None:
     assert double(21) == 42
     assert double(0) == 0
     assert double(-3) == -6

@@ -5,8 +5,83 @@ build-backend = "maturin"
 [project]
 name = "phylo"
 version = "0.1.0"
-requires-python = ">=3.12"
+description = ""
+authors = [{ name = "M. J. Wilson" }]
+requires-python = ">=3.12.2"
+readme = "README.md"
+# Intentionally empty: no code under python/phylo/ imports an external
+# package yet. Add entries here only once real code depends on them (see
+# CLAUDE.md's "keep dependencies minimal" convention), rather than
+# front-loading an intended tech stack.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.9.9,<0.10",
+    "mypy>=1.0.0",
+]
+test = [
+    "pytest>=8.3.5,<9",
+    "pytest-cov>=4.0.0",
+    "pytest-xdist>=3.0.0",
+    "pytest-benchmark>=4",
+    "numpy>=1.26.0",
+]
+
+[project.scripts]
+run_phylo = "phylo.scripts.run_phylo:main"
 
 [tool.maturin]
 python-source = "python"
 module-name = "phylo.oxiphylo"
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+ignore = [
+  "G004", # f-string in logger
+  "T201", # print statements
+  "PLR2004", # magic value in assert
+  "NPY002", # legacy numpy calls
+  "ANN",  # type-annotation presence is enforced by mypy, not ruff, here
+]
+
+extend-select = [
+  "B",           # flake8-bugbear
+  "I",           # isort
+  "ARG",         # flake8-unused-arguments
+  "C4",          # flake8-comprehensions
+  "EM",          # flake8-errmsg
+  "ICN",         # flake8-import-conventions
+  "ISC",         # flake8-implicit-str-concat
+  "G",           # flake8-logging-format
+  "PGH",         # pygrep-hooks
+  "PIE",         # flake8-pie
+  "PL",          # pylint
+  "PT",          # flake8-pytest-style
+  "PTH",         # flake8-use-pathlib
+  "RET",         # flake8-return
+  "RUF",         # Ruff-specific
+  "SIM",         # flake8-simplify
+  "T20",         # flake8-print
+  "UP",          # pyupgrade
+  "YTT",         # flake8-2020
+  "EXE",         # flake8-executable
+  "NPY",         # NumPy specific rules
+  "PD",          # pandas-vet
+]
+extend-ignore = [
+  "PLR09",    # Too many <...>
+  "ISC001",   # Conflicts with formatter
+]
+unfixable = [
+  "T20",  # Removes print statements
+  "F841", # Removes unused variables
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ALL"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

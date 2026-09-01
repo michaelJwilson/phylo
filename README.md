@@ -30,19 +30,32 @@ importable from Python.
 ## Tests
 
 ```
-pip install -r requirements-dev.txt
+pip install ".[test]"
 pytest      # Python: regression tests (tests/regression), a pytest-benchmark
             # suite (tests/benchmarks), and an integration test that the Rust
             # extension imports correctly (tests/test_oxiphylo_bindings.py)
 cargo test  # Rust: unit tests for the PyO3 bindings (src/lib.rs)
 ```
 
+## Linting & type checking
+
+```
+pip install ".[dev]"
+ruff check .
+ruff format --check .
+mypy .
+```
+
+Python code in this repo is type-hinted; run `mypy` locally before pushing
+(it isn't yet a required CI check — see `CLAUDE.md`).
+
 ## Continuous integration
 
-Every pull request against `main` runs three GitHub Actions jobs
-(`.github/workflows/ci.yml`) ahead of review: `rust-tests` (`cargo test`),
-`build` (compiles the extension and smoke-imports `phylo.oxiphylo`), and
-`python-tests` (the full `pytest` suite).
+Every pull request against `main` runs four GitHub Actions jobs
+(`.github/workflows/ci.yml`) ahead of review: `lint` (`ruff check` and
+`ruff format --check`), `rust-tests` (`cargo test`), `build` (compiles the
+extension and smoke-imports `phylo.oxiphylo`), and `python-tests` (the full
+`pytest` suite).
 
 ## Development approach
 
