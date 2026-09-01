@@ -58,8 +58,20 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
 - `ROADMAP.md` and the technical document gain three extensions to the move
   set: bounds that rule out whole sets of trees, learned compound moves
   drawn from a Dirichlet process, and a transformer policy over compressed
-  Newick strings. All three are proposals, and milestone 7 records what
+  Newick strings. All three are proposals, and milestone 9 records what
   would settle them.
+- `ROADMAP.md` gains a six-workstream breakdown — simulate, compress, fit,
+  move, track, benchmark — each with completion criteria and its main risk,
+  and the milestone table now maps to it. The move-set entry separates
+  connectivity from optimality, tabulates NNI, SPR, and multi-SPR against
+  both, and proposes TBR, stochastic escape, guided restriction,
+  recombination, and exhaustive search as additions.
+- The technical document states two algorithms it previously left implicit:
+  a canonical Newick form that fixes rooting and child order, which settles
+  the encoding for the transformer policy and supplies the memoization key
+  for search, and the closed-form `k`-state Jukes–Cantor transition
+  probabilities, which give the simulator an oracle independent of the
+  likelihood code.
 
 ### Fixed
 
