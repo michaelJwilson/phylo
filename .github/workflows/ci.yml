@@ -101,6 +101,36 @@ jobs:
       - run: uv sync --locked --extra docs
       - run: uv run sphinx-build -b html docs/source docs/_build/html -W
 
+  technical-doc:
+    name: Technical document (LaTeX)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      # TeX Live from the Ubuntu archive rather than a third-party action:
+      # these five packages are what the document needs, and no new GitHub
+      # Action joins the supply chain.
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            latexmk \
+            texlive-latex-base \
+            texlive-latex-recommended \
+            texlive-fonts-recommended \
+            texlive-science
+      - name: Build the PDF
+        working-directory: docs/tex
+        run: latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
+      # latexmk exits 0 on unresolved references and citations, so the log is
+      # checked explicitly -- the LaTeX counterpart of the docs job's -W.
+      - name: Fail on undefined references or citations
+        working-directory: docs/tex
+        run: |
+          if grep -nE 'There were undefined references|Citation .* undefined|Reference .* undefined' main.log; then
+            echo "::error::LaTeX reported undefined references or citations"
+            exit 1
+          fi
+
   audit:
     name: Dependency audit (pip-audit, cargo audit)
     runs-on: ubuntu-24.04

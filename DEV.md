@@ -29,7 +29,7 @@ can drift — `python -m mypy.stubtest phylo.oxiphylo` would close that.
 
 ## Continuous integration
 
-Seven jobs (`.github/workflows/ci.yml`) run on every pull request against
+Eight jobs (`.github/workflows/ci.yml`) run on every pull request against
 `main`:
 
 | Job | What it runs |
@@ -40,6 +40,7 @@ Seven jobs (`.github/workflows/ci.yml`) run on every pull request against
 | `build` | plain `pip install .`, then a smoke import of `phylo.oxiphylo` |
 | `python-tests` | the `pytest` suite, gated on a minimum coverage threshold |
 | `docs` | the Sphinx build with warnings as errors |
+| `technical-doc` | the LaTeX build, failing on undefined references or citations |
 | `audit` | `pip-audit` and `cargo audit`, when the locked dependency graph changed |
 
 Three details worth knowing before editing the workflow:

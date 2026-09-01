@@ -20,3 +20,14 @@ python/phylo/*.dylib
 # Sphinx build output
 docs/_build/
 
+# LaTeX build output (the technical PDF is built, not committed)
+docs/tex/*.aux
+docs/tex/*.bbl
+docs/tex/*.blg
+docs/tex/*.fdb_latexmk
+docs/tex/*.fls
+docs/tex/*.log
+docs/tex/*.out
+docs/tex/*.pdf
+docs/tex/*.toc
+

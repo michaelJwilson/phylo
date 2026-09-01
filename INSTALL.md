@@ -101,8 +101,18 @@ matching CI, so a broken docstring or cross-reference fails locally rather
 than in review.
 
 The technical document — the scientific background, equations, and algorithms
-— is LaTeX under `docs/tex/`, built with `latexmk -pdf` and described in
-[DEV.md](DEV.md).
+— is LaTeX under `docs/tex/`:
+
+```
+sudo apt-get install -y --no-install-recommends latexmk texlive-latex-base \
+  texlive-latex-recommended texlive-fonts-recommended texlive-science
+cd docs/tex && latexmk -pdf main.tex
+```
+
+Open `docs/tex/main.pdf`. CI builds it on every PR and fails on undefined
+references or citations, so a broken `\ref` or `\cite` fails there rather
+than shipping as a dangling "??" in the PDF. The PDF is a build artifact and
+is not committed.
 
 ## Benchmarking locally
 
