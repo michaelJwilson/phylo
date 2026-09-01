@@ -73,6 +73,16 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
   probabilities, which give the simulator an oracle independent of the
   likelihood code.
 
+- `pre-commit` no longer runs `pip-audit` and `cargo audit`. They reach the
+  network and build `cargo-audit`, which is too slow for every commit; CI
+  runs them when a lockfile changes and weekly on `main`.
+- CI cancels a branch's superseded runs instead of paying for both. `main`
+  is excluded, since its runs populate the audit caches PRs restore from.
+- `DEV.md` records the GitHub settings CI depends on but which live outside
+  the repository — branch auto-deletion, protection rules, required checks,
+  token permissions — and the CI budget rules: cap test sizes, never rank
+  performance on shared runners, release-gate long tests.
+
 ### Fixed
 
 - CI's `lint` job installed only the `dev` extra while `mypy` checks
