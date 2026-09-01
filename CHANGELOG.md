@@ -51,6 +51,15 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
   exact graph already passed. The key carries the ISO week, and a weekly
   scheduled run audits `main`, so advisories disclosed against unchanged
   pins still surface.
+- Reference sources are grouped by infrastructure and application, and by
+  topic within each, growing from 6 texts to 25. The technical document
+  gains a `Sources` section carrying the same taxonomy, and cites every
+  entry.
+- `ROADMAP.md` and the technical document gain three extensions to the move
+  set: bounds that rule out whole sets of trees, learned compound moves
+  drawn from a Dirichlet process, and a transformer policy over compressed
+  Newick strings. All three are proposals, and milestone 7 records what
+  would settle them.
 
 ### Fixed
 

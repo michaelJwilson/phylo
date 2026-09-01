@@ -165,7 +165,7 @@ Written directly, that is a sum over $k^{n-1}$ assignments --- intractable
 beyond a handful of taxa. Felsenstein's pruning algorithm computes it in time
 linear in $n$ by exploiting the tree's conditional independence structure
 \citep{felsenstein2004}; it is the sum-product algorithm on a tree
-\citep{mackay2003}.
+\citep{mackay2003, koller2009}.
 
 \subsection{Pruning}
 
@@ -265,7 +265,7 @@ reproducible from its seed. \emph{Not yet implemented.}
 \subsection{The size of the problem}
 
 The number of distinct unrooted binary topologies on $n$ taxa is the double
-factorial $(2n - 5)!!$, which grows faster than exponentially
+factorial $(2n - 5)!!$ \citep{rosen2019}, which grows faster than exponentially
 (Table~\ref{tab:treecount}). Exhaustive search is impossible past a handful
 of taxa, and finding the optimal tree under either the parsimony or the
 likelihood criterion is NP-hard \citep{felsenstein2004}. Practical inference
@@ -308,6 +308,49 @@ and recomputing only the invalidated path is what makes tree search
 affordable, and is a design requirement on the likelihood engine rather than
 an optimization to add later.
 
+\subsection{Extensions to the move set}
+\label{sec:extensions}
+
+Three extensions target the same bottleneck: the number of likelihood
+evaluations a search spends. All three are proposals. \emph{Not yet
+implemented.}
+
+\paragraph{Bounding whole sets of trees.} Scoring every neighbour exactly
+wastes work when most are poor. A cheap \emph{upper} bound on the likelihood
+attainable anywhere within a set of topologies lets the search discard the
+whole set, in the manner of branch and bound \citep{clrs2022}: when the
+bound falls below the best log-likelihood already achieved, no member of the
+set can win. Two sources of bounds are worth trying: relaxations of the
+pruning recursion \eqref{eq:pruning}, which replace the product over
+children by a quantity that is cheaper and provably no smaller; and
+compressed summaries of the alignment, where identical site patterns already
+collapse and coarser encodings trade tightness for speed
+\citep{blahut2003}. Soundness is the whole game --- a bound that can fall
+below an attainable likelihood silently discards the optimum --- so each
+candidate bound needs a proof, and a test that searches small trees
+exhaustively for a counterexample.
+
+\paragraph{Multi-moves.} Composing several NNI or SPR rearrangements into
+one action reaches topologies no single move reaches, at the cost of a much
+larger action space; in reinforcement-learning terms these are temporally
+extended actions \citep{suttonbarto2018}. Rather than fixing how many
+rearrangements a compound move contains, draw the composition during
+training from a Dirichlet process, so the number of distinct compound moves
+the agent maintains grows with the evidence for them instead of being set in
+advance \citep{mackay2003}. The measure of success is unchanged: fewer
+likelihood evaluations for the same likelihood reached.
+
+\paragraph{A transformer policy over Newick strings.} A topology serializes
+to a Newick string, which a transformer can consume directly --- tokenize
+the (compressed) string, pretrain on simulated trees, then fine-tune the
+policy with the usual policy-gradient machinery
+\citep{raschka2024, lapan2020, suttonbarto2018}. One property of the
+encoding decides whether this works: Newick is not canonical. The same
+topology admits many strings, differing by child order and by the choice of
+root for the serialization, so either the encoding is canonicalized or the
+model is made invariant to those relabelings. Otherwise the policy learns
+distinctions that carry no phylogenetic meaning.
+
 \subsection{Parsimony and likelihood}
 
 The \emph{large parsimony} problem asks for the topology minimizing the
@@ -346,7 +389,12 @@ so a single decomposition serves every branch. Gradients of the
 log-likelihood with respect to all branch lengths follow from reverse-mode
 automatic differentiation through the pruning recursion
 \eqref{eq:pruning}, at a cost proportional to one forward evaluation
-\citep{goodfellow2016, prince2023}.
+\citep{goodfellow2016, prince2023}. The optimizer consuming them is a
+standard constrained quasi-Newton or trust-region method
+\citep{nocedal2006}; the parameters carry constraints --- non-negative
+branch lengths, a normalized $\bpi$ --- so the geometry of the statistical
+manifold, and the natural gradient it induces, is the principled setting
+\citep{amari2016}.
 
 Analytic and automatic gradients are checked against central finite
 differences,
@@ -400,7 +448,9 @@ supply autodiff and batching alongside the parallelism; otherwise the work
 goes to the Rust backend. The threshold is a measured benchmark, not an
 expectation, and every accelerated kernel keeps its reference implementation
 as a pinned oracle. Kernel-level considerations --- memory hierarchy,
-occupancy, parallel reduction --- follow \citet{pmpp2022}.
+occupancy, parallel reduction --- follow \citet{pmpp2022}; the CPU-side
+counterparts, caching and where time actually goes, follow
+\citet{bryant2015}, and the backend itself is Rust \citep{blandy2021}.
 
 Memory is the constraint to watch: partial likelihoods occupy
 $O(n \, m \, k \, c)$ floating-point values for $n$ taxa, $m$ sites, $k$
@@ -427,6 +477,66 @@ No such figures exist yet --- the quality-assurance framework is unbuilt, and
 listing captions for figures that do not exist would be exactly the kind of
 placeholder this project's conventions forbid. This section is the place they
 go.
+
+\section{Sources}
+
+The texts this project works from, split by what each informs:
+\emph{infrastructure} --- how the code is built, structured, and made fast
+--- and \emph{application} --- the science it computes. Where an algorithm
+we implement appears in one of them, this document follows its formulation
+and notation and says where it deviates.
+
+\subsection{Infrastructure}
+
+\begin{description}
+  \item[Software craft.] \citet{martin2008} on the structure that keeps a
+    change reviewable; \citet{blandy2021} on ownership, lifetimes, and the
+    FFI boundary the Rust backend crosses.
+  \item[Systems and hardware.] \citet{bryant2015} on the memory hierarchy
+    and where CPU time goes; \citet{pmpp2022} on GPU kernels, occupancy,
+    and parallel reduction and scan.
+  \item[Algorithms and discrete mathematics.] \citet{clrs2022} on data
+    structures, traversal, complexity, and branch and bound;
+    \citet{rosen2019} on the counting and graph theory behind tree space.
+  \item[Numerical optimization.] \citet{nocedal2006} on line search, trust
+    region, and quasi-Newton methods for the continuous parameters.
+\end{description}
+
+\subsection{Application}
+
+\begin{description}
+  \item[Phylogenetics and sequence analysis.] \citet{felsenstein2004} on
+    substitution models, pruning, tree search, and the parsimony and
+    likelihood criteria; \citet{durbin1998} on probabilistic models of
+    sequences; \citet{compeau2015} on the algorithmic view of alignment and
+    phylogeny construction; \citet{pachter2005} on the algebraic structure
+    of phylogenetic models and their invariants, which offer topology tests
+    that avoid likelihood optimization altogether.
+  \item[Probabilistic inference and graphical models.] \citet{mackay2003}
+    on inference, message passing, and Monte Carlo; \citet{koller2009} on
+    factor graphs and the exact-inference machinery that
+    \eqref{eq:pruning} instantiates; \citet{frey1998} on belief propagation
+    read across inference and coding; \citet{ortega2022} on spectral
+    methods for signals indexed by graph vertices.
+  \item[Statistical physics and Monte Carlo.] \citet{mezard2009} on
+    inference over sparse graphs and phase transitions in hard
+    combinatorial problems --- tree search being one; \citet{newman1999} on
+    sampling, equilibration, and error estimates from correlated samples.
+  \item[Information, coding, and quantum computation.] \citet{blahut2003}
+    on algebraic coding, which is the background for the compressed tree
+    encodings in Section~\ref{sec:extensions}; \citet{nielsen2010} on
+    quantum information and algorithms, background only --- nothing here
+    targets quantum hardware.
+  \item[Geometry of statistical models.] \citet{amari2016} on the
+    statistical manifold, the Fisher metric, and natural gradient.
+  \item[Learning and decision making.] \citet{goodfellow2016} and
+    \citet{prince2023} on architectures, optimization, and automatic
+    differentiation; \citet{suttonbarto2018} on MDPs, value and policy
+    methods, and temporally extended actions; \citet{lapan2020} on
+    implementation practice; \citet{raschka2024} on transformer internals
+    and tokenization, for the policy over Newick strings proposed in
+    Section~\ref{sec:extensions}.
+\end{description}
 
 \bibliographystyle{plainnat}
 \bibliography{references}

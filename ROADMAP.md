@@ -44,6 +44,47 @@ a move drawn from the NNI or SPR neighbourhood, and the reward is the
 improvement in maximized log-likelihood. An episode is one search trajectory
 from a starting tree.
 
+## Extensions to the move set
+
+NNI and SPR over single moves are the starting point, not the destination.
+Three extensions attack the same bottleneck — the number of likelihood
+evaluations a search spends — and each is a research question rather than an
+implementation task.
+
+**Bound whole sets of trees, and rule them out.** Scoring every neighbour
+exactly wastes work when most are poor. A cheap *upper* bound on the
+likelihood attainable anywhere in a set of topologies lets the search discard
+the entire set, branch-and-bound style: when the bound falls below the best
+log-likelihood already found, no member of that set can win. Bounds can come
+from relaxing the pruning recursion, or from compressing the alignment —
+identical site patterns already collapse, and coarser encodings trade
+tightness for speed. Soundness decides whether this is an optimization or a
+bug: a bound that dips below an attainable likelihood silently discards the
+optimum, so each candidate bound needs a proof and an exhaustive
+small-tree search for counterexamples.
+
+**Learn compound moves rather than single ones.** Composing several NNI or
+SPR rearrangements into one action reaches topologies no single move reaches,
+at the cost of a much larger action space — temporally extended actions, in
+reinforcement-learning terms. Rather than fixing the composition depth,
+draw it during training from a Dirichlet process, so the number of distinct
+compound moves the agent maintains grows with the evidence for them instead
+of being chosen in advance. The target is unchanged: fewer likelihood
+evaluations for the same likelihood reached.
+
+**Put a transformer on the tree string.** A topology serializes to a Newick
+string, which a transformer can consume directly: tokenize the compressed
+string, pretrain on simulated trees, then fine-tune the policy with standard
+policy-gradient machinery — the ordinary industry recipe, applied to trees.
+One property of the encoding decides whether it works: Newick is not
+canonical. The same topology admits many strings, differing by child order
+and by where the serialization is rooted, so either the encoding is
+canonicalized or the model is made invariant to those relabelings. Otherwise
+the policy learns distinctions that carry no phylogenetic meaning.
+
+The technical document states all three precisely; `CLAUDE.md`'s reference
+list groups the sources they draw on.
+
 ## What it rests on
 
 The RL layer is only as good as the machinery underneath it, which is where
@@ -79,15 +120,21 @@ benchmark, lint, docs, and audit pipelines around placeholder functions.
 | 4 | Move sets and a classical baseline | NNI and SPR neighbourhoods, plus hill-climbing search, reproducing published behavior on standard datasets. |
 | 5 | Reinforcement learning agent | A learned proposal policy beats the hill-climbing baseline on held-out simulated datasets, measured by likelihood reached per likelihood evaluation. |
 | 6 | Empirical validation | Results on real alignments compared against established inference tools, with the comparison recorded in the technical document. |
+| 7 | Move-set extensions | Bounds that provably never exclude an attainable optimum, learned compound moves, and a transformer policy over Newick strings — each measured against milestone 5's agent at equal likelihood-evaluation budget. |
 
 Milestones 1–3 are the engineering foundation; nothing about the RL question
-can be answered honestly before they are in place and tested.
+can be answered honestly before they are in place and tested. Milestone 7
+depends on 5 for the baseline it has to beat.
 
 ## Background reading
 
-The technical document (`docs/tex/`) develops the theory and cites the
-standard sources: Felsenstein's *Inferring Phylogenies* for substitution
-models and tree search, Sutton & Barto for the RL formulation, MacKay for
-inference and Monte Carlo, Goodfellow et al. and Prince for optimization and
-automatic differentiation, and *Programming Massively Parallel Processors* for
-the GPU kernels. `CLAUDE.md` lists them in full.
+The technical document (`docs/tex/`) develops the theory and cites its
+sources, which `CLAUDE.md` groups in full: **infrastructure** — software
+craft, systems and hardware, algorithms and discrete mathematics, numerical
+optimization — and **application** — phylogenetics and sequence analysis,
+probabilistic inference and graphical models, statistical physics and Monte
+Carlo, information and coding theory, the geometry of statistical models, and
+learning and decision making. Felsenstein's *Inferring Phylogenies* carries
+the substitution models and tree search, Sutton & Barto the RL formulation,
+MacKay and Koller & Friedman the inference machinery, and *Programming
+Massively Parallel Processors* the GPU kernels.
