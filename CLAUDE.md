@@ -34,12 +34,23 @@ Guidance for Claude Code when working in this repository.
 *   **Scientific Outputs:** The suite must emit plots and tables for the LaTeX technical document. Update the LaTeX captions concurrently.
 
 ## Technical Document & Reference Sources
-`docs/tex/` is treated as code. Cite these texts and explicitly state any deviations from their standard algorithms:
-*   Hwu, Kirk & El Hajj: *Programming Massively Parallel Processors*
-*   MacKay: *Information Theory, Inference, and Learning Algorithms*
-*   Goodfellow et al. / Prince: *Deep Learning* / *Understanding Deep Learning*
-*   Sutton & Barto: *Reinforcement Learning: An Introduction*
-*   Felsenstein: *Inferring Phylogenies*
+`docs/tex/` is treated as code. Cite these texts where they carry the material and explicitly state any deviations from their standard algorithms. The 25 core references are categorized as a routing table based on what they inform:
+
+**Infrastructure (Build, Structure, and Speed)**
+*   **Software Craft:** Martin (*Clean Code*); Blandy et al. (*Programming Rust*)
+*   **Systems & Hardware:** Bryant & O'Hallaron (*Computer Systems*); Hwu et al. (*Programming Massively Parallel Processors*)
+
+**Optimization (Discrete and Continuous)**
+*   **Algorithms & Math:** Cormen et al. (*Introduction to Algorithms*); Rosen (*Discrete Mathematics and Its Applications*)
+*   **Numerical Optimization:** Nocedal & Wright (*Numerical Optimization*)
+*   **Probabilistic Inference:** MacKay (*Information Theory...*); Koller & Friedman (*Probabilistic Graphical Models*); Frey (*Graphical Models...*); Ortega (*Introduction to Graph Signal Processing*)
+*   **Statistical Physics:** Mézard & Montanari (*Information, Physics, and Computation*); Newman & Barkema (*Monte Carlo Methods in Statistical Physics*)
+*   **Information Geometry:** Amari (*Information Geometry and Its Applications*)
+*   **Learning & RL:** Goodfellow et al. / Prince (*Deep Learning*); Sutton & Barto (*Reinforcement Learning*); Lapan (*Deep RL Hands-On*); Raschka (*Build a Large Language Model*)
+
+**Application (The Science)**
+*   **Phylogenetics:** Felsenstein (*Inferring Phylogenies*); Durbin et al. (*Biological Sequence Analysis*); Compeau & Pevzner (*Bioinformatics Algorithms*); Pachter & Sturmfels (*Algebraic Statistics for Computational Biology*)
+*   **Information/Quantum:** Blahut (*Algebraic Codes for Data Transmission*); Nielsen & Chuang (*Quantum Computation and Quantum Information* — background only)
 
 ## Writing Style
 1.  **Be concise and direct:** Omit needless words, use active voice, and lead with the most important fact.
