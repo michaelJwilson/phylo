@@ -12,11 +12,23 @@ here. Where the two disagree, `CLAUDE.md` wins and this file needs fixing.
 | Path | Contents |
 | --- | --- |
 | `python/phylo/` | the Python package: re-exports, typed stub for the extension, stub CLI |
+| `python/phylo/sim/` | data generation and ground-truth retention |
+| `python/phylo/likelihood/` | Felsenstein pruning; CPU, CUDA, and Metal dispatch |
+| `python/phylo/opt/` | continuous parameter fitting via autodiff (PyTorch) |
+| `python/phylo/search/` | move sets, RL agents, temperature schedules |
+| `infra/` | CI/CD, agentic workflow, experiment tracking (Aim) |
 | `src/lib.rs` | the Rust extension (`oxiphylo`), exposed through PyO3 |
 | `benches/` | Criterion benchmarks for the Rust side |
 | `tests/` | regression tests, benchmarks, and the Rust-binding integration test |
 | `docs/source/` | Sphinx API documentation |
 | `docs/tex/` | LaTeX source for the technical document |
+
+Each of those directories carries its own `CLAUDE.md` stating the concerns
+local to it — the analytic oracle `sim/` validates against, the tolerance
+policy and NumPy reference `likelihood/` keeps, the constraint handling in
+`opt/`, the `n <= 10` test bound in `search/`, and the CI limits and ticket
+policy in `infra/`. The root `CLAUDE.md` still governs; these add what only
+applies inside one module.
 
 ## The two-language build
 

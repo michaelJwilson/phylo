@@ -92,6 +92,21 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
   token permissions — and the CI budget rules: cap test sizes, never rank
   performance on shared runners, release-gate long tests.
 
+- Module skeleton: `sim/`, `likelihood/`, `opt/`, `search/`, and `infra/`,
+  each carrying a `CLAUDE.md` for the concerns local to it — the analytic
+  oracle simulation validates against, the cross-device tolerance policy and
+  NumPy reference the likelihood keeps, constraint handling in the optimizer,
+  the `n <= 10` bound on topological tests, and the CI limits, tracking
+  manifest, and ticket policy in `infra/`. No code yet: the directories
+  declare where work goes and under what rules.
+- Framework decisions recorded: **PyTorch** for autodiff (mature MPS backend
+  on Apple Silicon alongside CUDA) and **Aim** for experiment tracking (open
+  source, self-hostable). Neither is added to `pyproject.toml` until code
+  imports it.
+- Robinson–Foulds distance will be implemented in-repo and tested against
+  hand-computed cases; an external implementation is noted as a future
+  cross-check rather than adopted as a dependency.
+
 ### Fixed
 
 - CI's `lint` job installed only the `dev` extra while `mypy` checks
