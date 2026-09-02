@@ -35,6 +35,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          # towncrier check below diffs against origin/main; a shallow
+          # checkout wouldn't have that history to compute a merge-base.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -62,6 +66,9 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy
+      # Fails a PR that changes user-visible behavior without a matching
+      # changelog.d/ fragment; no-ops on push to main (no diff against itself).
+      - run: uv run towncrier check --compare-with origin/main
 
   rust-lint:
     name: Rust lint & format (clippy, fmt)
