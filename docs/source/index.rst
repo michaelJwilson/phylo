@@ -33,5 +33,17 @@ whether or not it has members yet.
 .. automodule:: phylo.opt
    :members:
 
+.. automodule:: phylo.opt.objective
+   :members:
+
+.. automodule:: phylo.opt.constrain
+   :members:
+
+.. automodule:: phylo.opt.potts
+   :members:
+
+.. automodule:: phylo.opt.hmm
+   :members:
+
 .. automodule:: phylo.search
    :members:
