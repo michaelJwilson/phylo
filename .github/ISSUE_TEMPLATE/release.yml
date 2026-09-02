@@ -36,8 +36,6 @@ body:
         `STATUS.md`, and `docs/tex/` against the current code and against each
         other. Record what is stale, contradictory, or duplicated (including
         duplicated machinery across modules), and fix it in this ticket's PR.
-    validations:
-      required: true
   - type: textarea
     id: follow-up-tickets
     attributes:
@@ -45,17 +43,3 @@ body:
       description: >
         High-level work or blind spots the audit surfaced, sized to become
         their own Task-template tickets rather than folded into this one.
-  - type: checkboxes
-    id: release-gate
-    attributes:
-      label: Local release mechanism
-      description: Run `infra/release.sh` and confirm it passes clean.
-      options:
-        - label: "`infra/release.sh` passed with no failing check"
-          required: true
-  - type: markdown
-    attributes:
-      value: |
-        A maintainer adds the `release` label once the gate above is
-        confirmed and the release is ready to publish; see DEV.md's "Release"
-        section for the tag/publish steps that follow.
