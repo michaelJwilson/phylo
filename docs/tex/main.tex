@@ -139,6 +139,7 @@ $\Pmat(t)$ is a stochastic matrix: $P_{ij}(t) \ge 0$ and each row sums to
 one. Both properties are invariants the implementation is tested against.
 
 \subsection{Reversibility and the root distribution}
+\label{sec:reversibility}
 
 The models used here are time-reversible with respect to a distribution
 $\bpi$, meaning they satisfy detailed balance,
@@ -601,6 +602,16 @@ optimum --- pushed through the constraint map by the delta method. Those
 intervals are asymptotic, and Section~\ref{sec:qa} reports how fast they
 converge on their nominal coverage rather than assuming they have.
 
+That machinery also decides which parameters may be reported at all. An
+observed information with a flat direction is singular, and the interval it
+implies is not merely wide but undefined; the check is on the ratio of its
+smallest to its largest eigenvalue, since rounding leaves an exactly flat
+direction merely tiny rather than zero. For the phylogenetic model this is
+not a hypothetical: the two branches below a rooted binary tree's root
+realize a ratio of $6.7 \times 10^{-8}$, against $6.1 \times 10^{-2}$ for the
+same tree with that pair fitted as their sum. Section~\ref{sec:qa} shows the
+underlying invariance directly.
+
 \section{Reinforcement-learning formulation}
 
 Classical heuristics propose moves by a fixed, hand-designed rule. We ask
@@ -804,6 +815,27 @@ is invariant to.
   \includegraphics[width=0.8\linewidth]{figures/opt_coverage}
   \caption{\optCoverageCaption}
   \label{fig:opt-coverage}
+\end{figure}
+
+Figure~\ref{fig:opt-branch-recovery} applies that optimizer to the
+phylogenetic case Milestone~4 names: branch lengths fitted by automatic
+differentiation through the pruning recursion, validated against the
+parameters that generated the alignment. Panel~(b) is the reason the fit has
+one fewer parameter than the tree has branches. Moving length between the two
+branches below a rooted binary tree's root, holding their sum fixed, leaves
+the log-likelihood unchanged to floating-point precision, while the same move
+between two non-root siblings costs tens of log units. This is the pulley
+principle of Section~\ref{sec:reversibility} seen as a statement about
+estimability: the pair contributes one parameter, not two, and fitting both
+would leave the observed information singular and every interval in
+panel~(a) undefined.
+
+\qacaptionread{figures/opt_branch_recovery_caption.txt}{\optBranchRecoveryCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/opt_branch_recovery}
+  \caption{\optBranchRecoveryCaption}
+  \label{fig:opt-branch-recovery}
 \end{figure}
 
 Search-trajectory QA figures are not built yet; this section is where their
