@@ -34,16 +34,6 @@ uv run python -m phylo.qa.sim_problem_sizes \
   --params tests/regression/fixtures/simulation_params_8taxa.yaml \
   --output-dir docs/tex/figures
 
-uv run python -m phylo.qa.likelihood_backends \
-  --params tests/regression/fixtures/simulation_params_small_sites.yaml \
-  --params tests/regression/fixtures/simulation_params.yaml \
-  --params tests/regression/fixtures/simulation_params_8taxa.yaml \
-  --output-dir docs/tex/figures
-
-uv run python -m phylo.qa.likelihood_gradient \
-  --params tests/regression/fixtures/simulation_params.yaml \
-  --output-dir docs/tex/figures
-
 # The optimization figures refit both reference instances many times over,
 # which is why they are here and not in the per-PR test suite: the coverage
 # sweep alone is ~40 s. See python/phylo/qa/opt_coverage.py for the sizes.

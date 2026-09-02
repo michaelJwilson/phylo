@@ -28,6 +28,34 @@ module — the dependency runs application to infrastructure, never back.
 - **Correctness comes from brute force, not from another backend.** Direct
   marginalization over internal states at `n <= 6` is the test. Two backends
   agreeing proves nothing if both are wrong.
+- **The cross-device tolerance lives here, with its evidence.** Backends run
+  on different hardware in different precisions, so agreement is a tolerance,
+  never bitwise equality. Two numbers, stated in `device.py` and used from
+  there rather than retyped: `1e-11` relative where both sides are `float64`,
+  `1e-6` where either side is `float32`. PyTorch's Metal backend rejects
+  `float64`, so every Apple Silicon comparison is a `float32` one, and a
+  single bound loose enough to admit those would let a broken `float64`
+  backend pass — hence keying on the lowest precision taking part.
+
+  Both are **relative**, and that is forced rather than preferred. The total
+  log-likelihood is a sum over sites, so its magnitude and any absolute
+  discrepancy in it grow with the site count. Measuring `float32` against
+  `float64` on the regression fixtures:
+
+  | taxa, sites | \|lnL\| | absolute | relative |
+  | --- | --- | --- | --- |
+  | 4, 20 000 | 8.1e+04 | 4.38e-03 | 5.38e-08 |
+  | 4, 200 000 | 8.2e+05 | 3.61e-02 | 4.41e-08 |
+  | 8, 200 000 | 1.5e+06 | 4.99e-02 | 3.36e-08 |
+
+  The absolute column spans an order of magnitude while the relative column
+  is flat at roughly 0.4 times `float32` epsilon, which is the floor. An
+  absolute bound fixed at one problem size does not transfer to another. And
+  near `|lnL| = 2.4e5` adjacent `float32` values are `0.0156` apart, so no
+  absolute bound tighter than that is achievable in `float32` at all,
+  however good the kernel. Both tolerances sit better than an order of
+  magnitude above the measured agreement, leaving room for a device that
+  reorders reductions differently from the CPU.
 - **The pruning recursion is where the tolerance policy bites.** Root
   `CLAUDE.md` states it; here it means a backend is accepted when it agrees
   with the NumPy reference inside that tolerance, and rejected outside it —

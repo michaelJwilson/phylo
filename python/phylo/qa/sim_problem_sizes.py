@@ -11,10 +11,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-from matplotlib.axes import Axes
-
-from phylo.qa.figure import QAFigure, write_qa_figure
+from phylo.qa.figure import QATable, latex_integer, write_qa_table
 from phylo.sim.params import SimulationParams, load_simulation_params
 from phylo.sim.tree import preorder
 
@@ -23,10 +20,20 @@ def _n_taxa(params: SimulationParams) -> int:
     return sum(1 for node in preorder(params.tau) if node.is_leaf)
 
 
+def _escape(text: str) -> str:
+    """Escape the LaTeX specials a fixture filename can contain."""
+    return text.replace("_", "\\_")
+
+
 def render_problem_sizes(
-    fixture_names: list[str], params_by_fixture: dict[str, SimulationParams], ax: Axes
-) -> None:
-    """Draw a table of problem-size parameters, one row per fixture, on ``ax``.
+    fixture_names: list[str], params_by_fixture: dict[str, SimulationParams]
+) -> str:
+    """Build a LaTeX ``tabular`` of problem-size parameters, one row per fixture.
+
+    A typeset table rather than a matplotlib image: it matches the
+    surrounding type, scales with the document, and can be selected and
+    searched. The numbers are read from the yaml, so they cannot drift from
+    what the regression suite runs.
 
     Parameters
     ----------
@@ -34,30 +41,38 @@ def render_problem_sizes(
         Fixture filenames, in the row order to display.
     params_by_fixture : dict[str, SimulationParams]
         Loaded parameters, keyed by the same filenames.
-    ax : matplotlib.axes.Axes
-        Axes to draw into.
+
+    Returns
+    -------
+    str
+        A complete ``tabular`` environment.
     """
     rows = [
-        [
-            fixture_name,
-            str(_n_taxa(params_by_fixture[fixture_name])),
-            str(params_by_fixture[fixture_name].n_sites),
-            str(params_by_fixture[fixture_name].seed),
-            str(params_by_fixture[fixture_name].tolerance),
-        ]
+        " & ".join(
+            [
+                f"\\texttt{{{_escape(fixture_name)}}}",
+                str(_n_taxa(params_by_fixture[fixture_name])),
+                latex_integer(params_by_fixture[fixture_name].n_sites),
+                # A seed is an identifier, not a magnitude: separators would
+                # make 20260902 look like a quantity rather than a date.
+                str(params_by_fixture[fixture_name].seed),
+                f"{params_by_fixture[fixture_name].tolerance:g}",
+            ]
+        )
+        + r" \\"
         for fixture_name in fixture_names
     ]
-
-    ax.axis("off")
-    table = ax.table(
-        cellText=rows,
-        colLabels=["Fixture", "Taxa", "Sites", "Seed", "Tolerance"],
-        cellLoc="center",
-        loc="center",
+    return "\n".join(
+        [
+            r"\begin{tabular}{lrrrr}",
+            r"  \toprule",
+            r"  Fixture & Taxa & Sites & Seed & Tolerance \\",
+            r"  \midrule",
+            *(f"  {row}" for row in rows),
+            r"  \bottomrule",
+            r"\end{tabular}",
+        ]
     )
-    table.auto_set_font_size(False)
-    table.set_fontsize(8)
-    table.auto_set_column_width(col=list(range(5)))
 
 
 def build_caption(fixture_names: list[str]) -> str:
@@ -81,9 +96,7 @@ def build_caption(fixture_names: list[str]) -> str:
     )
 
 
-def render_problem_sizes_figure(
-    fixture_paths: list[Path], output_dir: Path
-) -> QAFigure:
+def render_problem_sizes_table(fixture_paths: list[Path], output_dir: Path) -> QATable:
     """Render the problem-sizes QA table and caption from a set of params yamls.
 
     Parameters
@@ -92,23 +105,20 @@ def render_problem_sizes_figure(
         Paths to ``simulation_params.yaml``-format files, in the row order
         to display.
     output_dir : Path
-        Directory the figure and caption are written into.
+        Directory the table fragment and caption are written into.
 
     Returns
     -------
-    QAFigure
-        Paths to the written figure and caption, and the caption text.
+    QATable
+        Paths to the written table and caption, and the caption text.
     """
     fixture_names = [path.name for path in fixture_paths]
     params_by_fixture = {
         path.name: load_simulation_params(path) for path in fixture_paths
     }
-    fig, ax = plt.subplots(figsize=(6, 1.5 + 0.4 * len(fixture_paths)))
-    render_problem_sizes(fixture_names, params_by_fixture, ax)
+    body = render_problem_sizes(fixture_names, params_by_fixture)
     caption = build_caption(fixture_names)
-    qa_figure = write_qa_figure(output_dir, "sim_problem_sizes", fig, caption)
-    plt.close(fig)
-    return qa_figure
+    return write_qa_table(output_dir, "sim_problem_sizes", body, caption)
 
 
 def main() -> None:
@@ -119,8 +129,8 @@ def main() -> None:
     )
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
-    qa_figure = render_problem_sizes_figure(args.params, args.output_dir)
-    print(f"Wrote {qa_figure.figure_path} and {qa_figure.caption_path}")
+    qa_table = render_problem_sizes_table(args.params, args.output_dir)
+    print(f"Wrote {qa_table.table_path} and {qa_table.caption_path}")
 
 
 if __name__ == "__main__":

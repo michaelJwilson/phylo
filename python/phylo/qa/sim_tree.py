@@ -10,13 +10,16 @@ actually used, not a schematic redrawn by hand.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Mapping
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.axes import Axes
 
-from phylo.qa.figure import QAFigure, write_qa_figure
+from phylo.qa.figure import QAFigure, state_label, write_qa_figure
 from phylo.sim.params import SimulationParams, load_simulation_params
+from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import Node, edges, preorder
 
 _MODEL_NAME = "Jukes-Cantor"
@@ -62,7 +65,28 @@ def tree_layout(tau: Node) -> dict[str, tuple[float, float]]:
     return {name: (depth[name], y[name]) for name in depth}
 
 
-def render_sim_tree(tau: Node, ax: Axes) -> dict[str, tuple[float, float]]:
+# Where the sequence column starts, in axes fraction. Just outside the right
+# spine, so the x axis still spans the tree alone -- its unit is expected
+# substitutions per site, and extending it under a block of letters would
+# put ticks on a region that has no length. Room is made by shrinking the
+# axes in ``render_sim_tree_figure`` rather than by widening the data range.
+_SEQUENCE_X = 1.03
+
+# Fraction of the figure width given to the tree; the rest holds the
+# sequences.
+_TREE_WIDTH = 0.58
+
+# Sites shown per leaf. Enough to read as a sequence, few enough to fit
+# beside the tree at one-column width.
+SITES_SHOWN = 14
+
+
+def render_sim_tree(
+    tau: Node,
+    ax: Axes,
+    alignment: Mapping[str, np.ndarray] | None = None,
+    k: int = 4,
+) -> dict[str, tuple[float, float]]:
     """Draw ``tau`` as a labelled phylogram on ``ax``.
 
     Parameters
@@ -106,6 +130,26 @@ def render_sim_tree(tau: Node, ax: Axes) -> dict[str, tuple[float, float]]:
             node_depth, node_y = layout[node.name]
             ax.text(node_depth + 0.01, node_y, node.name, fontsize=9, va="center")
 
+    if alignment is not None:
+        # x in axes fraction, y in data coordinates, so the sequences form a
+        # block aligned with the leaves however the tree is scaled.
+        transform = ax.get_yaxis_transform()
+        for node in preorder(tau):
+            if not node.is_leaf:
+                continue
+            _, node_y = layout[node.name]
+            sites = alignment[node.name][:SITES_SHOWN]
+            ax.text(
+                _SEQUENCE_X,
+                node_y,
+                "".join(state_label(int(state), k) for state in sites),
+                transform=transform,
+                fontsize=8,
+                family="monospace",
+                va="center",
+                clip_on=False,
+            )
+
     ax.set_xlabel("Expected substitutions / site")
     ax.set_yticks([])
     for spine in ("top", "right", "left"):
@@ -134,7 +178,10 @@ def build_caption(params: SimulationParams) -> str:
     return (
         f"Simulated topology for {n_taxa} taxa under the {_MODEL_NAME} model "
         f"(seed {params.seed}), branch lengths labelled in expected "
-        "substitutions per site."
+        f"substitutions per site. The first {SITES_SHOWN} simulated sites are "
+        f"shown beside each leaf, in tree order, so the alignment the "
+        f"likelihood consumes can be read off against the topology that "
+        f"generated it."
     )
 
 
@@ -154,8 +201,19 @@ def render_sim_tree_figure(params_path: Path, output_dir: Path) -> QAFigure:
         Paths to the written figure and caption, and the caption text.
     """
     params = load_simulation_params(params_path)
-    fig, ax = plt.subplots(figsize=(6, 4))
-    render_sim_tree(params.tau, ax)
+    # Simulated here rather than passed in: the figure's whole claim is that
+    # these sequences came from this tree, so they are drawn from the same
+    # params the topology is.
+    dataset = simulate_alignment(
+        tau=params.tau,
+        k=params.k,
+        pi=params.pi,
+        seed=params.seed,
+        n_sites=max(SITES_SHOWN, 1),
+    )
+    fig, ax = plt.subplots(figsize=(6.5, 4))
+    render_sim_tree(params.tau, ax, alignment=dataset.alignment, k=params.k)
+    fig.subplots_adjust(right=_TREE_WIDTH)
     caption = build_caption(params)
     qa_figure = write_qa_figure(output_dir, "sim_tree", fig, caption)
     plt.close(fig)

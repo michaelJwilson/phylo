@@ -13,6 +13,145 @@ from pathlib import Path
 import matplotlib as mpl
 from matplotlib.figure import Figure
 
+# LaTeX special characters a caption may not contain unescaped. Backslash is
+# included: the only escape sequence captions are allowed to use is ``\_``,
+# so any other backslash is a mistake rather than a choice.
+_LATEX_SPECIALS = "\\_%&#"
+
+# Thousands separator for integers in generated LaTeX. An underscore rather
+# than a comma or a thin space, matching the numeric literals in this
+# project's Python; ``\_`` is the escaped form LaTeX text mode needs.
+_THOUSANDS = "\\_"
+
+
+def latex_integer(value: int) -> str:
+    """Format an integer with underscore separators, escaped for LaTeX.
+
+    Parameters
+    ----------
+    value : int
+        The integer to format.
+
+    Returns
+    -------
+    str
+        e.g. ``200000`` becomes ``200\\_000``. Values below 10,000 are
+        returned unseparated, since ``2\\_000`` is harder to read than
+        ``2000``, not easier.
+    """
+    if abs(value) < 10_000:
+        return str(value)
+    return f"{value:,}".replace(",", _THOUSANDS)
+
+
+def check_latex_safe(text: str) -> None:
+    """Raise if ``text`` contains an unescaped LaTeX special character.
+
+    ``qa/CLAUDE.md`` requires captions to be plain text that
+    ``docs/tex/main.tex`` can ``\\input`` verbatim. Enforced here, at the
+    point of writing, rather than asserted separately in each caption test:
+    a contract every caller must satisfy belongs in the one function every
+    caller goes through.
+
+    Parameters
+    ----------
+    text : str
+        Caption or table body to check.
+
+    Raises
+    ------
+    ValueError
+        If an unescaped special character remains after removing the one
+        permitted escape sequence.
+    """
+    remaining = text.replace(_THOUSANDS, "")
+    offenders = sorted(
+        {character for character in remaining if character in _LATEX_SPECIALS}
+    )
+    if offenders:
+        msg = (
+            f"caption contains unescaped LaTeX special character(s) "
+            f"{offenders}; only {_THOUSANDS!r} may be escaped"
+        )
+        raise ValueError(msg)
+
+
+_NUCLEOTIDES = "ACGT"
+
+
+def state_label(state: int, k: int) -> str:
+    """Render a simulated state as a nucleotide letter when ``k == 4``.
+
+    Parameters
+    ----------
+    state : int
+        Simulated state, in ``[0, k)``.
+    k : int
+        Number of states in the model.
+
+    Returns
+    -------
+    str
+        The nucleotide letter for ``state`` when ``k == 4``; otherwise the
+        state's decimal digit, since the nucleotide labelling only applies
+        to the 4-state alphabet.
+    """
+    if k == len(_NUCLEOTIDES):
+        return _NUCLEOTIDES[state]
+    return str(state)
+
+
+@dataclass(frozen=True)
+class QATable:
+    """A rendered LaTeX table fragment together with its caption.
+
+    Parameters
+    ----------
+    table_path : Path
+        Path the ``tabular`` fragment was written to.
+    caption_path : Path
+        Path the caption text was written to.
+    caption : str
+        The caption text itself.
+    """
+
+    table_path: Path
+    caption_path: Path
+    caption: str
+
+
+def write_qa_table(output_dir: Path, stem: str, body: str, caption: str) -> QATable:
+    """Write a LaTeX ``tabular`` fragment and its caption under ``output_dir``.
+
+    A table is typeset by LaTeX rather than drawn by matplotlib and saved as
+    an image: an image does not match the surrounding type, does not scale
+    with the document, and cannot be selected or searched.
+
+    Parameters
+    ----------
+    output_dir : Path
+        Directory to write into; created if missing.
+    stem : str
+        Base filename, without extension, shared by both outputs.
+    body : str
+        The ``tabular`` environment, complete, for ``main.tex`` to
+        ``\\input``.
+    caption : str
+        Caption text, subject to :func:`check_latex_safe`.
+
+    Returns
+    -------
+    QATable
+        Paths written to, and the caption text.
+    """
+    check_latex_safe(caption)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    table_path = output_dir / f"{stem}.tex"
+    caption_path = output_dir / f"{stem}_caption.txt"
+    table_path.write_text(body if body.endswith("\n") else body + "\n")
+    caption_path.write_text(caption)
+    return QATable(table_path=table_path, caption_path=caption_path, caption=caption)
+
 
 @dataclass(frozen=True)
 class QAFigure:
@@ -45,15 +184,16 @@ def write_qa_figure(output_dir: Path, stem: str, fig: Figure, caption: str) -> Q
     fig : matplotlib.figure.Figure
         Figure to save as a PDF (vector, for inclusion in the LaTeX build).
     caption : str
-        Caption text to write alongside the figure, plain text -- callers
-        must not pass unescaped LaTeX special characters (see this
-        directory's ``CLAUDE.md``).
+        Caption text to write alongside the figure. Checked by
+        :func:`check_latex_safe`, so a caption that would break the LaTeX
+        build fails here instead.
 
     Returns
     -------
     QAFigure
         Paths written to, and the caption text.
     """
+    check_latex_safe(caption)
     output_dir.mkdir(parents=True, exist_ok=True)
     figure_path = output_dir / f"{stem}.pdf"
     caption_path = output_dir / f"{stem}_caption.txt"
