@@ -18,6 +18,8 @@ import torch
 from numpy.testing import assert_allclose
 from phylo.opt.hmm import (
     HmmObjective,
+    align_states,
+    baum_welch,
     forward_log_likelihood,
     load_hmm_params,
     simulate_sequences,
@@ -158,7 +160,10 @@ def test_theta_has_one_entry_per_free_probability() -> None:
     assert objective.initial().shape == (17,)
 
 
-def test_the_initial_point_is_uniform_everywhere() -> None:
+def test_the_initial_point_is_uninformative_but_not_symmetric() -> None:
+    # Initial and transition start uniform; the emission rows are tilted
+    # apart. See the stationary-point test below for why the tilt has to be
+    # there.
     objective = HmmObjective(np.zeros((2, 5), dtype=np.int64), n_states=3, n_symbols=4)
     constrained = objective.constrain(objective.initial())
     assert_allclose(
@@ -169,10 +174,72 @@ def test_the_initial_point_is_uniform_everywhere() -> None:
         np.full((3, 3), 1 / 3),
         rtol=1e-14,
     )
+    emission = torch.exp(constrained["log_emission"])
+    assert_allclose(emission.sum(dim=1).numpy(), np.ones(3), rtol=1e-14)
+    # Every state favours a different symbol, so no two rows agree.
+    assert emission[0].argmax() != emission[1].argmax()
+    assert emission[1].argmax() != emission[2].argmax()
+
+
+def test_the_uniform_point_is_a_stationary_point_of_the_likelihood() -> None:
+    # This is why `initial` breaks the symmetry, and it is a property of the
+    # model rather than a quirk of the optimizer: with every hidden state
+    # identical, no infinitesimal change to the initial or transition
+    # parameters changes the likelihood at all. An optimizer started there
+    # never moves those blocks, and the fit silently returns a model with one
+    # effective state. Found by watching a fit do exactly that.
+    params = load_hmm_params(FIXTURE)
+    objective = HmmObjective(
+        simulate_sequences(params)[:40], params.n_states, params.n_symbols
+    )
+    uniform = torch.zeros(objective.n_parameters, dtype=torch.float64)
+
+    point = uniform.detach().clone().requires_grad_(True)
+    gradient = torch.autograd.grad(objective(point), point)[0]
+
+    n_free_initial = params.n_states - 1
+    n_free_transition = params.n_states * (params.n_states - 1)
+    blocked = gradient[: n_free_initial + n_free_transition]
+    assert_allclose(blocked.numpy(), np.zeros(blocked.numel()), atol=1e-12)
+    # The emission block is not flat, which is why the fit appears to make
+    # progress while the states stay exchangeable.
+    assert float(gradient[n_free_initial + n_free_transition :].abs().max()) > 1.0
+
+
+def test_baum_welch_increases_the_likelihood_monotonically() -> None:
+    # An exact property of EM, not an empirical one: each iteration
+    # maximizes a lower bound that is tight at the current parameters, so
+    # the likelihood cannot decrease. A violation means the M step is wrong.
+    params = load_hmm_params(FIXTURE)
+    observations = simulate_sequences(params)[:60]
+    objective = HmmObjective(observations, params.n_states, params.n_symbols)
+    start = objective.constrain(objective.initial())
+
+    previous = -float("inf")
+    log_initial = start["log_initial"]
+    log_transition = start["log_transition"]
+    log_emission = start["log_emission"]
+    for _ in range(8):
+        log_initial, log_transition, log_emission, value = baum_welch(
+            observations,
+            log_initial,
+            log_transition,
+            log_emission,
+            max_iterations=1,
+        )
+        assert value >= previous - 1e-9 * abs(value)
+        previous = value
+
+
+def test_align_states_recovers_a_known_permutation() -> None:
+    params = load_hmm_params(FIXTURE)
+    emission = torch.as_tensor(params.emission)
+    order = (2, 0, 1)
+    permuted = torch.log(emission[list(order)])
+    # align_states returns the order that maps the permuted matrix back.
+    recovered = align_states(permuted, emission)
     assert_allclose(
-        torch.exp(constrained["log_emission"]).numpy(),
-        np.full((3, 4), 0.25),
-        rtol=1e-14,
+        torch.exp(permuted)[list(recovered)].numpy(), emission.numpy(), atol=1e-15
     )
 
 
@@ -242,3 +309,23 @@ def test_a_missing_field_is_refused(tmp_path: Path) -> None:
     path.write_text(text)
     with pytest.raises(ValueError, match="missing required field"):
         load_hmm_params(path)
+
+
+def test_baum_welch_stops_once_the_likelihood_stops_moving() -> None:
+    # The convergence test is relative to the log-likelihood's magnitude, as
+    # everywhere else. A loose tolerance must stop the iteration early, which
+    # shows as a worse optimum than a tight one reaches from the same start.
+    params = load_hmm_params(FIXTURE)
+    observations = simulate_sequences(params)[:60]
+    objective = HmmObjective(observations, params.n_states, params.n_symbols)
+    start = objective.constrain(objective.initial())
+    arguments = (
+        observations,
+        start["log_initial"],
+        start["log_transition"],
+        start["log_emission"],
+    )
+
+    *_, loose = baum_welch(*arguments, tolerance=1e-1)
+    *_, tight = baum_welch(*arguments, tolerance=1e-14)
+    assert loose < tight

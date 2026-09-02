@@ -1,16 +1,20 @@
 # qa/
 
 High-level oversight scripts: the plots and tables that give scientific
-figures for `docs/tex/` and validate the application frameworks (`sim/` now,
-`likelihood/`, `opt/`, `search/` later) beyond what a unit test checks.
+figures for `docs/tex/` and validate the application frameworks (`sim/`, `likelihood/`
+and `opt/` now, `search/` later) beyond what a unit test checks.
 
 Root `CLAUDE.md` holds the repository-wide rules. These are local.
 
 ## What lives here
 
-One script per figure or table, each taking a `simulation_params.yaml`-format
-input and producing a rendered figure plus a caption that states the seed,
-sizes, and model used to generate it. `figure.py` holds the shared
+One script per figure or table, each taking a declarative parameters file and
+producing a rendered figure plus a caption that states the seed, sizes, and
+model used to generate it. The format is that model's own — the
+phylogenetic figures take `simulation_params.yaml`, the optimization figures
+take the Potts and HMM fixtures `phylo.opt` defines — because the
+ground-truth-retention rule is about the caption matching what actually ran,
+not about one file layout. `figure.py` holds the shared
 figure/caption-writing helper every script uses, so output is named and
 formatted consistently rather than per script.
 

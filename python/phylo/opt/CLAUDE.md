@@ -13,6 +13,12 @@ Root `CLAUDE.md` holds the repository-wide rules. These are local.
 differentiable scalar to minimize, and a map back to named constrained
 parameters. `constrain.py` holds the constraint maps every instance shares.
 
+`fit.py` holds the optimizer and the interval machinery: L-BFGS with a
+strong-Wolfe line search, and standard errors from the observed Fisher
+information pushed through the constraint map by the delta method. The
+intervals live here rather than in a test because a standard error computed
+in a test is not available to the next instance.
+
 `potts.py` and `hmm.py` are **reference instances**, not applications: a
 1-D Potts chain in an external field and a discrete HMM, each with an exact
 independent oracle for its own objective. They exist so the interface is
@@ -48,6 +54,17 @@ Apple Silicon path the memory requirement in `ROADMAP.md` assumes.
   gradient's norm — entrywise relative fails at a symmetric starting point,
   where entries are exactly zero, and absolute does not transfer across data
   sizes.
+- **Every threshold is relative, inside the optimizer too.** Convergence is
+  the gradient's infinity norm against the objective's own magnitude, and
+  L-BFGS's own `tolerance_grad`/`tolerance_change` are switched **off**: their
+  defaults are absolute, so on a summed log-likelihood they halt the inner
+  loop long before the gradient is small relative to the objective. That is
+  issue #111's failure inside the optimizer rather than in a test.
+- **A symmetric starting point can be a stationary point.** The HMM's uniform
+  parameters are one: with every hidden state identical, the gradient in the
+  initial and transition blocks is exactly zero, and a fit started there
+  returns a one-state model while appearing to make progress. Starting points
+  break the symmetry deterministically, and a test pins the reason.
 - **Recovery is the acceptance test.** Fit simulated data with known
   parameters and require the confidence intervals to cover the truth at the
   nominal rate. A likelihood that increases proves the optimizer runs, not

@@ -44,6 +44,19 @@ uv run python -m phylo.qa.likelihood_gradient \
   --params tests/regression/fixtures/simulation_params.yaml \
   --output-dir docs/tex/figures
 
+# The optimization figures refit both reference instances many times over,
+# which is why they are here and not in the per-PR test suite: the coverage
+# sweep alone is ~40 s. See python/phylo/qa/opt_coverage.py for the sizes.
+uv run python -m phylo.qa.opt_recovery \
+  --potts-params tests/regression/fixtures/potts_params.yaml \
+  --hmm-params tests/regression/fixtures/hmm_params.yaml \
+  --output-dir docs/tex/figures
+
+uv run python -m phylo.qa.opt_coverage \
+  --potts-params tests/regression/fixtures/potts_params.yaml \
+  --hmm-params tests/regression/fixtures/hmm_params.yaml \
+  --output-dir docs/tex/figures
+
 (
   cd docs/tex
   latexmk -pdf -interaction=nonstopmode -halt-on-error \

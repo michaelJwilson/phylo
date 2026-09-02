@@ -380,6 +380,7 @@ a complete generated instance at the smallest of them --- the Newick string
 and the leading simulated sites of the alignment.
 
 \section{Tree search}
+\label{sec:search}
 
 \subsection{The size of the problem}
 
@@ -564,7 +565,41 @@ differences,
 \end{equation}
 %
 with $h$ chosen to balance truncation against round-off. This check is a
-required test for any differentiable component. \emph{Not yet implemented.}
+required test for any differentiable component, and is implemented for every
+objective the optimizer accepts (\texttt{phylo.opt}).
+
+\subsection{The optimization interface}
+\label{sec:opt-interface}
+
+The optimizer is deliberately ignorant of what it optimizes. It takes an
+unconstrained parameter vector, a differentiable scalar to minimize, and a
+map back to the named constrained parameters; nothing in it refers to a
+tree, and a test asserts that the module imports nothing from the simulation,
+likelihood or search packages. Constraints are imposed by construction rather
+than by projection --- positive scales through a log or softplus map, a
+distribution through a softmax --- so no step can leave the feasible set.
+
+One detail of that map is load-bearing rather than cosmetic. A softmax over
+$n$ logits is invariant to adding a constant to all of them, so one direction
+of the parameter space is exactly flat; the observed information is then
+singular and the intervals below are undefined. Pinning the first logit
+removes that direction and makes the map a bijection onto the simplex. The
+same issue appears as a physical gauge in the Potts field of
+Section~\ref{sec:qa} and is fixed the same way.
+
+Discrete moves sit outside this interface. A move changes the structure ---
+a different topology, chain length or state count --- and so changes what the
+parameter vector means and how long it is. It therefore constructs a
+\emph{new} objective rather than stepping inside a fit over a fixed-length
+vector, and the loop that proposes moves owns that construction. This is what
+lets the tree search of Section~\ref{sec:search} and the continuous fit share
+an optimizer without either knowing about the other.
+
+Fitted parameters are reported with intervals derived from the observed
+Fisher information --- the Hessian of the negative log-likelihood at the
+optimum --- pushed through the constraint map by the delta method. Those
+intervals are asymptotic, and Section~\ref{sec:qa} reports how fast they
+converge on their nominal coverage rather than assuming they have.
 
 \section{Reinforcement-learning formulation}
 
@@ -735,8 +770,44 @@ means something only near its minimum.
   \label{fig:likelihood-gradient}
 \end{figure}
 
-Search and optimization-trajectory QA figures are not built yet; this section
-is where their captions go once they are.
+Figure~\ref{fig:opt-recovery} is the acceptance test for the optimizer of
+Section~\ref{sec:opt-interface}, run on two models that share nothing but a
+factorized structure: a one-dimensional Potts chain in an external field, and
+a discrete hidden Markov model. Neither is phylogenetic, which is the point
+--- an interface demonstrated on a single model is shaped by that model. Each
+fitted parameter is plotted against the value that generated the data, with
+the interval the observed information implies; markers are open where the
+interval misses, so the figure states its own coverage.
+
+\qacaptionread{figures/opt_recovery_caption.txt}{\optRecoveryCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/opt_recovery}
+  \caption{\optRecoveryCaption}
+  \label{fig:opt-recovery}
+\end{figure}
+
+Coverage on one dataset is a draw, not a rate. Figure~\ref{fig:opt-coverage}
+refits both models over independent datasets at a range of sizes and plots
+the fraction of intervals containing the truth. Both converge on the nominal
+rate from opposite sides, which is the behaviour of an asymptotic
+approximation; a wrong variance formula would not improve with sample size.
+The hidden Markov model approaches from below for two identifiable reasons
+absent from the Potts chain: emission probabilities fitted near zero, where a
+Wald interval on the log scale is a poor approximation, and the
+post-selection cost of aligning the hidden-state permutation the likelihood
+is invariant to.
+
+\qacaptionread{figures/opt_coverage_caption.txt}{\optCoverageCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\linewidth]{figures/opt_coverage}
+  \caption{\optCoverageCaption}
+  \label{fig:opt-coverage}
+\end{figure}
+
+Search-trajectory QA figures are not built yet; this section is where their
+captions go once they are.
 
 \section{Sources}
 
