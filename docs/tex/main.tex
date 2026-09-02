@@ -305,6 +305,12 @@ substitution frequencies are checked against \eqref{eq:jc} within a
 yaml-declared Monte Carlo tolerance in
 \texttt{tests/regression/test\_jc\_simulate.py}.
 
+Table~\ref{tab:sim-problem-sizes} in Section~\ref{sec:qa} lists every
+simulation regression fixture at the problem sizes actually run, read
+directly from each fixture's yaml; Figure~\ref{fig:sim-example} there shows
+a complete generated instance at the smallest of them --- the Newick string
+and the leading simulated sites of the alignment.
+
 \section{Tree search}
 
 \subsection{The size of the problem}
@@ -549,6 +555,7 @@ states, and $c$ rate categories, before any caching of unchanged subtrees
 across proposals.
 
 \section{Quality assurance}
+\label{sec:qa}
 
 The test suite is expected to establish scientific validity, not to exercise
 syntax: fixtures come from component-wise simulation under known parameters,
@@ -578,9 +585,39 @@ Figure~\ref{fig:sim-tree} is the first: the topology and branch lengths
 \texttt{tests/regression/test\_jc\_simulate.py}.
 \texttt{infra/build\_technical\_doc.sh} regenerates the figure and the
 caption above --- read verbatim from the file the script writes alongside
-it --- on every build, so the two cannot drift apart. Likelihood,
-optimization, and search QA figures are not built yet; this section is
-where their captions go once they are.
+it --- on every build, so the two cannot drift apart.
+
+Table~\ref{tab:sim-problem-sizes} tabulates the taxa count, site count,
+seed, and Monte Carlo tolerance of every simulation regression fixture,
+rendered by \texttt{phylo.qa.sim\_problem\_sizes} directly from the three
+\texttt{simulation\_params.yaml} files rather than restated by hand, so the
+numbers in this document cannot drift from what the regression suite
+actually runs.
+
+\qacaptionread{figures/sim_problem_sizes_caption.txt}{\simProblemSizesCaption}
+\begin{table}[htbp]
+  \centering
+  \includegraphics[width=0.8\linewidth]{figures/sim_problem_sizes}
+  \caption{\simProblemSizesCaption}
+  \label{tab:sim-problem-sizes}
+\end{table}
+
+Figure~\ref{fig:sim-example} shows a complete generated instance at the
+smallest of those sizes: the Newick string \texttt{phylo.sim.newick.to\_newick}
+produces for the 4-taxon fixture, and the leading simulated sites of the
+alignment, nucleotide-coded for this $k = 4$ model, rendered by
+\texttt{phylo.qa.sim\_example}.
+
+\qacaptionread{figures/sim_example_caption.txt}{\simExampleCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\linewidth]{figures/sim_example}
+  \caption{\simExampleCaption}
+  \label{fig:sim-example}
+\end{figure}
+
+Likelihood, optimization, and search QA figures are not built yet; this
+section is where their captions go once they are.
 
 \section{Sources}
 
