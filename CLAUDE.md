@@ -77,6 +77,8 @@ This file is authoritative. The rest exist so it does not have to carry everythi
 *   **Phylogenetics:** Felsenstein (*Inferring Phylogenies*); Durbin et al. (*Biological Sequence Analysis*); Compeau & Pevzner (*Bioinformatics Algorithms*); Pachter & Sturmfels (*Algebraic Statistics for Computational Biology*)
 *   **Information/Quantum:** Blahut (*Algebraic Codes for Data Transmission*); Nielsen & Chuang (*Quantum Computation and Quantum Information* — background only)
 
+**Expected Reader:** a well-educated developer with baseline scientific and performance-computing background, but no expert knowledge of phylogenetics. This sets the formatting contract for `docs/tex/`: keep the body streamlined — hyperlinks and citations over inline derivation — and push required background that isn't phylo-specific (e.g. NNI, other standard algorithms) into a dedicated appendix, cited from the point of use rather than re-derived there. Treat the main text as a best-effort high-level overview of the current best-known approach (simulation, models), not an exhaustive record; link out to supporting docs, plots, and results for the detail behind it.
+
 ## Writing Style
 1.  **Be concise and direct:** Omit needless words, use active voice, and lead with the most important fact.
 2.  **Be concrete and precise:** Use exact facts and numbers ("40% faster") instead of vague intensifiers ("much faster").
