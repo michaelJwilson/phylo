@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+import matplotlib as mpl
 from matplotlib.figure import Figure
 
 
@@ -56,6 +57,12 @@ def write_qa_figure(output_dir: Path, stem: str, fig: Figure, caption: str) -> Q
     output_dir.mkdir(parents=True, exist_ok=True)
     figure_path = output_dir / f"{stem}.pdf"
     caption_path = output_dir / f"{stem}_caption.txt"
-    fig.savefig(figure_path)
+    # matplotlib's PDF backend defaults to embedding text as Type 3 fonts
+    # (pdf.fonttype=3), which GitHub's pdf.js-based blob viewer fails to
+    # render ("Error rendering embedded code"). Type 42 embeds TrueType
+    # outlines instead, which pdf.js renders correctly; scoped to this call
+    # so it doesn't change matplotlib's global rc state for callers.
+    with mpl.rc_context({"pdf.fonttype": 42, "ps.fonttype": 42}):
+        fig.savefig(figure_path)
     caption_path.write_text(caption)
     return QAFigure(figure_path=figure_path, caption_path=caption_path, caption=caption)
