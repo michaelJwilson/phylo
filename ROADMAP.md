@@ -29,7 +29,7 @@ Establishing the simulation, compression, and numerical infrastructure required 
 
 Stand up standard move sets for search and the rigid evaluation harness required to measure RL performance.
 
-- **Milestone 5: Move Sets & Classical Baseline.** Implement strict NNI and SPR topological neighborhoods. Test connectivity via random walks and reproduce published hill-climbing behavior on standard datasets.
+- **Milestone 5: Move Sets & Classical Baseline.** Implement strict NNI and SPR topological neighborhoods. Test connectivity via random walks and reproduce published hill-climbing behavior on standard datasets. NNI and SPR neighbourhood generators (`phylo.search.topology`) landed, validated exhaustively against closed-form neighbour counts at `n = 5..8` including NNI-in-SPR containment (issue #79, `changelog.d/79.added.md`); the random-walk connectivity test and the classical hill-climbing baseline are deferred to issue #73's canonical Newick key and remain not started.
 - **Milestone 6: Experiment Tracking.** Stand up a localized manifest system (e.g., Aim) to log configurations, likelihood traces, compute budgets, and QA figures. Ensure total reproducibility from a single manifest.
 - **Milestone 7: Benchmark Harness.** Deploy a leaderboard evaluating algorithms strictly on budget-matched log-likelihood metrics across shared seeds. Require statistical significance (paired comparisons) to claim new state-of-the-art variants.
 

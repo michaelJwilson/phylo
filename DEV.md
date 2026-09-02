@@ -13,7 +13,7 @@ carries the domain; `CLAUDE.md` states why keeping it liftable matters.
 | `docs/source/` | Sphinx API documentation. |
 | `python/phylo/` | Python package: re-exports, typed extension stubs, stub CLI. |
 | `python/phylo/sim/` | Data generation and ground-truth retention. |
-| `python/phylo/likelihood/` | Felsenstein pruning; CPU, CUDA, and Metal dispatch. |
+| `python/phylo/likelihood/` | Felsenstein pruning; CPU dispatch landed (NumPy, PyTorch, Rust), CUDA and Metal dispatch not yet implemented. |
 | `python/phylo/opt/` | Continuous parameter fitting via autodiff (PyTorch). |
 | `python/phylo/search/` | Move sets, RL agents, temperature schedules. |
 | `python/phylo/qa/` | QA figures/tables for the technical document; renders, doesn't recompute. |
@@ -79,7 +79,7 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 
 * **Reproducibility:** Pin environments entirely. Use `--locked` for CI installs, pin runner images (`ubuntu-24.04`), and strictly use `np.random.default_rng(seed)`.
 * **Versioning:** Maintained strictly in `Cargo.toml` (`[package].version`).
-* **Definition of Done:** Follow `CLAUDE.md`'s checklist. A PR must also update the item's status in `STATUS.md`.
+* **Definition of Done:** Follow `CLAUDE.md`'s checklist.
 * **PR Template:** Every PR starts from `.github/pull_request_template.md`, which carries the Definition-of-Done checklist, a benchmark-numbers table, a second Benchmark-section table for the realized value of any scientific/tolerance regression test the PR touches (test, reference, tolerance, realized value — write "N/A" as text and delete the table if none), a Documentation Sync line, and a Follow-up / Deferred Work section for TODOs left to a tracking issue, all as a reminder, not a CI gate.
 * **Agentic Approach:** Use parallel git worktrees/PRs for disjoint tasks. Use single sequential PRs for coupled changes.
 
