@@ -1,0 +1,45 @@
+# An 8-taxon balanced tree, at the same n_sites/tolerance as
+# simulation_params.yaml -- the taxa-count point in the "variety of
+# site/taxa sizes" sim/CLAUDE.md asks validation tests to cover.
+seed: 20260904
+n_sites: 200000
+tolerance: 0.01
+k: 4
+pi: [0.25, 0.25, 0.25, 0.25]
+tau:
+  name: root
+  children:
+    - name: left
+      branch_length: 0.05
+      children:
+        - name: left_left
+          branch_length: 0.05
+          children:
+            - name: A
+              branch_length: 0.10
+            - name: B
+              branch_length: 0.15
+        - name: left_right
+          branch_length: 0.05
+          children:
+            - name: C
+              branch_length: 0.20
+            - name: D
+              branch_length: 0.25
+    - name: right
+      branch_length: 0.05
+      children:
+        - name: right_left
+          branch_length: 0.05
+          children:
+            - name: E
+              branch_length: 0.30
+            - name: F
+              branch_length: 0.10
+        - name: right_right
+          branch_length: 0.05
+          children:
+            - name: G
+              branch_length: 0.15
+            - name: H
+              branch_length: 0.40

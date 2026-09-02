@@ -1,0 +1,27 @@
+# Ground truth for the k=4 Jukes-Cantor regression test
+# (tests/regression/test_jc_simulate.py). Every field is required -- see
+# python/phylo/sim/params.py and python/phylo/sim/CLAUDE.md.
+#
+# n_sites=200000 keeps the Monte Carlo standard error of an empirical
+# transition frequency (sqrt(p(1-p)/n_sites), <= ~0.001 for p in [0, 1]) an
+# order of magnitude below tolerance, so the regression test has margin
+# without being flaky.
+seed: 20260902
+n_sites: 200000
+tolerance: 0.01
+k: 4
+pi: [0.25, 0.25, 0.25, 0.25]
+tau:
+  name: root
+  children:
+    - name: A
+      branch_length: 0.10
+    - name: B
+      branch_length: 0.25
+    - name: ancestor_CD
+      branch_length: 0.05
+      children:
+        - name: C
+          branch_length: 0.15
+        - name: D
+          branch_length: 0.40
