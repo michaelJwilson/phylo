@@ -9,7 +9,6 @@ carries the domain; `CLAUDE.md` states why keeping it liftable matters.
 
 | Path | Contents |
 | --- | --- |
-| `infra/` | CI/CD, agentic workflow, experiment tracking (Aim). |
 | `benches/`, `tests/` | Criterion benchmarks (Rust), pytest suite, and integration tests. |
 | `docs/source/` | Sphinx API documentation. |
 | `python/phylo/` | Python package: re-exports, typed extension stubs, stub CLI. |

@@ -143,6 +143,14 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
   `CHANGELOG.md` is now a plain, manually-edited file under `[Unreleased]`;
   the fragment-per-PR assembly step (`infra/changelog.py`) and its
   `--check`/`--assemble` CI steps are gone.
+- Scaffolding that outlived its code: `infra/__init__.py` and
+  `tests/infra/__init__.py` (both empty since `infra/changelog.py` and its
+  test were deleted), the orphan fragment `changelog.d/30.changed.md` left
+  over from the same removal, and the unused `pytest-xdist` dependency
+  (never invoked — no `-n` flag, no `addopts`). `infra/` is no longer in
+  `pyproject.toml`'s `mypy` `files` list or `DEV.md`'s layout table;
+  `infra/CLAUDE.md` and `infra/TICKETING.md` stay, since they are content,
+  not code.
 
 ### Security
 
