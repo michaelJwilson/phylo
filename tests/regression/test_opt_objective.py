@@ -16,6 +16,9 @@ import pytest
 import torch
 from numpy.testing import assert_allclose
 from phylo.opt.constrain import free_from_log_simplex, log_simplex
+from phylo.opt.hmm import HmmObjective
+from phylo.opt.objective import Objective
+from phylo.opt.potts import PottsObjective
 
 # The whole point of the abstraction: the optimizer may not know what it is
 # optimizing. Stated as module prefixes rather than names so a new
@@ -103,3 +106,9 @@ def test_the_pinned_gauge_leaves_no_flat_direction() -> None:
     assert torch.allclose(
         torch.log_softmax(logits, dim=0), torch.log_softmax(logits + 1.0, dim=0)
     )
+
+
+def test_both_reference_instances_satisfy_the_protocol() -> None:
+    chains = torch.zeros((2, 3), dtype=torch.long).numpy()
+    assert isinstance(PottsObjective(chains, n_states=2), Objective)
+    assert isinstance(HmmObjective(chains, n_states=2, n_symbols=2), Objective)
