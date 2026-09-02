@@ -650,8 +650,50 @@ against the analytic form, never against the pruning code it feeds.
   \label{fig:jc-transition}
 \end{figure}
 
-Optimization and search QA figures are not built yet; this section is where
-their captions go once they are.
+Figure~\ref{fig:likelihood-backends} turns to the likelihood engine, and to
+the two claims it rests on. Panel~(a) checks every backend against
+brute-force marginalization over internal states, an exhaustive sum that is a
+different algorithm rather than a second opinion from the same recursion;
+panel~(b) checks the accelerated backends against the vectorized NumPy
+reference at the full fixture sizes, where that sum is no longer tractable.
+
+Panel~(b) reports a \emph{relative} deviation, and the reason generalizes.
+The total log-likelihood is a sum over sites, so its magnitude grows with the
+site count and so does any absolute discrepancy in it. The regression suite
+pins absolute tolerances at deliberately small sizes, where they are
+achievable; the same agreement, measured at $2 \times 10^{5}$ sites, reads
+several orders of magnitude larger in absolute terms while sitting at the
+\texttt{float64} floor relatively. An absolute tolerance fixed at one problem
+size does not transfer to another, which is a constraint on how the
+cross-device tolerance of Section~\ref{sec:qa} should eventually be stated.
+
+\qacaptionread{figures/likelihood_backends_caption.txt}{\likelihoodBackendsCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/likelihood_backends}
+  \caption{\likelihoodBackendsCaption}
+  \label{fig:likelihood-backends}
+\end{figure}
+
+Figure~\ref{fig:likelihood-gradient} checks the derivative the continuous
+optimization of Milestone~4 will descend. Autograd differentiates the PyTorch
+pruning recursion analytically; central finite differences of the independent
+NumPy likelihood approximate the same quantity numerically. Panel~(b) sweeps
+the finite-difference step to show why the step must be stated rather than
+assumed: truncation error falls as the step shrinks while floating-point
+cancellation grows, so the disagreement is U-shaped in the step and the check
+means something only near its minimum.
+
+\qacaptionread{figures/likelihood_gradient_caption.txt}{\likelihoodGradientCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/likelihood_gradient}
+  \caption{\likelihoodGradientCaption}
+  \label{fig:likelihood-gradient}
+\end{figure}
+
+Search and optimization-trajectory QA figures are not built yet; this section
+is where their captions go once they are.
 
 \section{Sources}
 

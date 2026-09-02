@@ -34,6 +34,16 @@ uv run python -m phylo.qa.sim_problem_sizes \
   --params tests/regression/fixtures/simulation_params_8taxa.yaml \
   --output-dir docs/tex/figures
 
+uv run python -m phylo.qa.likelihood_backends \
+  --params tests/regression/fixtures/simulation_params_small_sites.yaml \
+  --params tests/regression/fixtures/simulation_params.yaml \
+  --params tests/regression/fixtures/simulation_params_8taxa.yaml \
+  --output-dir docs/tex/figures
+
+uv run python -m phylo.qa.likelihood_gradient \
+  --params tests/regression/fixtures/simulation_params.yaml \
+  --output-dir docs/tex/figures
+
 (
   cd docs/tex
   latexmk -pdf -interaction=nonstopmode -halt-on-error \
