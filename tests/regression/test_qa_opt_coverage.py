@@ -40,11 +40,27 @@ def test_potts_coverage_counts_every_parameter_of_every_replicate() -> None:
 
 def test_hmm_coverage_counts_every_parameter_of_every_replicate() -> None:
     params = load_hmm_params(HMM_FIXTURE)
-    covered, total = hmm_coverage(params, n_sequences=150, replicates=2)
+    covered, total, boundary = hmm_coverage(params, n_sequences=600, replicates=2)
     per_replicate = (
         params.n_states + params.n_states**2 + params.n_states * params.n_symbols
     )
+    assert boundary == 0, "600 sequences should keep the estimate interior"
     assert total == 2 * per_replicate
+    assert 0 <= covered <= total
+
+
+def test_a_boundary_fit_is_counted_and_contributes_no_intervals() -> None:
+    # The reason hmm_coverage returns a third number. At a small enough
+    # sample some fits put an emission probability at zero, where the
+    # observed information is singular and there is no interval to check.
+    # Dropping them silently would select for the well-behaved samples.
+    params = load_hmm_params(HMM_FIXTURE)
+    covered, total, boundary = hmm_coverage(params, n_sequences=40, replicates=3)
+    per_replicate = (
+        params.n_states + params.n_states**2 + params.n_states * params.n_symbols
+    )
+    assert boundary > 0, "40 sequences was meant to reach the boundary"
+    assert total == (3 - boundary) * per_replicate
     assert 0 <= covered <= total
 
 
@@ -58,7 +74,7 @@ def test_the_sizes_the_figure_sweeps_are_increasing() -> None:
 
 def test_the_caption_reports_the_numbers_it_was_given() -> None:
     potts = [(100, 158, 160), (400, 155, 160), (1600, 96, 100)]
-    hmm = [(150, 168, 192), (600, 139, 144), (2400, 91, 96)]
+    hmm = [(150, 168, 192, 0), (600, 139, 144, 0), (2400, 91, 96, 0)]
 
     _, caption = build_figure(potts, hmm)
 
@@ -66,7 +82,19 @@ def test_the_caption_reports_the_numbers_it_was_given() -> None:
     assert "96/100 = 0.960 at 1600" in caption
     assert "168/192 = 0.875 at 150" in caption
     assert "91/96 = 0.948 at 2400" in caption
+    assert "boundary" not in caption
     # qa/CLAUDE.md: captions are plain text pulled into LaTeX verbatim.
+    assert not set(caption) & set("_%\\&#")
+
+
+def test_the_caption_declares_any_fit_that_had_no_interval() -> None:
+    potts = [(100, 158, 160), (400, 155, 160), (1600, 96, 100)]
+    hmm = [(150, 120, 144, 2), (600, 139, 144, 0), (2400, 91, 96, 0)]
+
+    _, caption = build_figure(potts, hmm)
+
+    assert "boundary of the parameter space" in caption
+    assert "2 of" in caption
     assert not set(caption) & set("_%\\&#")
 
 
@@ -77,7 +105,7 @@ def test_main_writes_a_figure_and_caption(
     # technical-document build, not to a per-PR test; the sizes are patched
     # down so the wiring is still exercised.
     monkeypatch.setattr(opt_coverage, "POTTS_SIZES", ((50, 2), (100, 2)))
-    monkeypatch.setattr(opt_coverage, "HMM_SIZES", ((40, 1), (80, 1)))
+    monkeypatch.setattr(opt_coverage, "HMM_SIZES", ((600, 1), (900, 1)))
 
     written = opt_coverage.main(
         [
@@ -91,3 +119,10 @@ def test_main_writes_a_figure_and_caption(
     )
     assert written.figure_path.is_file()
     assert written.caption_path.read_text() == written.caption
+
+
+def test_a_size_where_every_fit_hits_the_boundary_is_refused() -> None:
+    # Rather than a ZeroDivisionError from an empty count. The message says
+    # what to change, since the fix is a larger size, not a code change.
+    with pytest.raises(ValueError, match="reached the boundary"):
+        build_figure([(100, 158, 160)], [(10, 0, 0, 4)])

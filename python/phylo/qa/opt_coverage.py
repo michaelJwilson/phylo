@@ -49,7 +49,11 @@ NOMINAL = 0.95
 # minute of the technical-document build. The Potts fit is two orders of
 # magnitude cheaper than the HMM's, so it gets both more sizes and more
 # replicates; the HMM's largest size is where the asymptotics are meant to
-# be visible, so it is the one that must not be dropped.
+# be visible, so it is the one that must not be dropped. The smallest HMM size
+# is deliberately small enough that some fits reach the boundary of the
+# parameter space and have no interval at all; those are counted and
+# reported rather than hidden, since it is part of what small-sample
+# inference looks like.
 POTTS_SIZES = ((100, 40), (400, 40), (1600, 25))
 HMM_SIZES = ((150, 8), (600, 6), (2400, 4))
 
@@ -97,11 +101,19 @@ def potts_coverage(
 
 def hmm_coverage(
     params: HmmParams, n_sequences: int, replicates: int
-) -> tuple[int, int]:
+) -> tuple[int, int, int]:
     """Count covering intervals over independent HMM datasets.
 
     The hidden-state permutation is aligned before comparing, since the
     likelihood is invariant to it.
+
+    A fit whose estimate reaches the boundary of the parameter space -- an
+    emission probability at zero -- has no interval to check: the curvature
+    in that direction vanishes, the observed information is singular, and
+    ``phylo.opt.fit`` refuses to invert it. Those replicates are counted
+    separately rather than dropped silently, because excluding them without
+    saying so would quietly select for the well-behaved samples and report a
+    coverage that no procedure achieves.
 
     Parameters
     ----------
@@ -114,8 +126,9 @@ def hmm_coverage(
 
     Returns
     -------
-    tuple[int, int]
-        Intervals covering, and intervals checked.
+    tuple[int, int, int]
+        Intervals covering, intervals checked, and replicates that reached
+        the boundary and so contributed no intervals.
     """
     truths = {
         "log_initial": torch.log(torch.as_tensor(params.initial)),
@@ -124,6 +137,7 @@ def hmm_coverage(
     }
     covered = 0
     total = 0
+    boundary = 0
     for replicate in range(replicates):
         drawn = replace(
             params, seed=params.seed + 7919 * replicate, n_sequences=n_sequences
@@ -133,7 +147,11 @@ def hmm_coverage(
         )
         result = fit(objective)
         estimate = objective.constrain(result.theta)
-        error = constrained_standard_errors(objective, result.theta)
+        try:
+            error = constrained_standard_errors(objective, result.theta)
+        except ValueError:
+            boundary += 1
+            continue
         order = list(
             align_states(estimate["log_emission"], torch.as_tensor(params.emission))
         )
@@ -146,19 +164,45 @@ def hmm_coverage(
             hits = covers(point, spread, reference)
             covered += int(hits.sum())
             total += hits.numel()
-    return covered, total
+    return covered, total, boundary
+
+
+def _points(
+    series: list[tuple[int, int, int]],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Sizes, realized rates, and binomial standard errors, for one curve."""
+    empty = [size for size, _, total in series if total == 0]
+    if empty:
+        msg = (
+            f"every fit at size(s) {empty} reached the boundary of the "
+            f"parameter space, so there are no intervals to plot; raise the "
+            f"size or the replicate count"
+        )
+        raise ValueError(msg)
+    sizes = np.array([float(size) for size, _, _ in series])
+    rates = np.array([hit / total for _, hit, total in series])
+    errors = np.array(
+        [
+            float((rate * (1.0 - rate) / total) ** 0.5)
+            for rate, (_, _, total) in zip(rates, series, strict=True)
+        ]
+    )
+    return sizes, rates, errors
 
 
 def build_figure(
     potts: list[tuple[int, int, int]],
-    hmm: list[tuple[int, int, int]],
+    hmm: list[tuple[int, int, int, int]],
 ) -> tuple[Figure, str]:
     """Assemble the coverage figure and its caption.
 
     Parameters
     ----------
-    potts, hmm : list[tuple[int, int, int]]
+    potts : list[tuple[int, int, int]]
         One ``(size, covered, total)`` per data size.
+    hmm : list[tuple[int, int, int, int]]
+        One ``(size, covered, total, boundary)`` per data size, the last
+        entry counting replicates that produced no interval.
 
     Returns
     -------
@@ -176,15 +220,11 @@ def build_figure(
             color=INK_MUTED,
             fontsize="small",
         )
-        for index, (series, label) in enumerate(((potts, "Potts"), (hmm, "HMM"))):
-            sizes = np.array([size for size, _, _ in series], dtype=float)
-            rates = np.array([hit / total for _, hit, total in series])
-            errors = np.array(
-                [
-                    (rate * (1.0 - rate) / total) ** 0.5
-                    for rate, (_, _, total) in zip(rates, series, strict=True)
-                ]
-            )
+        curves = [
+            (_points(potts), "Potts"),
+            (_points([entry[:3] for entry in hmm]), "HMM"),
+        ]
+        for index, ((sizes, rates, errors), label) in enumerate(curves):
             style = series_style(index)
             ax.errorbar(
                 sizes,
@@ -207,9 +247,25 @@ def build_figure(
         ax.legend(loc="lower right", frameon=False)
         fig.tight_layout()
 
-    def _rate(entry: tuple[int, int, int]) -> str:
-        size, hit, total = entry
+    def _rate(entry: tuple[int, ...]) -> str:
+        size, hit, total = entry[0], entry[1], entry[2]
         return f"{hit}/{total} = {hit / total:.3f} at {size}"
+
+    boundary_note = (
+        ""
+        if not any(entry[3] for entry in hmm)
+        else (
+            " At the smallest hidden Markov size "
+            f"{sum(entry[3] for entry in hmm)} of "
+            f"{sum(replicates for _, replicates in HMM_SIZES)} fits reached "
+            "the boundary of the parameter space -- an emission probability "
+            "estimated at zero -- where the observed information is singular "
+            "and there is no interval to report. Those fits are excluded from "
+            "the counts above and stated here rather than dropped silently, "
+            "since excluding them unannounced would select for the "
+            "well-behaved samples."
+        )
+    )
 
     caption = (
         f"Realized coverage of the 95 percent Wald intervals built from the "
@@ -226,7 +282,7 @@ def build_figure(
         f"Wald interval on the log scale is a poor approximation, and "
         f"aligning the hidden-state permutation to the truth is a "
         f"post-selection step that costs a little coverage. Seeds are fixed, "
-        f"so every point is reproducible rather than redrawn."
+        f"so every point is reproducible rather than redrawn." + boundary_note
     )
     return fig, caption
 

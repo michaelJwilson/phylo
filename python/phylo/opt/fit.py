@@ -31,6 +31,9 @@ _Z_95 = 1.959963984540054
 # accumulates; few enough that the convergence test below is checked often.
 _INNER_ITERATIONS = 20
 
+# Conditioning floor for the observed information; see parameter_covariance.
+_RCOND = 1e-6
+
 
 @dataclass(frozen=True)
 class FitResult:
@@ -168,15 +171,34 @@ def observed_information(objective: Objective, theta: torch.Tensor) -> torch.Ten
     return information
 
 
-def parameter_covariance(objective: Objective, theta: torch.Tensor) -> torch.Tensor:
+def parameter_covariance(
+    objective: Objective, theta: torch.Tensor, rcond: float = _RCOND
+) -> torch.Tensor:
     """Inverse observed information: the asymptotic covariance of ``theta``.
+
+    Conditioning is checked rather than left to ``torch.linalg.inv``. A model
+    with an exactly flat direction produces an information matrix that is
+    only *numerically* singular -- rounding leaves its smallest eigenvalue at
+    1e-4 rather than 0 -- so the inversion succeeds and returns an
+    astronomically large covariance instead of failing. Silently returning a
+    meaningless interval is worse than raising.
 
     Parameters
     ----------
     objective : Objective
         The fitted objective.
     theta : torch.Tensor
-        Fitted parameters.
+        Fitted parameters. This must be an optimum: the observed information
+        is a statement about curvature at a maximum, and away from one the
+        Hessian need not be positive definite, so a non-optimal point is
+        rejected by the same check that catches an unidentifiable model.
+    rcond : float
+        Smallest acceptable ratio of the smallest to the largest eigenvalue
+        of the observed information. The default separates the two cases by
+        four orders of magnitude on both sides: a phylogenetic tree whose two
+        root branches are confounded realizes 6.7e-08, while the same tree
+        with that pair merged realizes 6.1e-02 and an unrooted fixture
+        5.6e-02.
 
     Returns
     -------
@@ -186,21 +208,27 @@ def parameter_covariance(objective: Objective, theta: torch.Tensor) -> torch.Ten
     Raises
     ------
     ValueError
-        If the information matrix is singular, which means the model as
-        parameterized is not identifiable -- a gauge that was not fixed, or
-        a fixture too small to pin every parameter. Reported as such rather
-        than as a linear-algebra error, because that is the actual fault.
+        If the information is singular, indefinite, or worse conditioned than
+        ``rcond``. All three mean the model as parameterized is not
+        identifiable from this data -- a gauge that was not fixed, a
+        confounded pair of parameters, or a sample too small to pin them.
+        Reported as such rather than as a linear-algebra error, because that
+        is the actual fault.
     """
     information = observed_information(objective, theta)
-    try:
-        covariance: torch.Tensor = torch.linalg.inv(information)
-    except RuntimeError as exc:
-        # torch raises _LinAlgError, a RuntimeError subclass. Translated
-        # because the fault is a model that cannot be identified from this
-        # data, not a linear-algebra mishap, and the caller can act on the
-        # former.
-        msg = "observed information is singular: the model is not identifiable"
-        raise ValueError(msg) from exc
+    # Symmetric by construction, so eigvalsh is exact where a general
+    # eigensolver would introduce a spurious imaginary part.
+    eigenvalues = torch.linalg.eigvalsh(information)
+    smallest = float(eigenvalues.min())
+    largest = float(eigenvalues.max())
+    if largest <= 0.0 or smallest <= rcond * largest:
+        msg = (
+            f"observed information is not positive definite to within "
+            f"rcond={rcond:.0e} (eigenvalue ratio {smallest / largest:.2e}): "
+            f"the model is not identifiable from this data"
+        )
+        raise ValueError(msg)
+    covariance: torch.Tensor = torch.linalg.inv(information)
     return covariance
 
 

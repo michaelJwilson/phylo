@@ -280,6 +280,38 @@ def test_a_singular_information_matrix_is_reported_as_unidentifiable() -> None:
         parameter_covariance(_Quadratic(), torch.zeros(2, dtype=torch.float64))
 
 
+def test_an_estimate_on_the_boundary_has_no_interval() -> None:
+    # Not a contrived matrix: at a small enough sample the HMM's
+    # maximum-likelihood estimate puts an emission probability at zero, and
+    # on the boundary the curvature in that direction vanishes. The
+    # information is then singular only *numerically* -- rounding leaves its
+    # smallest eigenvalue near 1e-14 rather than at 0 -- so torch inverts it
+    # successfully and returns an astronomically large covariance. Refusing
+    # is the whole point of checking the conditioning rather than trusting
+    # the inversion to fail.
+    base = load_hmm_params(HMM_FIXTURE)
+    params = replace(base, n_sequences=30, sequence_length=5)
+    objective = HmmObjective(
+        simulate_sequences(params), params.n_states, params.n_symbols
+    )
+    result = fit(objective)
+    fitted = torch.exp(objective.constrain(result.theta)["log_emission"])
+    assert float(fitted.min()) < 1e-6, "this sample was meant to reach the boundary"
+
+    with pytest.raises(ValueError, match="not identifiable"):
+        parameter_covariance(objective, result.theta)
+
+
+def test_a_well_posed_fit_is_far_from_the_conditioning_floor() -> None:
+    # The other side of the same threshold: the check must not be so eager
+    # that it rejects the fits the recovery tests depend on.
+    objective, _ = _hmm_objective()
+    information = observed_information(objective, fit(objective).theta)
+    eigenvalues = torch.linalg.eigvalsh(information)
+    ratio = float(eigenvalues.min() / eigenvalues.max())
+    assert ratio > 1e-4, f"eigenvalue ratio {ratio:.2e} is close to the 1e-6 floor"
+
+
 def test_the_observed_information_is_the_hessian_of_the_objective() -> None:
     # Pinned against a closed form: d2/dx2 (x - 2)^2 = 2, and zero elsewhere.
     information = observed_information(
@@ -296,8 +328,12 @@ def test_covers_is_elementwise_and_two_sided() -> None:
 
 
 def test_standard_errors_are_shaped_like_their_parameters() -> None:
-    objective, truth = _hmm_objective()
-    error = constrained_standard_errors(objective, truth)
+    # At the fitted optimum, not at the truth: the observed information is a
+    # statement about curvature *at a maximum*, and away from one the
+    # Hessian need not be positive definite. Written against the truth
+    # first, this raised -- correctly.
+    objective, _ = _hmm_objective()
+    error = constrained_standard_errors(objective, fit(objective).theta)
     assert error["log_initial"].shape == (3,)
     assert error["log_transition"].shape == (3, 3)
     assert error["log_emission"].shape == (3, 4)
