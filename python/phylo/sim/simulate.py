@@ -14,7 +14,8 @@ from dataclasses import dataclass
 import numpy as np
 
 from phylo.sim.jc import jc_transition_probabilities
-from phylo.sim.tree import Node, preorder, to_newick
+from phylo.sim.newick import to_newick
+from phylo.sim.tree import Node, preorder
 
 
 @dataclass(frozen=True)

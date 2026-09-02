@@ -1,8 +1,8 @@
 """Minimal tree representation for the simulator.
 
 Topology is an input to simulation (drawn from ``simulation_params.yaml``),
-never inferred, so this is deliberately not a general Newick parser --
-serialization to Newick is the only direction the simulator needs.
+never inferred. Newick serialization, parsing, and validation live in
+``phylo.sim.newick``, the package's single source of Newick functionality.
 """
 
 from __future__ import annotations
@@ -70,31 +70,3 @@ def edges(root: Node) -> Iterator[tuple[Node, Node]]:
     for child in root.children:
         yield root, child
         yield from edges(child)
-
-
-def to_newick(root: Node) -> str:
-    """Serialize a tree to Newick format.
-
-    Parameters
-    ----------
-    root : Node
-        Root of the tree to serialize. Its ``branch_length`` is ignored, per
-        the Newick convention that the root carries no incoming edge.
-
-    Returns
-    -------
-    str
-        The tree in Newick format, terminated with ``;``.
-    """
-    return f"{_to_newick(root)};"
-
-
-def _to_newick(node: Node) -> str:
-    if node.is_leaf:
-        label = node.name
-    else:
-        inner = ",".join(_to_newick(child) for child in node.children)
-        label = f"({inner}){node.name}"
-    if node.branch_length is None:
-        return label
-    return f"{label}:{node.branch_length}"

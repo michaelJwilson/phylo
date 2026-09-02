@@ -21,7 +21,7 @@ Engineering Requirements:
 Establishing the simulation, compression, and numerical infrastructure required to train and score any model.
 
 - **Milestone 1: Simulation Engine.** Implement k-state, e.g. 4 alphabet models, assuming a given evolutionary model - Jukes-Cantor. Ensure generated sequences match analytic closed-form transition probabilities.
-- **Milestone 2: Compression & Canonicalization.** Implement lossless subtree-level (DAG) compression across sites.  Define and enforce a canonical newick topology key to enable O(1) equality checks.
+- **Milestone 2: Compression & Canonicalization.** Implement lossless subtree-level (DAG) compression across sites.  Define and enforce a canonical newick topology key to enable O(1) equality checks. `phylo.sim.newick`'s topology counting and validation (issue #60) are a prerequisite for this key, not the key itself.
 - **Milestone 3: Likelihood Engine.** Implement Felsenstein pruning via PyTorch/Triton/JAX (GPU) and Rust (CPU). Validate against brute-force marginalization on small trees to machine precision.
 - **Milestone 4: Continuous Optimization.** Fit branch lengths, rate matrix (Q), and root distribution (π) via autodiff. Validate gradients against finite differences and ensure simulated parameter recovery within confidence intervals.
 
