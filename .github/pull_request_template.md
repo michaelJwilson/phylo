@@ -19,6 +19,23 @@ or criterion. Write "N/A — no hot-path change" if this PR doesn't touch one.
 | --- | --- | --- | --- |
 |  |  |  |  |
 
+<!--
+Required whenever this PR touches a regression test that pins output against
+a reference within a stated tolerance (CLAUDE.md, "Pin to Independent
+Sources" / "Cross-Device Agreement Is a Tolerance") — e.g.
+`tests/regression/test_jc_simulate.py::test_simulated_substitution_frequencies_match_analytic_jc`,
+which checks `assert_allclose(..., atol=params.tolerance)` against the
+closed-form JC probabilities, or
+`tests/benchmarks/test_pruning_rust_bench.py::test_numpy_vs_rust_forward_pass`,
+which pins the Rust oracle against NumPy with `abs_tol=1e-9`. Report the
+realized value even when it passes, not just the tolerance it was checked
+against. Write "N/A" if this PR has no such test.
+-->
+
+| Test | Reference | Tolerance (atol/rtol) | Realized value |
+| --- | --- | --- | --- |
+|  |  |  |  |
+
 ### Documentation Sync
 
 <!--
