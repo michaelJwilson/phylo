@@ -155,6 +155,9 @@ showcontent = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "release: long-running scientific validity test, run on release rather than per PR (DEV.md CI & Performance Budget)",
+]
 
 [tool.coverage.run]
 source = ["phylo"]

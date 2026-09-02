@@ -11,6 +11,16 @@ it -- ``phylo.sim.tree`` only holds the ``Node`` structure and traversals.
 The closed-form leaf-labelled rooted binary tree count, ``(2n-3)!!``, is the
 standard result for the number of possible tree topologies (Felsenstein,
 *Inferring Phylogenies*, ch. 3).
+
+Alongside the rooted grammar this module also validates the *unrooted*,
+trifurcating-root convention: an unrooted binary topology drawn with an
+arbitrary internal node as a 3-child root, reusing ``Node`` rather than a
+parallel type (root ``CLAUDE.md``'s no-premature-abstraction rule). It is
+grammar-only -- exactly one root with 3 children, every other internal node
+with exactly 2 -- and does not itself identify when two such strings denote
+the same topology under a different rooting or child order; that is
+``phylo.search.topology``'s ``leaf_bipartitions`` for move-set validation,
+and issue #73's canonical Newick key for the general case.
 """
 
 from __future__ import annotations
@@ -127,6 +137,68 @@ def validate_newick(s: str) -> bool:
     except ValueError:
         return False
     return True
+
+
+def validate_unrooted_newick(s: str) -> bool:
+    """Check whether ``s`` is well-formed Newick for the trifurcating-root
+    unrooted convention.
+
+    A root with exactly 3 children (each itself a rooted binary subtree, or
+    a leaf), rather than ``validate_newick``'s exactly 2 -- the standard way
+    to draw an unrooted binary topology without a distinguished root edge.
+    Below the root the grammar is identical to ``validate_newick``'s: every
+    other internal node has exactly 2 children.
+
+    Parameters
+    ----------
+    s : str
+        Candidate Newick string.
+
+    Returns
+    -------
+    bool
+        Whether ``s`` parses as a trifurcating-root unrooted binary
+        topology.
+    """
+    try:
+        _parse_unrooted_newick(s)
+    except ValueError:
+        return False
+    return True
+
+
+def _parse_unrooted_newick(s: str) -> Node:
+    if len(s) == 0 or s[0] != "(":
+        msg = "expected a trifurcating root starting with '('"
+        raise ValueError(msg)
+    i = 1
+    first, i = _parse_subtree(s, i)
+    if i >= len(s) or s[i] != ",":
+        msg = f"expected ',' after root's first child at position {i}"
+        raise ValueError(msg)
+    i += 1
+    second, i = _parse_subtree(s, i)
+    if i >= len(s) or s[i] != ",":
+        msg = f"expected ',' after root's second child at position {i}"
+        raise ValueError(msg)
+    i += 1
+    third, i = _parse_subtree(s, i)
+    if i >= len(s) or s[i] != ")":
+        msg = f"expected ')' closing the trifurcating root at position {i}"
+        raise ValueError(msg)
+    i += 1
+    name, i = _parse_token(s, i)
+    i = _skip_comment(s, i)
+    branch_length, i = _parse_branch_length(s, i)
+    root = Node(name=name, branch_length=branch_length, children=(first, second, third))
+    if i >= len(s) or s[i] != ";":
+        msg = "expected terminating ';'"
+        raise ValueError(msg)
+    i += 1
+    if i != len(s):
+        msg = f"trailing characters after ';': {s[i:]!r}"
+        raise ValueError(msg)
+    return root
 
 
 def _parse_newick(s: str) -> Node:

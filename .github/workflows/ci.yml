@@ -162,7 +162,7 @@ jobs:
             cargo-${{ runner.os }}-
       - run: pip install "uv==${UV_VERSION}"
       - run: uv sync --locked --extra test
-      - run: uv run pytest --cov=phylo --cov-report=term-missing --cov-fail-under=90
+      - run: uv run pytest -m "not release" --cov=phylo --cov-report=term-missing --cov-fail-under=90
 
   docs:
     name: Docs build (Sphinx)

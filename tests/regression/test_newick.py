@@ -15,7 +15,12 @@ from itertools import combinations
 from pathlib import Path
 
 import pytest
-from phylo.sim.newick import count_topologies, to_newick, validate_newick
+from phylo.sim.newick import (
+    count_topologies,
+    to_newick,
+    validate_newick,
+    validate_unrooted_newick,
+)
 from phylo.sim.params import load_simulation_params
 from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import Node, preorder
@@ -134,3 +139,41 @@ def test_validate_newick_accepts_a_single_leaf() -> None:
 
 def test_validate_newick_accepts_branch_lengths_and_internal_labels() -> None:
     assert validate_newick("(A:0.1,(B:0.2,C:0.3)anc:0.05)root;")
+
+
+def test_validate_unrooted_newick_accepts_a_trifurcating_root() -> None:
+    params = load_simulation_params(FIXTURE)
+    dataset = simulate_alignment(
+        tau=params.tau, k=params.k, pi=params.pi, seed=params.seed, n_sites=10
+    )
+
+    assert validate_unrooted_newick(dataset.newick)
+
+
+def test_validate_unrooted_newick_rejects_a_strictly_binary_root() -> None:
+    # A rooted binary tree (2 children at the root) is not the trifurcating-
+    # root convention: validate_newick and validate_unrooted_newick partition
+    # well-formed Newick strings into disjoint sets.
+    assert not validate_unrooted_newick("(A,(B,C)anc);")
+
+
+@pytest.mark.parametrize(
+    "malformed",
+    [
+        "(A,B,C",  # unbalanced: missing closing paren and ';'
+        "(A,B,C,D);",  # 4 children at the root, not 3
+        "(A);",  # 1 child at the root: missing ',' after the first
+        "(A,B);",  # 2 children at the root, not 3 (validate_newick's shape)
+        "(A,B,C))",  # unbalanced: extra closing paren
+        "(A,B,C)",  # missing terminating ';'
+        "(A,B,C);extra",  # trailing characters after ';'
+        "(,B,C);",  # empty leaf label
+        "",  # empty string
+    ],
+)
+def test_validate_unrooted_newick_rejects_malformed_strings(malformed: str) -> None:
+    assert not validate_unrooted_newick(malformed)
+
+
+def test_validate_unrooted_newick_accepts_binary_subtrees_under_the_root() -> None:
+    assert validate_unrooted_newick("(A,B,(C,D)anc:0.1)root;")
