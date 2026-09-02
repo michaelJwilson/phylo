@@ -22,24 +22,27 @@ body:
     id: roadmap-progress
     attributes:
       label: Roadmap progress
-      description: >
+      value: |
         Summarize progress against `ROADMAP.md` since the last release: which
         milestones moved, and against which requirement.
+
+        Further update the ROADMAP.md if necessary, i.e. if a high-level work milestone
+        has been achieved that was not described.        
     validations:
       required: true
   - type: textarea
     id: consistency-audit
     attributes:
       label: Consistency audit
-      description: >
+      value: |
         Check `CLAUDE.md`, `DEV.md`, `README.md`, `INSTALL.md`, `ROADMAP.md`,
-        `STATUS.md`, and `docs/tex/` against the current code and against each
-        other. Record what is stale, contradictory, or duplicated (including
-        duplicated machinery across modules), and fix it in this ticket's PR.
+        , `docs/tex/` and the code against each other. Record what is stale, contradictory,
+        or duplicated (including duplicated machinery/code across modules), and fix it in this
+        ticket's PR.  code duplication should be common language.
   - type: textarea
     id: follow-up-tickets
     attributes:
-      label: Suggested follow-up tickets
-      description: >
-        High-level work or blind spots the audit surfaced, sized to become
-        their own Task-template tickets rather than folded into this one.
+      label: Suggest follow-up tickets
+      value: |
+        In the PR, suggest high-level work or blind spots the audit surfaced, sized to become
+        their own task-template tickets to be tracked, rather than folded into this one.
