@@ -56,6 +56,16 @@ uv run python -m phylo.qa.opt_model_recovery \
   --params tests/regression/fixtures/simulation_params_8taxa.yaml \
   --output-dir docs/tex/figures
 
+# The search figures each sweep all 105 unrooted topologies on the 6-taxon
+# fixture, which is why they are here and not in the per-PR suite.
+uv run python -m phylo.qa.search_trajectory \
+  --params tests/regression/fixtures/simulation_params_6taxa.yaml \
+  --output-dir docs/tex/figures
+
+uv run python -m phylo.qa.search_topologies \
+  --params tests/regression/fixtures/simulation_params_6taxa.yaml \
+  --output-dir docs/tex/figures
+
 (
   cd docs/tex
   latexmk -pdf -interaction=nonstopmode -halt-on-error \

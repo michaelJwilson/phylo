@@ -201,6 +201,44 @@ class BranchLengthObjective:
             self.branch_lengths(theta),
         )
 
+    def fitted_tree(self, theta: torch.Tensor) -> Node:
+        """The topology with ``theta``'s branch lengths attached.
+
+        The inverse of :meth:`theta_from_truth`, and the form anything that
+        draws or serializes a fitted tree needs --- ``pruning_torch`` keeps
+        lengths out of the ``Node`` structure, which is right for
+        differentiation and wrong for display.
+
+        On a rooted binary tree the estimable sum is split evenly between the
+        two root branches, per :meth:`branch_lengths`. That is a drawing
+        convention, which is exactly what this method is for; neither half is
+        an estimate.
+
+        Parameters
+        ----------
+        theta : torch.Tensor
+            Unconstrained parameters.
+
+        Returns
+        -------
+        Node
+            A copy of the topology carrying the fitted lengths.
+        """
+        lengths = dict(
+            zip(
+                self._branch_order,
+                self.branch_lengths(theta).detach().tolist(),
+                strict=True,
+            )
+        )
+
+        def rebuild(node: Node) -> Node:
+            children = tuple(rebuild(child) for child in node.children)
+            length = lengths.get(node.name)
+            return Node(name=node.name, branch_length=length, children=children)
+
+        return rebuild(self._tau)
+
     def theta_from_truth(self, tau: Node) -> torch.Tensor:
         """Place a tree's own branch lengths in the unconstrained coordinates.
 

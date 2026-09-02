@@ -448,6 +448,30 @@ then applies on top, replacing recurring subtrees by dictionary symbols ---
 an extended alphabet over the canonical string \citep{blahut2003} --- which
 shortens the token sequence a transformer must attend over.
 
+\subsection{Hill climbing}
+\label{sec:hill-climbing}
+
+The simplest search that uses the move sets above: score the current
+topology, score every neighbour, move to the best strict improvement, stop
+when none improves. It is the baseline the learned policy of
+Section~\ref{sec:rl} has to beat, so it is worth stating precisely rather
+than assuming.
+
+Two details are not incidental. A candidate is scored by \emph{fitting} it
+--- the continuous parameters are re-estimated for every topology, because a
+topology's likelihood is its maximized likelihood and comparing trees at
+shared branch lengths compares nothing. And the budget is counted in
+candidate fits rather than in time: fitting dominates by four orders of
+magnitude over generating the neighbourhood, and a wall-clock budget would
+make a result depend on the machine that produced it.
+
+The discrete move is what connects this section to
+Section~\ref{sec:opt-interface}. A move changes the structure being fitted,
+so it changes what the parameter vector means and how long it is; it cannot
+be a step inside a fit over a fixed-length vector. It builds a new objective,
+and this loop is what owns that construction. The optimizer needed no
+knowledge of trees to serve it.
+
 \subsection{Parsimony and likelihood}
 
 The \emph{large parsimony} problem asks for the topology minimizing the
@@ -550,6 +574,7 @@ same tree with that pair fitted as their sum. Section~\ref{sec:qa} shows the
 underlying invariance directly.
 
 \section{Reinforcement-learning formulation}
+\label{sec:rl}
 
 Classical heuristics propose moves by a fixed, hand-designed rule. We ask
 whether a learned policy proposes better ones, and cast the search as a
@@ -823,8 +848,39 @@ flexible could most easily overfit, so it is the point worth checking.
   \label{fig:opt-model-recovery}
 \end{figure}
 
-Search-trajectory QA figures are not built yet; this section is where their
-captions go once they are.
+Figure~\ref{fig:search-trajectory} is the search of
+Section~\ref{sec:hill-climbing} doing both things at once. Panel~(a) is a
+trajectory: log-likelihood against candidate fits spent, with the generating
+tree's own score as the reference. Panel~(b) is every unrooted topology on
+the same leaf set, scored and ranked. Below eight taxa that enumeration is
+affordable, and it is what turns ``the search found the best tree'' from an
+assertion into a checkable claim --- the only independent oracle this project
+has for the discrete half of the problem.
+
+\qacaptionread{figures/search_trajectory_caption.txt}{\searchTrajectoryCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/search_trajectory}
+  \caption{\searchTrajectoryCaption}
+  \label{fig:search-trajectory}
+\end{figure}
+
+Figure~\ref{fig:search-topologies} shows what that discrimination amounts to.
+On this fixture the search recovers the generating topology, so drawing the
+inferred tree against the true one would show the same tree twice; the
+informative comparison is against the runner-up, the highest-scoring topology
+the search ruled out. The two differ by a single split, and the rejected
+tree fits the internal branch that would create the wrong grouping at
+essentially zero length --- which is what rejecting a topology looks like
+from inside the continuous fit.
+
+\qacaptionread{figures/search_topologies_caption.txt}{\searchTopologiesCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/search_topologies}
+  \caption{\searchTopologiesCaption}
+  \label{fig:search-topologies}
+\end{figure}
 
 \section{Sources}
 

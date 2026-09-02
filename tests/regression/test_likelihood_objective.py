@@ -32,7 +32,7 @@ from phylo.opt.fit import (
 from phylo.sim.gtr import gtr_rate_matrix
 from phylo.sim.jc import jc_rate_matrix
 from phylo.sim.simulate import simulate_alignment
-from phylo.sim.tree import Node
+from phylo.sim.tree import Node, preorder
 
 from tests._fixtures import EIGHT_TAXA, FOUR_TAXA, SMALL_SITES, load_fixture
 from tests._objective_checks import assert_gradient_matches_finite_differences
@@ -490,4 +490,47 @@ def test_substitution_model_intervals_cover_at_the_nominal_rate() -> None:
     band = 3.0 * (0.95 * 0.05 / total) ** 0.5
     assert abs(rate - 0.95) <= band, (
         f"coverage {rate:.4f}, expected 0.95 +/- {band:.4f}"
+    )
+
+
+def test_fitted_tree_carries_the_fitted_lengths_back_onto_the_topology() -> None:
+    # The inverse of theta_from_truth, and the form anything that draws or
+    # serializes a fitted tree needs: pruning_torch keeps lengths out of the
+    # Node structure, which is right for differentiation and wrong for
+    # display.
+    params = load_fixture(SMALL_SITES)
+    objective = _objective(SMALL_SITES)
+    theta = objective.theta_from_truth(params.tau)
+
+    rebuilt = objective.fitted_tree(theta)
+
+    assert_allclose(
+        pruning_torch.branch_lengths_from_tree(rebuilt).numpy(),
+        pruning_torch.branch_lengths_from_tree(params.tau).numpy(),
+        rtol=1e-12,
+    )
+    assert rebuilt.branch_length is None
+    assert [node.name for node in preorder(rebuilt)] == [
+        node.name for node in preorder(params.tau)
+    ]
+
+
+def test_fitted_tree_halves_the_merged_root_pair() -> None:
+    # The estimable quantity is the pair's sum; halving it is a drawing
+    # convention and the docstring says so. Pinned because a reader of the
+    # picture could otherwise take either half for an estimate.
+    params = load_fixture(EIGHT_TAXA)
+    objective = _objective(EIGHT_TAXA)
+
+    rebuilt = objective.fitted_tree(objective.theta_from_truth(params.tau))
+
+    halves = [child.branch_length for child in rebuilt.children]
+    assert all(half is not None for half in halves)
+    first, second = (float(half) for half in halves if half is not None)
+    assert first == pytest.approx(second)
+
+    original = [child.branch_length for child in params.tau.children]
+    assert all(length is not None for length in original)
+    assert first + second == pytest.approx(
+        sum(float(length) for length in original if length is not None)
     )
