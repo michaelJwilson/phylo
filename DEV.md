@@ -40,7 +40,7 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 
 | Job | Execution |
 | --- | --- |
-| `lint` | `ruff check`, `ruff format --check`, strict `mypy` |
+| `lint` | `ruff check`, `ruff format --check`, strict `mypy`, `towncrier check` |
 | `rust-lint` | `cargo clippy -D warnings`, `cargo fmt --check` |
 | `rust-tests` | `cargo test --locked`, `cargo bench` (informational) |
 | `build` | `pip install .` (no lockfile, mimics fresh consumer), smoke import |

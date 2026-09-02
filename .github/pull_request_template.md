@@ -32,7 +32,7 @@ untrue. Check the ones this PR updates, or check "None applicable".
 - [ ] `INSTALL.md`
 - [ ] `ROADMAP.md`
 - [ ] `docs/tex/`
-- [ ] `CHANGELOG.md` (`[Unreleased]`, if user-visible)
+- [ ] `changelog.d/` (add a fragment; see `changelog.d/README.md`, if user-visible)
 - [ ] `STATUS.md` (if this changes an item's status)
 - [ ] None applicable
 
