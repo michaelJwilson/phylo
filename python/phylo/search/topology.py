@@ -32,13 +32,75 @@ dedup).
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
+
+import numpy as np
 
 from phylo.sim.tree import Node
 
 Topology = Node
 
 NodeId = int | str
+
+
+def random_topology(leaf_names: Sequence[str], rng: np.random.Generator) -> Topology:
+    """Draw an unrooted binary topology on ``leaf_names``, uniformly by construction.
+
+    Stepwise insertion: three leaves meet at the root, then each remaining
+    leaf subdivides a uniformly chosen edge. Every topology is reachable, and
+    the construction is the standard one behind the ``(2n-5)!!`` count --- at
+    step ``i`` there are ``2i - 5`` edges to choose from, and the product of
+    those choices is that count, so no topology is favoured.
+
+    A search needs a starting point that is not the answer. Reading one from
+    a fixture would make every run start beside the truth and measure
+    nothing.
+
+    Parameters
+    ----------
+    leaf_names : Sequence[str]
+        Taxon names, at least 3, all distinct.
+    rng : np.random.Generator
+        Seeded generator, so a search is reproducible from its seed.
+
+    Returns
+    -------
+    Topology
+        An unrooted binary topology in the trifurcating-root convention,
+        with ``branch_length=None`` throughout --- lengths belong to the
+        objective that fits them, not to the topology.
+
+    Raises
+    ------
+    ValueError
+        If fewer than 3 names are given, or any two are equal.
+    """
+    if len(leaf_names) < 3:
+        msg = f"need at least 3 leaves for an unrooted topology, got {len(leaf_names)}"
+        raise ValueError(msg)
+    if len(set(leaf_names)) != len(leaf_names):
+        msg = "leaf names must be distinct"
+        raise ValueError(msg)
+
+    adjacency: dict[NodeId, list[NodeId]] = {0: []}
+    for name in leaf_names[:3]:
+        adjacency[0].append(name)
+        adjacency[name] = [0]
+
+    next_id = 1
+    for name in leaf_names[3:]:
+        edges = sorted(_edges(adjacency), key=lambda edge: (str(edge[0]), str(edge[1])))
+        first, second = edges[int(rng.integers(len(edges)))]
+        internal = next_id
+        next_id += 1
+        adjacency[first].remove(second)
+        adjacency[second].remove(first)
+        adjacency[internal] = [first, second, name]
+        adjacency[first].append(internal)
+        adjacency[second].append(internal)
+        adjacency[name] = [internal]
+
+    return _from_adjacency(adjacency, 0)
 
 
 def leaf_bipartitions(topology: Topology) -> frozenset[frozenset[str]]:

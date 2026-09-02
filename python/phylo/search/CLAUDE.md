@@ -11,6 +11,13 @@ NNI, SPR, and multi-SPR neighbourhoods behind one interface; hill-climbing
 and reinforcement-learning agents; annealing schedules and the
 likelihood-versus-temperature curves used to judge exploration.
 
+`infer.py` is the outer loop, and the first user of the seam `opt/CLAUDE.md`
+records: a discrete move changes the structure being fitted, so it builds a
+new `Objective` rather than stepping inside a fit. That is why this module
+may import `phylo.likelihood` and `phylo.opt` while neither may import it —
+the dependency runs application to infrastructure, and `phylo.opt` needed no
+change to serve a topology search.
+
 ## Local rules
 
 - **Topological tests run at `n <= 10`**, because at that size exhaustive
@@ -28,5 +35,15 @@ likelihood-versus-temperature curves used to judge exploration.
   the likelihood as fast as the evaluation budget allows and pays the gap to
   truth on reaching a local maximum under all moves. An agent that can see
   the true tree during training learns to look it up.
+- **A search budget is counted in candidate fits, never in seconds.**
+  `DEV.md` forbids ranking performance on CI hardware, and a wall-clock
+  budget would make a result depend on the machine that produced it, so a run
+  would not be reproducible from its seed. Measured here: one candidate fit
+  is 213 ms against 22 us to generate an entire NNI neighbourhood, so the fit
+  is the only unit worth counting.
+- **A topology is scored at most once per search.** `leaf_bipartitions` is
+  the key — rooting- and child-order-independent, so the same tree proposed
+  by two different moves is recognized. An SPR neighbourhood overlaps its
+  predecessor heavily, and refitting is the dominant avoidable cost.
 - **Every proposed move set states whether it is complete**, in which of the
   two senses, and what it costs per step.
