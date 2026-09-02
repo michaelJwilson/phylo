@@ -4,6 +4,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{booktabs}
+\usepackage{graphicx}
 \usepackage{microtype}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
@@ -18,6 +19,20 @@
 \newcommand{\branch}{\mathbf{t}}
 \newcommand{\data}{\mathbf{D}}
 \newcommand{\states}{\mathcal{A}}
+
+% Reads a QA caption file into a macro, rather than \input-ing it directly
+% inside \caption -- hyperref builds a PDF-string from the caption argument
+% by \edef-expanding it, and \openin/\read (needed to read a file) are not
+% expandable, so calling them from inside \caption fails. Reading the file
+% into a plain macro first, as its own statement, avoids that: by the time
+% \caption sees the macro it is ordinary expandable text.
+\newread\qacaptionfile
+\endlinechar=-1
+\newcommand{\qacaptionread}[2]{%
+  \openin\qacaptionfile=#1\relax
+  \read\qacaptionfile to #2
+  \closein\qacaptionfile
+}
 
 \title{\texttt{phylo}: Technical Document}
 \author{M.\ J.\ Wilson}
@@ -547,10 +562,23 @@ and timing comparisons. \textbf{Their captions belong in this section}, added
 in the same change that adds the figure, so that a plot and its description
 cannot drift apart.
 
-No such figures exist yet --- the quality-assurance framework is unbuilt, and
-listing captions for figures that do not exist would be exactly the kind of
-placeholder this project's conventions forbid. This section is the place they
-go.
+\qacaptionread{figures/sim_tree_caption.txt}{\simTreeCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\linewidth]{figures/sim_tree}
+  \caption{\simTreeCaption}
+  \label{fig:sim-tree}
+\end{figure}
+
+Figure~\ref{fig:sim-tree} is the first: the topology and branch lengths
+\texttt{phylo.sim.simulate} draws an alignment over, rendered by
+\texttt{phylo.qa.sim\_tree} from the same 8-taxon regression fixture as
+\texttt{tests/regression/test\_jc\_simulate.py}.
+\texttt{infra/build\_technical\_doc.sh} regenerates the figure and the
+caption above --- read verbatim from the file the script writes alongside
+it --- on every build, so the two cannot drift apart. Likelihood,
+optimization, and search QA figures are not built yet; this section is
+where their captions go once they are.
 
 \section{Sources}
 

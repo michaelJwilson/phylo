@@ -103,16 +103,19 @@ matching CI, so a broken docstring or cross-reference fails locally rather
 than in review.
 
 The technical document — the scientific background, equations, and algorithms
-— is LaTeX under `docs/tex/`:
+— is LaTeX under `docs/tex/`. It includes QA figures `phylo.qa` scripts
+render (currently: the assumed simulation tree, `phylo.qa.sim_tree`), so
+building it means regenerating those first, not just running `latexmk`:
 
 ```
 sudo apt-get install -y --no-install-recommends latexmk texlive-latex-base \
   texlive-latex-recommended texlive-fonts-recommended texlive-science
-cd docs/tex && latexmk -pdf main.tex
+uv sync --locked --extra test
+infra/build_technical_doc.sh
 ```
 
-Open `docs/tex/main.pdf`. CI builds it on every PR and fails on undefined
-references or citations.
+Open `docs/draft.pdf`. CI runs the same script on every PR and fails on
+undefined references or citations.
 
 ## Benchmarking locally
 

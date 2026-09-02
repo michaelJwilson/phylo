@@ -16,8 +16,10 @@ carries the domain; `CLAUDE.md` states why keeping it liftable matters.
 | `python/phylo/likelihood/` | Felsenstein pruning; CPU, CUDA, and Metal dispatch. |
 | `python/phylo/opt/` | Continuous parameter fitting via autodiff (PyTorch). |
 | `python/phylo/search/` | Move sets, RL agents, temperature schedules. |
+| `python/phylo/qa/` | QA figures/tables for the technical document; renders, doesn't recompute. |
 | `src/lib.rs` | Rust extension (`oxiphylo`), exposed through PyO3. |
 | `docs/tex/` | LaTeX source for the technical document. |
+| `infra/build_technical_doc.sh` | Regenerates QA figures, then builds `docs/draft.pdf`. |
 
 *Note: Each directory contains a localized `CLAUDE.md` defining specific constraints (e.g., `sim/` oracles, `search/` constraints). These append to, rather than override, the root `CLAUDE.md`.*
 
@@ -46,7 +48,7 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 | `build` | `pip install .` (no lockfile, mimics fresh consumer), smoke import |
 | `python-tests` | `pytest` suite, gated on minimum coverage |
 | `docs` | Sphinx build (warnings as errors) |
-| `technical-doc` | LaTeX build (fails on undefined refs/citations) |
+| `technical-doc` | Regenerate QA figures (`infra/build_technical_doc.sh`), then LaTeX build (fails on undefined refs/citations) |
 | `audit` | `pip-audit`, `cargo audit` (skips on cache hit if lockfiles are unchanged) |
 
 `lint`, `python-tests`, and `docs` restore a `~/.cache/uv` cache keyed on `uv.lock`'s hash before installing `uv`. `rust-lint`, `rust-tests`, `build`, and those same three jobs restore a shared `~/.cargo/registry`, `~/.cargo/git`, and `target/` cache keyed on `Cargo.lock`'s hash, so `oxiphylo` (built via `maturin`/`pyo3` on every `uv sync` or `pip install .`) compiles from scratch only when a lockfile changes or no job has populated the cache yet. `audit`'s per-week marker cache (above) is unrelated and unaffected.

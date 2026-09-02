@@ -25,7 +25,7 @@ This file is authoritative. The rest exist so it does not have to carry everythi
 | `CHANGELOG.md` | What has landed, edited directly under `[Unreleased]` |
 | `docs/tex/` | The technical document: background, equations, algorithms |
 
-`python/phylo/sim/`, `likelihood/`, `opt/`, `search/`, and `infra/` each carry their own `CLAUDE.md`. Those add what applies only inside one module; they never override this file. A rule that binds the whole repository belongs here, not in one of them.
+`python/phylo/sim/`, `likelihood/`, `opt/`, `search/`, `qa/`, and `infra/` each carry their own `CLAUDE.md`. Those add what applies only inside one module; they never override this file. A rule that binds the whole repository belongs here, not in one of them.
 
 ## Environment & Tooling
 *   **Python (3.12):** Manage via `uv`. Run `uv sync --locked --all-extras`. Regenerate locks with `uv lock` and commit `uv.lock` in the same PR.
