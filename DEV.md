@@ -25,6 +25,21 @@ carries the domain; `CLAUDE.md` states why keeping it liftable matters.
 
 New issues are filed through `.github/ISSUE_TEMPLATE/task.yml`; blank issues are disabled via `.github/ISSUE_TEMPLATE/config.yml`.
 
+## Test Layout
+
+`tests/` is organized by **kind** at the top level and by subject within it. Where a new test goes follows from what kind of check it is, not from what it covers.
+
+| Path | Holds |
+| --- | --- |
+| `tests/regression/` | Correctness. Asserts scientific validity against an independent oracle. |
+| `tests/benchmarks/` | `pytest-benchmark` timings. Asserts shape only; correctness is pinned by the regression counterpart. |
+| `tests/regression/fixtures/` | Declarative test data (e.g. `simulation_params.yaml`). Data, not Python. |
+| `tests/` (top level) | Whole-package and binding smoke tests, which belong to no single kind or submodule — `test_run_phylo.py`, `test_oxiphylo_bindings.py`. |
+
+* **Every benchmark pairs with a regression module.** `benchmarks/test_<name>_bench.py` accompanies `regression/test_<name>.py`. A benchmark without a counterpart asserts nothing about correctness, which `CLAUDE.md`'s "No Coverage Theatre" rule forbids.
+* **Split by submodule only when a kind outgrows one flat directory** — a future `tests/regression/likelihood/`, not a top-level `tests/likelihood/`. Kind stays the outer axis; a subject-first split would fight the two directories already there.
+* **Fixtures follow their blast radius.** Used by one module: keep it in that module, or in a local `conftest.py`. Shared across modules: a top-level underscore-prefixed module such as `tests/_example_hotpath.py`, which is imported rather than collected.
+
 ---
 
 ## Infrastructure & Tooling
