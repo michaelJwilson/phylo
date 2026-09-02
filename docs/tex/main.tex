@@ -27,11 +27,19 @@
 % into a plain macro first, as its own statement, avoids that: by the time
 % \caption sees the macro it is ordinary expandable text.
 \newread\qacaptionfile
-\endlinechar=-1
 \newcommand{\qacaptionread}[2]{%
+  \begingroup
+  % \endlinechar=-1 stops TeX appending a space at the end of the line it
+  % reads, which would otherwise land inside the caption. It is scoped to
+  % this group: set globally, as it was, it suppresses the space at EVERY
+  % source line break in the document, so "the substitution\nmodel" sets as
+  % "substitutionmodel". \global keeps the definition \read makes, which is
+  % otherwise local to the group.
+  \endlinechar=-1
   \openin\qacaptionfile=#1\relax
-  \read\qacaptionfile to #2
+  \global\read\qacaptionfile to #2
   \closein\qacaptionfile
+  \endgroup
 }
 
 \title{\texttt{phylo}: Technical Document}
