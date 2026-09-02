@@ -62,6 +62,10 @@ uv run python -m phylo.qa.opt_branch_recovery \
   --rooted-params tests/regression/fixtures/simulation_params_8taxa.yaml \
   --output-dir docs/tex/figures
 
+uv run python -m phylo.qa.opt_model_recovery \
+  --params tests/regression/fixtures/simulation_params_8taxa.yaml \
+  --output-dir docs/tex/figures
+
 (
   cd docs/tex
   latexmk -pdf -interaction=nonstopmode -halt-on-error \

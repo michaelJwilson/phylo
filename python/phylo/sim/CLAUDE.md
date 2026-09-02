@@ -10,7 +10,15 @@ Root `CLAUDE.md` holds the repository-wide rules. These are local.
 
 Simulation of `k`-state, e.g. 4, characters down a binary tree under a rate matrix `Q`,
 branch lengths `t`, and a root distribution `π`: the `k`-state Jukes–Cantor
-model first, then other models after.
+model first, then the general time-reversible model (`gtr.py`) after.
+
+`gtr.py` exists because Jukes--Cantor has no free rate parameters, so there
+is nothing in `Q` or `pi` to fit under it. Its three normalizations are
+gauges, not tidiness: each removes a direction along which the likelihood is
+exactly flat, and a flat direction leaves the observed information singular
+and every parameter without a confidence interval. `simulate_alignment` takes
+an optional `rate_matrix`; omitting it keeps the Jukes--Cantor closed form,
+because a substitution model is the last thing worth changing silently.
 
 `newick.py` is the package's single source of Newick functionality (root
 `CLAUDE.md`, "Package Surface"): serializing a tree (optionally with
