@@ -32,9 +32,11 @@ docs/tex/*.out
 docs/tex/*.pdf
 docs/tex/*.toc
 
-# QA figures/captions phylo.qa scripts render for the technical document
-# (infra/build_technical_doc.sh regenerates them)
-docs/tex/figures/
+# QA figures/captions under docs/tex/figures/ are committed, not ignored:
+# they are the technical document's evidence, and a reviewer should see a
+# changed plot in the diff rather than have to build the document to find
+# out. infra/build_technical_doc.sh regenerates them, and CI rebuilds and
+# compares the rendered document, so a stale figure still fails.
 
 # infra/build_technical_doc.sh's LaTeX build output. docs/draft.pdf itself
 # is committed (see DEV.md's "Technical Document" section).

@@ -23,14 +23,10 @@ A fifth series is not a new hue. Facet, or fold into an aggregate.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
 
 import matplotlib as mpl
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
 
 # Okabe-Ito, fixed order. See the module docstring for the validation result.
 PALETTE: tuple[str, ...] = ("#0072B2", "#009E73", "#D55E00", "#CC79A7")

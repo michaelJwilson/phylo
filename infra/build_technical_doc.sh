@@ -24,6 +24,10 @@ uv run python -m phylo.qa.sim_example \
   --params tests/regression/fixtures/simulation_params.yaml \
   --output-dir docs/tex/figures
 
+uv run python -m phylo.qa.jc_transition \
+  --params tests/regression/fixtures/simulation_params.yaml \
+  --output-dir docs/tex/figures
+
 uv run python -m phylo.qa.sim_problem_sizes \
   --params tests/regression/fixtures/simulation_params.yaml \
   --params tests/regression/fixtures/simulation_params_small_sites.yaml \

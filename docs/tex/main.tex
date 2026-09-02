@@ -634,8 +634,24 @@ alignment, nucleotide-coded for this $k = 4$ model, rendered by
   \label{fig:sim-example}
 \end{figure}
 
-Likelihood, optimization, and search QA figures are not built yet; this
-section is where their captions go once they are.
+Figure~\ref{fig:jc-transition} closes the simulation section by checking the
+simulator against the model it is supposed to realize. The curves are the
+closed-form transition probabilities of eq.~\eqref{eq:jc}; the markers are
+the substitution frequencies \texttt{phylo.sim.simulate} actually produced,
+one pair per branch. Agreement here is what licenses using simulated data as
+ground truth everywhere else in this document: the simulator is validated
+against the analytic form, never against the pruning code it feeds.
+
+\qacaptionread{figures/jc_transition_caption.txt}{\jcTransitionCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\linewidth]{figures/jc_transition}
+  \caption{\jcTransitionCaption}
+  \label{fig:jc-transition}
+\end{figure}
+
+Optimization and search QA figures are not built yet; this section is where
+their captions go once they are.
 
 \section{Sources}
 
