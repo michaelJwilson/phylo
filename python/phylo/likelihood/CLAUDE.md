@@ -10,7 +10,8 @@ Root `CLAUDE.md` holds the repository-wide rules. These are local.
 
 The pruning recursion, site- and subtree-level compression, the canonical
 form used to key memoized results, and backends: a vectorized NumPy
-reference, an efficient CPU path, CUDA, and Metal/MPS.
+reference, a differentiable PyTorch backend (`pruning_torch.py`, float64,
+CPU), an efficient CPU path, CUDA, and Metal/MPS.
 
 ## Local rules
 
@@ -29,3 +30,8 @@ reference, an efficient CPU path, CUDA, and Metal/MPS.
   transformation sits inside the autodiff graph.
 - **Memoize on the canonical form.** A topology has many Newick spellings;
   keying a cache on a raw string silently recomputes trees already scored.
+- **Differentiable backends keep branch lengths out of the topology.**
+  `pruning_torch.py` takes branch lengths as a `torch.float64` tensor
+  ordered by `branch_order(tau)`, separate from the `Node` tree; it never
+  reads `Node.branch_length`, so `torch.autograd` differentiates only
+  through the tensor, never through Python floats baked into the topology.
