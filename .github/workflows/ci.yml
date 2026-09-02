@@ -141,6 +141,10 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The benchmark decision below diffs against the base branch, which
+          # a shallow checkout does not have.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -162,7 +166,38 @@ jobs:
             cargo-${{ runner.os }}-
       - run: pip install "uv==${UV_VERSION}"
       - run: uv sync --locked --extra test
-      - run: uv run pytest -m "not release" --cov=phylo --cov-report=term-missing --cov-fail-under=90
+      # Benchmarks are half the suite's wall clock (36 s of 71 s) and measure
+      # code that a docs or QA change cannot have altered, so they are skipped
+      # unless something they measure moved. The job still runs and still
+      # reports, because it is a required check: skipping the *step* would
+      # leave the check pending and block the merge (issue #109).
+      #
+      # Coverage is unaffected: every line the benchmarks reach is also
+      # reached by the regression module DEV.md's Test Layout requires each of
+      # them to pair with, so the suite stays at 100% either way.
+      - name: Decide whether the benchmarks need to run
+        id: benchmarks
+        run: |
+          base="origin/${{ github.base_ref || 'main' }}"
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref || 'main' }}" || true
+          changed="$(git diff --name-only "$base"...HEAD || git ls-files)"
+          echo "changed files:"; echo "$changed" | sed 's/^/  /'
+          if echo "$changed" | grep -qE '^(src/|python/phylo/(sim|likelihood|opt|search)/|tests/benchmarks/|Cargo\.(toml|lock)|pyproject\.toml|uv\.lock)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::computational code changed -- running benchmarks"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::no computational code changed -- skipping benchmarks"
+          fi
+      - name: Run the suite
+        run: |
+          if [ "${{ steps.benchmarks.outputs.run }}" = "true" ]; then
+            uv run pytest -m "not release" \
+              --cov=phylo --cov-report=term-missing --cov-fail-under=90
+          else
+            uv run pytest -m "not release" --ignore=tests/benchmarks \
+              --cov=phylo --cov-report=term-missing --cov-fail-under=90
+          fi
 
   docs:
     name: Docs build (Sphinx)

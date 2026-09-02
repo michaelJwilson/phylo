@@ -28,6 +28,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from phylo.likelihood.brute_force import brute_force_log_likelihood
+from phylo.likelihood.device import CROSS_DEVICE_RTOL_FLOAT64
 from phylo.likelihood.pruning import log_likelihood
 from phylo.sim.params import load_simulation_params
 from phylo.sim.simulate import simulate_alignment
@@ -115,7 +116,7 @@ def test_pruning_matches_brute_force(
     pruned = log_likelihood(tau, k, pi, dataset.alignment)
     brute = brute_force_log_likelihood(tau, k, pi, dataset.alignment)
 
-    assert_allclose(pruned, brute, atol=1e-9)
+    assert_allclose(pruned, brute, rtol=CROSS_DEVICE_RTOL_FLOAT64)
 
 
 def test_rescaled_and_unrescaled_agree_on_small_problems() -> None:
@@ -162,7 +163,9 @@ def test_pulley_principle_is_invariant_to_root_position() -> None:
             ),
         )
         assert_allclose(
-            log_likelihood(slid, k, pi, dataset.alignment), baseline, atol=1e-9
+            log_likelihood(slid, k, pi, dataset.alignment),
+            baseline,
+            rtol=CROSS_DEVICE_RTOL_FLOAT64,
         )
 
 
