@@ -10,7 +10,9 @@ Root `CLAUDE.md` holds the repository-wide rules. These are local.
 
 One script per figure or table, each taking a `simulation_params.yaml`-format
 input and producing a rendered figure plus a caption that states the seed,
-sizes, and model used to generate it. `figure.py` holds the shared
+sizes, and model used to generate it. `ledger.py` is the exception: it renders
+nothing, and records validated runs to Aim so a result can be replayed from
+its manifest (`infra/CLAUDE.md`). `figure.py` holds the shared
 figure/caption-writing helper every script uses, so output is named and
 formatted consistently rather than per script.
 

@@ -12,7 +12,10 @@ performance is never ranked on GitHub runners. These are local.
 
 **Aim**, decided: open source and self-hostable, which suits likelihood- and
 temperature-curve tracking across many episodes without a hosted account. It
-is not yet a dependency: it arrives with the first code that records a run.
+is an optional dependency, in the `tracking` extra rather than the core
+requirements: it pulls a large graph, and nothing under `sim/`, `likelihood/`,
+`opt/` or `search/` imports it. `phylo.qa.ledger` is the recorder, and it
+imports Aim lazily so the package works without the extra installed.
 
 Every run records, at minimum, the commit, the `uv.lock` and `Cargo.lock`
 hashes, the seed, the dataset identity, the model specification, the move

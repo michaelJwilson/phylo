@@ -43,6 +43,12 @@ dev = [
 docs = [
     "sphinx>=7,<9",
 ]
+# Experiment tracking (infra/CLAUDE.md). Optional, not core: it pulls ~49
+# packages (boto3, cryptography, fastapi, a compiled RocksDB binding), and
+# nothing under sim/, likelihood/, opt/ or search/ imports it.
+tracking = [
+    "aim>=3.29,<4",
+]
 test = [
     # >=9.0.3 is the fix for PYSEC-2026-1845; the previous <9 cap blocked it.
     "pytest>=9.0.3",
@@ -120,6 +126,11 @@ files = ["python", "tests"]
 module = "pytest_benchmark.*"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# aim ships no py.typed marker.
+module = "aim.*"
+ignore_missing_imports = true
+
 [tool.towncrier]
 directory = "changelog.d"
 filename = "CHANGELOG.md"
@@ -163,4 +174,6 @@ source = ["phylo"]
 exclude_lines = [
     "pragma: no cover",
     "if __name__ == .__main__.:",
+    # Import guards for annotations only; never executed at runtime.
+    "if TYPE_CHECKING:",
 ]

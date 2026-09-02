@@ -35,3 +35,6 @@ whether or not it has members yet.
 
 .. automodule:: phylo.search
    :members:
+
+.. automodule:: phylo.qa.ledger
+   :members:

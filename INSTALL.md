@@ -26,8 +26,10 @@ After changing a dependency, run `uv lock` and commit the updated lockfile in th
 same PR.
 
 The extras are `dev` (ruff, mypy, pre-commit, pip-audit), `test` (pytest and
-plugins, NumPy), and `docs` (Sphinx). `--all-extras` installs all three; sync
-a single one with `uv sync --locked --extra test`.
+plugins, NumPy), `docs` (Sphinx), and `tracking` (Aim, for the run ledger).
+`--all-extras` installs all four; sync a single one with
+`uv sync --locked --extra test`. The ledger tests skip without `tracking`, so
+run the suite with `--all-extras` to reproduce CI's coverage gate.
 
 ## Building
 
