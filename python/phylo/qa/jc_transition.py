@@ -60,7 +60,10 @@ def empirical_transitions(params: SimulationParams) -> list[tuple[float, float, 
 
     points: list[tuple[float, float, float]] = []
     for parent, child in edges(dataset.tau):
-        if child.branch_length is None:
+        if child.branch_length is None:  # pragma: no cover
+            # Unreachable: simulate_alignment above raises on a non-root node
+            # without a branch length, so this narrows the type for mypy
+            # rather than guarding a path a caller can reach.
             msg = f"non-root node {child.name!r} has no branch_length"
             raise ValueError(msg)
         parent_states = dataset.node_states[parent.name]
@@ -143,7 +146,7 @@ def build_figure(params: SimulationParams) -> tuple[Figure, str]:
         ax.annotate(
             r"$P_{ii}(t)$  no substitution",
             xy=(grid[-1], stay_curve[-1]),
-            xytext=(-4, 11),
+            xytext=(-4, 17),
             textcoords="offset points",
             ha="right",
             color=stay["color"],
