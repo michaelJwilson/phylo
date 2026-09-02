@@ -243,6 +243,13 @@ jobs:
             echo "::error::LaTeX reported undefined references or citations"
             exit 1
           fi
+      # TEMP debug step for #71/#72: capture what this runner actually built
+      # so its bytes can be compared to what was committed locally.
+      - name: TEMP upload built PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: draft-pdf-debug
+          path: docs/draft.pdf
       # docs/draft.pdf is committed (see DEV.md's "Technical Document"
       # section); catch a PR that edited docs/tex/ or a QA figure without
       # regenerating and committing the rebuilt PDF.
