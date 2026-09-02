@@ -1,0 +1,16 @@
+# Ground truth for the 1-D Potts chain reference instance
+# (tests/regression/test_opt_potts.py). Every field is required -- see
+# python/phylo/opt/potts.py and python/phylo/opt/CLAUDE.md.
+#
+# chain_length=12 with n_chains=400 gives 4400 adjacent pairs and 4800 site
+# observations, enough that the maximum-likelihood estimate sits well inside
+# the interval the recovery test checks without the fit being slow.
+#
+# The field is written in whatever gauge is convenient; the loader
+# canonicalizes it to logsumexp(h) == 0, since h and h + c are the same model.
+seed: 20260902
+n_states: 3
+chain_length: 12
+n_chains: 400
+coupling: 0.75
+field: [0.40, -0.10, -0.30]

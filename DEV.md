@@ -14,7 +14,7 @@ carries the domain; `CLAUDE.md` states why keeping it liftable matters.
 | `python/phylo/` | Python package: re-exports, typed extension stubs, stub CLI. |
 | `python/phylo/sim/` | Data generation and ground-truth retention. |
 | `python/phylo/likelihood/` | Felsenstein pruning; CPU dispatch landed (NumPy, PyTorch, Rust), CUDA and Metal dispatch not yet implemented. |
-| `python/phylo/opt/` | Continuous parameter fitting via autodiff (PyTorch). |
+| `python/phylo/opt/` | Model-agnostic continuous parameter fitting via autodiff (PyTorch): the `Objective` interface, shared constraint maps, and the Potts and HMM reference instances. Imports nothing from `sim/`, `likelihood/` or `search/`, asserted by test. |
 | `python/phylo/search/` | Move sets, RL agents, temperature schedules. |
 | `python/phylo/qa/` | QA figures/tables for the technical document; renders, doesn't recompute. |
 | `src/lib.rs` | Rust extension (`oxiphylo`), exposed through PyO3. |

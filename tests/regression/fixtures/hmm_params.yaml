@@ -1,0 +1,24 @@
+# Ground truth for the discrete-HMM reference instance
+# (tests/regression/test_opt_hmm.py). Every field is required -- see
+# python/phylo/opt/hmm.py and python/phylo/opt/CLAUDE.md.
+#
+# The emission rows are deliberately well separated: a near-uniform emission
+# makes the hidden states nearly exchangeable, and a recovery test on an
+# almost-unidentifiable model measures the fixture rather than the optimizer.
+#
+# sequence_length=15 with n_sequences=300 gives 4200 transitions and 4500
+# emissions, enough to pin every row without the fit being slow.
+seed: 20260903
+n_states: 3
+n_symbols: 4
+sequence_length: 15
+n_sequences: 300
+initial: [0.5, 0.3, 0.2]
+transition:
+  - [0.70, 0.20, 0.10]
+  - [0.15, 0.75, 0.10]
+  - [0.20, 0.20, 0.60]
+emission:
+  - [0.70, 0.15, 0.10, 0.05]
+  - [0.05, 0.65, 0.20, 0.10]
+  - [0.10, 0.10, 0.25, 0.55]
