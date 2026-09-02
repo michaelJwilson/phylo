@@ -256,6 +256,21 @@ scaling factors. Rescaling changes the arithmetic but not the result: the
 rescaled and direct computations must agree to within floating-point
 tolerance on small problems where both run.
 
+\subsection{Differentiable backends}
+
+Branch lengths $\branch$ are what gradient-based fitting and tree search
+differentiate through, so an accelerated backend must keep them in the
+autodiff graph rather than baking them into topology state. The PyTorch
+backend (\texttt{pruning\_torch.py}, float64, CPU) takes $\branch$ as a
+tensor separate from the topology and is accepted when its log-likelihood
+agrees with the NumPy reference to $\mathrm{atol} = 10^{-9}$ -- the same
+bound as the brute-force check above -- never relaxed to accommodate a
+discrepancy. Gradients obtained from \texttt{torch.autograd} are checked
+against central finite differences of the NumPy oracle (step
+$\epsilon = 10^{-6}$) to $\mathrm{atol} = 10^{-6}$, the coarser bound set by
+the finite-difference truncation and rounding error at that step size, not
+by the autodiff computation itself.
+
 \subsection{Rate variation across sites}
 
 Sites evolve at different rates. The standard treatment draws a

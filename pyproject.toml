@@ -15,14 +15,18 @@ requires-python = ">=3.12.2"
 readme = "README.md"
 # phylo.sim imports numpy (simulation) and pyyaml (simulation_params.yaml
 # loading) directly; phylo.qa imports matplotlib to render the figures
-# docs/tex/ includes -- all three are core dependencies rather than
-# front-loaded ahead of need (see CLAUDE.md, "keep dependencies minimal").
-# matplotlib has 21k+ GitHub stars, well above the 1,000-star review bar.
+# docs/tex/ includes; phylo.likelihood.pruning_torch imports torch, the
+# autodiff backend CLAUDE.md's Performance section already decided on --
+# added here, by the first PR whose code imports it, per that section's
+# note. All four are core dependencies rather than front-loaded ahead of
+# need (see CLAUDE.md, "keep dependencies minimal"). matplotlib has 21k+
+# GitHub stars and torch 90k+, both well above the 1,000-star review bar.
 # Add further entries only as real code depends on them.
 dependencies = [
     "matplotlib>=3.9.0",
     "numpy>=1.26.0",
     "pyyaml>=6.0.3",
+    "torch>=2.4.0",
 ]
 
 [project.optional-dependencies]
