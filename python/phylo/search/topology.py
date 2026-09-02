@@ -43,6 +43,69 @@ Topology = Node
 NodeId = int | str
 
 
+def enumerate_topologies(leaf_names: Sequence[str]) -> Iterator[Topology]:
+    """Every unrooted binary topology on ``leaf_names``, each exactly once.
+
+    The same stepwise insertion :func:`random_topology` samples from, taken
+    exhaustively: three leaves meet at the root, then each remaining leaf is
+    inserted at every edge in turn. Each topology is produced once, so the
+    count is ``(2n-5)!!`` --- which is what pins this function, since a
+    generator that double-counted or missed trees would make a search look
+    better or worse than it is.
+
+    This is the oracle for search quality. Below ``n = 8`` it is the only
+    independent statement available about whether hill climbing found the
+    best tree or merely a good one.
+
+    Parameters
+    ----------
+    leaf_names : Sequence[str]
+        Taxon names, at least 3, all distinct.
+
+    Returns
+    -------
+    Iterator[Topology]
+        Every unrooted binary topology on that leaf set, with
+        ``branch_length=None`` throughout.
+
+    Raises
+    ------
+    ValueError
+        If fewer than 3 names are given, or any two are equal.
+    """
+    if len(leaf_names) < 3:
+        msg = f"need at least 3 leaves for an unrooted topology, got {len(leaf_names)}"
+        raise ValueError(msg)
+    if len(set(leaf_names)) != len(leaf_names):
+        msg = "leaf names must be distinct"
+        raise ValueError(msg)
+
+    seed_adjacency: dict[NodeId, list[NodeId]] = {0: list(leaf_names[:3])}
+    for name in leaf_names[:3]:
+        seed_adjacency[name] = [0]
+
+    def grow(
+        adjacency: dict[NodeId, list[NodeId]], remaining: Sequence[str], next_id: int
+    ) -> Iterator[Topology]:
+        if not remaining:
+            yield _from_adjacency(adjacency, 0)
+            return
+        name, rest = remaining[0], remaining[1:]
+        for first, second in sorted(
+            _edges(adjacency), key=lambda edge: (str(edge[0]), str(edge[1]))
+        ):
+            grown = {node: list(neighbours) for node, neighbours in adjacency.items()}
+            grown[first].remove(second)
+            grown[second].remove(first)
+            grown[next_id] = [first, second, name]
+            grown[first].append(next_id)
+            grown[second].append(next_id)
+            grown[name] = [next_id]
+            yield from grow(grown, rest, next_id + 1)
+
+    yield from grow(seed_adjacency, list(leaf_names[3:]), 1)
+
+
 def random_topology(leaf_names: Sequence[str], rng: np.random.Generator) -> Topology:
     """Draw an unrooted binary topology on ``leaf_names``, uniformly by construction.
 

@@ -1,0 +1,44 @@
+# Ground truth for the exhaustive search study
+# (tests/regression/test_search_exhaustive.py). Every field is required --
+# see python/phylo/sim/params.py and python/phylo/sim/CLAUDE.md.
+#
+# 6 taxa because that is where exhaustive enumeration is still cheap -- 105
+# unrooted topologies -- and hill climbing is no longer trivially correct.
+# The topology is in the trifurcating-root convention, so every branch is
+# separately estimable (see python/phylo/likelihood/CLAUDE.md).
+#
+# The branch lengths are deliberately uneven. A tree with equal branches has
+# near-degenerate alternatives, and a study run on one would measure the
+# fixture's symmetry rather than the search.
+#
+# n_sites=1500 is enough to separate topologies by likelihood while keeping
+# a 105-topology sweep inside a minute.
+seed: 20260905
+n_sites: 1500
+tolerance: 0.01
+k: 4
+pi: [0.25, 0.25, 0.25, 0.25]
+tau:
+  name: root
+  children:
+    - name: A
+      branch_length: 0.12
+    - name: B
+      branch_length: 0.28
+    - name: ancestor_CDEF
+      branch_length: 0.06
+      children:
+        - name: ancestor_CD
+          branch_length: 0.09
+          children:
+            - name: C
+              branch_length: 0.21
+            - name: D
+              branch_length: 0.07
+        - name: ancestor_EF
+          branch_length: 0.14
+          children:
+            - name: E
+              branch_length: 0.33
+            - name: F
+              branch_length: 0.18
