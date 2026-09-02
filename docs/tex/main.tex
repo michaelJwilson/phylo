@@ -54,6 +54,16 @@ deviations are stated where they occur.
 
 \tableofcontents
 
+\paragraph{Intended reader.} Intended reader is: well-educated developer with
+scientific and performance-computing background, but not an expert in a given
+application, e.g. phylogenetics.  The body stays streamlined --- citing
+sources rather than re-deriving standard material inline --- and pushes
+required appliation background into Appendix~\ref{app:background}, referenced
+from the point of use. It is a higher-level overview of the current best-known
+approach (simulation, models) in line with the roadmap, not an exhaustive record;
+detail, plots, and results for support are linked to dedicated supporting documents,
+e.g. the results of a dedicated study to find the best of a number of approaches.
+
 \section{Scope and status}
 
 The project's goal is to search the space of phylogenetic tree topologies
@@ -356,17 +366,10 @@ scores better.
 \subsection{Move sets}
 
 Two rearrangement neighbourhoods define the search graph
-\citep{felsenstein2004}:
-
-\begin{description}
-  \item[NNI (nearest-neighbour interchange).] Each internal edge of an
-    unrooted binary tree separates four subtrees, which can be rejoined in
-    three ways; two are new topologies. With $n - 3$ internal edges, the NNI
-    neighbourhood contains $2(n-3)$ topologies --- small, cheap, and local.
-  \item[SPR (subtree prune and regraft).] Detach a subtree and reattach it at
-    another edge. The neighbourhood is quadratic in $n$, so each step costs
-    more, but the larger reach escapes local optima that trap NNI.
-\end{description}
+\citep{felsenstein2004}: NNI and SPR, defined in
+Appendix~\ref{app:background}. NNI's neighbourhood is small, cheap, and
+local; SPR's is quadratic in $n$, so each step costs more, but its larger
+reach escapes local optima that trap NNI.
 
 Since neighbouring topologies differ only near the affected edges, most
 partial likelihoods are unchanged between a tree and its neighbour. Caching
@@ -701,5 +704,30 @@ follows its formulation and notation and says where it deviates.
 
 \bibliographystyle{plainnat}
 \bibliography{references}
+
+\appendix
+
+\section{Background material}
+\label{app:background}
+
+Standard algorithms that are not specific to \texttt{phylo}, referenced from
+the main text rather than re-derived there (see the intended-reader note
+after the table of contents).
+
+\subsection{NNI and SPR}
+\label{app:nni-spr}
+
+Two rearrangement neighbourhoods define the tree-search graph used in
+Section~\ref{sec:extensions} and throughout \citep{felsenstein2004}:
+
+\begin{description}
+  \item[NNI (nearest-neighbour interchange).] Each internal edge of an
+    unrooted binary tree separates four subtrees, which can be rejoined in
+    three ways; two are new topologies. With $n - 3$ internal edges, the NNI
+    neighbourhood contains $2(n-3)$ topologies --- small, cheap, and local.
+  \item[SPR (subtree prune and regraft).] Detach a subtree and reattach it at
+    another edge. The neighbourhood is quadratic in $n$, so each step costs
+    more, but the larger reach escapes local optima that trap NNI.
+\end{description}
 
 \end{document}
