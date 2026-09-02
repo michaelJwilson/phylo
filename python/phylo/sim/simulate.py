@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from phylo.sim.gtr import reversible_transition_probabilities
 from phylo.sim.jc import jc_transition_probabilities
 from phylo.sim.newick import to_newick
 from phylo.sim.tree import Node, preorder
@@ -64,6 +65,7 @@ def simulate_alignment(
     pi: np.ndarray,
     seed: int,
     n_sites: int,
+    rate_matrix: np.ndarray | None = None,
 ) -> SimulatedDataset:
     """Simulate an alignment under the k-state Jukes-Cantor model.
 
@@ -80,6 +82,12 @@ def simulate_alignment(
         Seed for ``np.random.default_rng``, so the dataset is reproducible.
     n_sites : int
         Number of alignment columns to simulate.
+    rate_matrix : np.ndarray | None
+        Reversible rate matrix, shape ``(k, k)``, whose stationary
+        distribution is ``pi``. ``None`` keeps the Jukes-Cantor closed form,
+        which is the existing behaviour and stays the default: root
+        ``CLAUDE.md`` forbids silent behaviour changes, and the substitution
+        model is the last thing worth changing silently.
 
     Returns
     -------
@@ -100,7 +108,13 @@ def simulate_alignment(
             if node.branch_length is None:
                 msg = f"non-root node {node.name!r} has no branch_length"
                 raise ValueError(msg)
-            transition = jc_transition_probabilities(node.branch_length, k=k)
+            transition = (
+                jc_transition_probabilities(node.branch_length, k=k)
+                if rate_matrix is None
+                else reversible_transition_probabilities(
+                    rate_matrix, pi, node.branch_length
+                )
+            )
             states = _sample_rows(rng, transition, parent_states)
         node_states[node.name] = states
         for child in node.children:

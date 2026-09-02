@@ -32,7 +32,13 @@ import numpy as np
 import torch
 
 from phylo.likelihood import pruning_torch
-from phylo.opt.constrain import free_from_positive, positive
+from phylo.opt.constrain import (
+    free_from_log_simplex,
+    free_from_positive,
+    log_simplex,
+    positive,
+)
+from phylo.sim.gtr import n_exchangeabilities
 from phylo.sim.tree import Node
 
 # Starting length for every branch, in expected substitutions per site. Small
@@ -218,3 +224,205 @@ class BranchLengthObjective:
             lengths = lengths[keep].clone()
             lengths[keep.index(first)] = summed
         return free_from_positive(lengths)
+
+
+class SubstitutionModelObjective:
+    """Fits branch lengths, GTR exchangeabilities and ``pi`` together.
+
+    The follow-up to :class:`BranchLengthObjective`, and a modelling change
+    rather than an optimizer one: Jukes-Cantor has no free rate parameters,
+    so fitting ``Q`` and ``pi`` needs a model that has some
+    (:mod:`phylo.sim.gtr`).
+
+    **Three gauges, all load-bearing.** Each removes a direction along which
+    the likelihood is exactly flat, and a flat direction makes the observed
+    information singular and every interval undefined --- not merely wide.
+
+    * ``Q`` is normalized to one expected substitution per unit time, or it
+      trades off against every branch length at once.
+    * One exchangeability is held at 1, or the whole vector can be scaled and
+      the rate normalization undoes it.
+    * ``pi`` goes through :func:`phylo.opt.constrain.log_simplex`, which pins
+      its first logit, or a constant can be added to all of them.
+
+    Parameters
+    ----------
+    tau : Node
+        The topology, held fixed.
+    k : int
+        Number of states.
+    alignment : Mapping[str, np.ndarray]
+        Observed states per taxon.
+    dtype : torch.dtype
+        Precision; ``float64`` by default.
+    device : torch.device | str | None
+        Where to run.
+    """
+
+    def __init__(
+        self,
+        tau: Node,
+        k: int,
+        alignment: Mapping[str, np.ndarray],
+        dtype: torch.dtype = torch.float64,
+        device: torch.device | str | None = None,
+    ) -> None:
+        # The branch-length block, including the confounded-root-pair merge,
+        # is exactly BranchLengthObjective's. Reused rather than restated so
+        # the two cannot drift; pi is a placeholder here because this class
+        # fits its own.
+        self._branches = BranchLengthObjective(
+            tau, k, np.full(k, 1.0 / k), alignment, dtype=dtype, device=device
+        )
+        self._tau = tau
+        self._k = k
+        self._alignment = dict(alignment)
+        self._dtype = dtype
+        self._device = device
+
+        self._n_free_exchangeabilities = n_exchangeabilities(k) - 1
+        rows, columns = np.triu_indices(k, k=1)
+        self._rows = torch.as_tensor(rows, device=device)
+        self._columns = torch.as_tensor(columns, device=device)
+
+    @property
+    def n_parameters(self) -> int:
+        """Branch lengths, free exchangeabilities, and free ``pi`` entries."""
+        return (
+            self._branches.n_parameters + self._n_free_exchangeabilities + (self._k - 1)
+        )
+
+    @property
+    def parameter_names(self) -> list[str]:
+        """Names in ``theta`` order, branch lengths first."""
+        return [
+            *self._branches.parameter_names,
+            *(f"s{index}" for index in range(self._n_free_exchangeabilities)),
+            *(f"pi{index}" for index in range(1, self._k)),
+        ]
+
+    def _split(self, theta: torch.Tensor) -> tuple[torch.Tensor, ...]:
+        first = self._branches.n_parameters
+        second = first + self._n_free_exchangeabilities
+        return theta[:first], theta[first:second], theta[second:]
+
+    def rate_matrix(self, theta: torch.Tensor) -> torch.Tensor:
+        """The normalized GTR rate matrix ``theta`` encodes.
+
+        Parameters
+        ----------
+        theta : torch.Tensor
+            Unconstrained parameters.
+
+        Returns
+        -------
+        torch.Tensor
+            Rate matrix of shape ``(k, k)``, differentiable throughout.
+        """
+        _, free_exchangeabilities, free_pi = self._split(theta)
+        pi = torch.exp(log_simplex(free_pi))
+        values = torch.cat(
+            [
+                positive(free_exchangeabilities),
+                torch.ones(1, dtype=self._dtype, device=self._device),
+            ]
+        )
+        upper = torch.zeros(
+            (self._k, self._k), dtype=self._dtype, device=self._device
+        ).index_put((self._rows, self._columns), values)
+        symmetric = upper + upper.T
+        rate = symmetric * pi.unsqueeze(0)
+        rate = rate - torch.diag(rate.sum(dim=1))
+        scale = -(pi * torch.diagonal(rate)).sum()
+        return rate / scale
+
+    def initial(self) -> torch.Tensor:
+        """Uninformative: short branches, equal exchangeabilities, uniform ``pi``.
+
+        That start is Jukes-Cantor exactly, which is a deliberate choice: the
+        fit begins at the model the fixtures' simpler tests use, so any
+        departure it reaches is something the data asked for.
+        """
+        return torch.cat(
+            [
+                self._branches.initial(),
+                torch.zeros(
+                    self._n_free_exchangeabilities,
+                    dtype=self._dtype,
+                    device=self._device,
+                ),
+                torch.zeros(self._k - 1, dtype=self._dtype, device=self._device),
+            ]
+        )
+
+    def constrain(self, theta: torch.Tensor) -> Mapping[str, torch.Tensor]:
+        """Branch lengths, the full exchangeability vector, and ``pi``.
+
+        Parameters
+        ----------
+        theta : torch.Tensor
+            Unconstrained parameters.
+
+        Returns
+        -------
+        Mapping[str, torch.Tensor]
+            ``branch_lengths`` (estimable entries only, as for
+            :class:`BranchLengthObjective`), ``exchangeabilities`` (all of
+            them, the last pinned at 1), and ``pi``.
+        """
+        branches, free_exchangeabilities, free_pi = self._split(theta)
+        return {
+            "branch_lengths": positive(branches),
+            "exchangeabilities": torch.cat(
+                [
+                    positive(free_exchangeabilities),
+                    torch.ones(1, dtype=self._dtype, device=self._device),
+                ]
+            ),
+            "pi": torch.exp(log_simplex(free_pi)),
+        }
+
+    def __call__(self, theta: torch.Tensor) -> torch.Tensor:
+        """Negative log-likelihood under the GTR model ``theta`` encodes."""
+        branches, _, free_pi = self._split(theta)
+        return -pruning_torch.log_likelihood(
+            self._tau,
+            self._k,
+            torch.exp(log_simplex(free_pi)),
+            self._alignment,
+            self._branches.branch_lengths(branches),
+            rate_matrix=self.rate_matrix(theta),
+        )
+
+    def theta_from_truth(
+        self, tau: Node, exchangeabilities: np.ndarray, pi: np.ndarray
+    ) -> torch.Tensor:
+        """Place a known truth in the unconstrained coordinates.
+
+        Parameters
+        ----------
+        tau : Node
+            A tree carrying the true branch lengths.
+        exchangeabilities : np.ndarray
+            The true exchangeabilities, all of them. Rescaled here so the
+            last is 1, which is the same model: scaling them is undone by the
+            rate normalization.
+        pi : np.ndarray
+            The true stationary distribution.
+
+        Returns
+        -------
+        torch.Tensor
+            ``theta`` whose constrained parameters are that truth.
+        """
+        scaled = torch.as_tensor(exchangeabilities, dtype=self._dtype)
+        scaled = scaled / scaled[-1]
+        return torch.cat(
+            [
+                self._branches.theta_from_truth(tau),
+                free_from_positive(scaled[:-1]),
+                free_from_log_simplex(
+                    torch.log(torch.as_tensor(pi, dtype=self._dtype))
+                ),
+            ]
+        )

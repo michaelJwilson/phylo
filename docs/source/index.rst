@@ -21,6 +21,9 @@ whether or not it has members yet.
 .. automodule:: phylo.sim.jc
    :members:
 
+.. automodule:: phylo.sim.gtr
+   :members:
+
 .. automodule:: phylo.sim.params
    :members:
 
@@ -28,6 +31,9 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.likelihood
+   :members:
+
+.. automodule:: phylo.likelihood.objective
    :members:
 
 .. automodule:: phylo.opt

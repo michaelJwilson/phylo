@@ -177,6 +177,41 @@ $\Q$ through the normalization
 Without \eqref{eq:normalisation}, $\Q$ and $\branch$ trade off against each
 other and neither is identifiable.
 
+\subsection{The general time-reversible model}
+\label{sec:gtr}
+
+Jukes--Cantor has no free rate parameters, so there is nothing in $\Q$ or
+$\bpi$ to estimate under it. The general reversible model supplies some:
+%
+\begin{equation}
+  \Q_{ij} = s_{ij} \, \pi_j \quad (i \neq j), \qquad
+  \Q_{ii} = -\sum_{j \neq i} \Q_{ij},
+  \label{eq:gtr}
+\end{equation}
+%
+with $s$ symmetric --- the \emph{exchangeabilities} --- and $\bpi$ the
+stationary distribution. Detailed balance, $\pi_i \Q_{ij} = \pi_j \Q_{ji}$,
+follows immediately from the symmetry of $s$, so \eqref{eq:gtr} is reversible
+by construction rather than by assumption, and the eigendecomposition
+\eqref{eq:eigen} applies exactly.
+
+Two normalizations are gauges rather than conventions, and a third appears
+once $\bpi$ is fitted. Each removes a direction along which the likelihood is
+exactly flat; a flat direction makes the observed information singular, so
+without them no parameter of the model has a confidence interval at all.
+First, $\Q$ and $c\Q$ describe the same process at branch lengths $t$ and
+$t/c$, so $\Q$ is scaled to one expected substitution per unit time,
+$-\sum_i \pi_i \Q_{ii} = 1$; this is what makes a branch length mean
+``expected substitutions per site''. Second, the same freedom reappears in
+$s$, since scaling every entry is undone by that normalization, so one entry
+is held at $1$. Third, $\bpi$ is optimized through a softmax whose first
+logit is pinned, since adding a constant to all of them changes nothing.
+
+Setting every $s_{ij}$ equal and $\bpi$ uniform must reproduce the
+Jukes--Cantor rate matrix exactly, which is how the implementation is
+validated --- against a model this document has already pinned against its
+own closed form, rather than against a restatement of \eqref{eq:gtr}.
+
 \subsection{The \texorpdfstring{$k$}{k}-state Jukes--Cantor model}
 \label{sec:jc}
 
@@ -836,6 +871,23 @@ panel~(a) undefined.
   \includegraphics[width=0.9\linewidth]{figures/opt_branch_recovery}
   \caption{\optBranchRecoveryCaption}
   \label{fig:opt-branch-recovery}
+\end{figure}
+
+Figure~\ref{fig:opt-model-recovery} fits the substitution model itself ---
+the exchangeabilities and stationary frequencies of Section~\ref{sec:gtr} ---
+alongside the branch lengths. Panel~(a) recovers an asymmetric generating
+truth. Panel~(b) is the half that is easy to omit: given data simulated under
+Jukes--Cantor, the general model must return equal exchangeabilities and a
+uniform $\bpi$ rather than inventing structure the data does not contain.
+Jukes--Cantor is exactly the point of the parameter space where a model this
+flexible could most easily overfit, so it is the point worth checking.
+
+\qacaptionread{figures/opt_model_recovery_caption.txt}{\optModelRecoveryCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/opt_model_recovery}
+  \caption{\optModelRecoveryCaption}
+  \label{fig:opt-model-recovery}
 \end{figure}
 
 Search-trajectory QA figures are not built yet; this section is where their

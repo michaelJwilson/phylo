@@ -18,13 +18,19 @@ import pytest
 import torch
 from numpy.testing import assert_allclose
 from phylo.likelihood import pruning_torch
-from phylo.likelihood.objective import BranchLengthObjective
+from phylo.likelihood.objective import (
+    BranchLengthObjective,
+    SubstitutionModelObjective,
+)
 from phylo.opt.fit import (
     constrained_standard_errors,
     covers,
     fit,
+    observed_information,
     parameter_covariance,
 )
+from phylo.sim.gtr import gtr_rate_matrix
+from phylo.sim.jc import jc_rate_matrix
 from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import Node
 
@@ -291,6 +297,191 @@ def test_branch_length_intervals_cover_at_the_nominal_rate() -> None:
             objective.constrain(result.theta)["branch_lengths"],
             constrained_standard_errors(objective, result.theta)["branch_lengths"],
             truth,
+        )
+        covered += int(hits.sum())
+        total += hits.numel()
+
+    rate = covered / total
+    band = 3.0 * (0.95 * 0.05 / total) ** 0.5
+    assert abs(rate - 0.95) <= band, (
+        f"coverage {rate:.4f}, expected 0.95 +/- {band:.4f}"
+    )
+
+
+# --- fitting the substitution model as well as the branches --------------
+
+# Deliberately asymmetric, matching tests/regression/test_gtr.py: no two
+# exchangeabilities equal and no two frequencies equal, so a bug that
+# collapsed either would show as a failure rather than as a coincidence.
+_TRUE_EXCHANGEABILITIES = np.array([1.6, 0.4, 0.9, 0.7, 2.1, 1.0])
+_TRUE_PI = np.array([0.35, 0.15, 0.30, 0.20])
+_GTR_SITES = 20000
+
+
+def _gtr_objective(
+    fixture: str = SMALL_SITES, seed_offset: int = 0, sites: int = _GTR_SITES
+) -> tuple[SubstitutionModelObjective, torch.Tensor]:
+    params = load_fixture(fixture)
+    rate = gtr_rate_matrix(_TRUE_EXCHANGEABILITIES, _TRUE_PI)
+    dataset = simulate_alignment(
+        tau=params.tau,
+        k=params.k,
+        pi=_TRUE_PI,
+        seed=params.seed + 7919 * seed_offset,
+        n_sites=sites,
+        rate_matrix=rate,
+    )
+    objective = SubstitutionModelObjective(
+        params.tau, params.k, dict(dataset.alignment)
+    )
+    truth = objective.theta_from_truth(params.tau, _TRUE_EXCHANGEABILITIES, _TRUE_PI)
+    return objective, truth
+
+
+def test_the_torch_rate_matrix_matches_the_numpy_one() -> None:
+    # Two implementations of the same construction -- the differentiable
+    # torch one the optimizer uses, and the numpy one the simulator uses --
+    # so agreement is evidence rather than self-consistency. A drift between
+    # them would fit one model to data generated under another.
+    objective, truth = _gtr_objective(sites=200)
+    assert_allclose(
+        objective.rate_matrix(truth).detach().numpy(),
+        gtr_rate_matrix(_TRUE_EXCHANGEABILITIES, _TRUE_PI),
+        atol=1e-15,
+    )
+
+
+def test_the_starting_point_is_exactly_jukes_cantor() -> None:
+    # Not approximately: the fit begins at the model the rest of this suite
+    # validates, so any departure it reaches is something the data asked for.
+    params = load_fixture(SMALL_SITES)
+    objective, _ = _gtr_objective(sites=200)
+    assert_allclose(
+        objective.rate_matrix(objective.initial()).detach().numpy(),
+        jc_rate_matrix(params.k),
+        atol=1e-15,
+    )
+
+
+def test_the_substitution_model_theta_round_trips() -> None:
+    objective, truth = _gtr_objective(sites=200)
+    constrained = objective.constrain(truth)
+    # The truth is rescaled so the last exchangeability is 1, which is the
+    # same model -- test_gtr.py pins that invariance exactly.
+    assert_allclose(
+        constrained["exchangeabilities"].numpy(),
+        _TRUE_EXCHANGEABILITIES / _TRUE_EXCHANGEABILITIES[-1],
+        rtol=1e-13,
+    )
+    assert_allclose(constrained["pi"].numpy(), _TRUE_PI, rtol=1e-13)
+    assert float(constrained["exchangeabilities"][-1]) == pytest.approx(1.0)
+
+
+def test_the_substitution_model_has_one_parameter_per_free_quantity() -> None:
+    objective, _ = _gtr_objective(sites=200)
+    # 5 branches + 5 free exchangeabilities (of 6) + 3 free pi entries (of 4).
+    assert objective.n_parameters == 13
+    assert objective.parameter_names[-4:] == ["s4", "pi1", "pi2", "pi3"]
+
+
+def test_the_substitution_model_gradient_matches_finite_differences() -> None:
+    objective, truth = _gtr_objective(sites=500)
+    assert_gradient_matches_finite_differences(
+        objective, truth, _FINITE_DIFFERENCE_STEP, _RTOL_GRADIENT
+    )
+
+
+def test_the_substitution_model_fit_beats_the_generating_parameters() -> None:
+    objective, truth = _gtr_objective()
+    result = fit(objective)
+    assert result.converged
+    assert result.value < float(objective(truth))
+
+
+def test_the_three_gauges_leave_a_well_conditioned_problem() -> None:
+    # The direct test that the rate normalization, the pinned
+    # exchangeability and the simplex gauge between them remove every flat
+    # direction. Drop any one and this ratio collapses toward zero and
+    # `parameter_covariance` refuses the fit.
+    objective, _ = _gtr_objective()
+    information = observed_information(objective, fit(objective).theta)
+    eigenvalues = torch.linalg.eigvalsh(information)
+    assert float(eigenvalues.min() / eigenvalues.max()) > 1e-4
+
+
+def test_the_substitution_model_is_recovered_to_within_four_standard_errors() -> None:
+    objective, _ = _gtr_objective()
+    result = fit(objective)
+    estimate = objective.constrain(result.theta)
+    error = constrained_standard_errors(objective, result.theta)
+
+    reference = _TRUE_EXCHANGEABILITIES / _TRUE_EXCHANGEABILITIES[-1]
+    for name, fitted, spread, expected in (
+        (
+            "exchangeabilities",
+            estimate["exchangeabilities"][:-1],
+            error["exchangeabilities"][:-1],
+            torch.as_tensor(reference[:-1]),
+        ),
+        ("pi", estimate["pi"], error["pi"], torch.as_tensor(_TRUE_PI)),
+    ):
+        deviation = (fitted - expected).abs() / spread
+        assert float(deviation.max()) < 4.0, (
+            f"{name}: worst {float(deviation.max()):.2f} standard errors from truth"
+        )
+
+
+def test_fitting_jc_simulated_data_recovers_a_jc_like_model() -> None:
+    # A consistency check the other direction: given data generated under
+    # Jukes-Cantor, the general model must not invent structure. Stated in
+    # standard errors so it transfers if the fixture size changes.
+    params = load_fixture(SMALL_SITES)
+    dataset = simulate_alignment(
+        tau=params.tau,
+        k=params.k,
+        pi=params.pi,
+        seed=params.seed,
+        n_sites=_GTR_SITES,
+    )
+    objective = SubstitutionModelObjective(
+        params.tau, params.k, dict(dataset.alignment)
+    )
+    result = fit(objective)
+    estimate = objective.constrain(result.theta)
+    error = constrained_standard_errors(objective, result.theta)
+
+    free = estimate["exchangeabilities"][:-1]
+    deviation = (free - torch.ones_like(free)).abs() / error["exchangeabilities"][:-1]
+    assert float(deviation.max()) < 4.0
+
+    uniform = torch.full((params.k,), 1.0 / params.k, dtype=torch.float64)
+    pi_deviation = (estimate["pi"] - uniform).abs() / error["pi"]
+    assert float(pi_deviation.max()) < 4.0
+
+
+@pytest.mark.release
+def test_substitution_model_intervals_cover_at_the_nominal_rate() -> None:
+    reference = torch.as_tensor(_TRUE_EXCHANGEABILITIES / _TRUE_EXCHANGEABILITIES[-1])[
+        :-1
+    ]
+    truth_pi = torch.as_tensor(_TRUE_PI)
+    covered = 0
+    total = 0
+    for replicate in range(30):
+        objective, _ = _gtr_objective(fixture=EIGHT_TAXA, seed_offset=replicate)
+        result = fit(objective)
+        assert result.converged
+        estimate = objective.constrain(result.theta)
+        error = constrained_standard_errors(objective, result.theta)
+        hits = torch.cat(
+            [
+                covers(
+                    estimate["exchangeabilities"][:-1],
+                    error["exchangeabilities"][:-1],
+                    reference,
+                ),
+                covers(estimate["pi"], error["pi"], truth_pi),
+            ]
         )
         covered += int(hits.sum())
         total += hits.numel()

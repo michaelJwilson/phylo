@@ -23,7 +23,11 @@ import math
 import numpy as np
 import pytest
 import torch
-from phylo.likelihood.objective import BranchLengthObjective
+from phylo.likelihood.objective import (
+    BranchLengthObjective,
+    SubstitutionModelObjective,
+)
+from phylo.sim.gtr import gtr_rate_matrix
 from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import Node
 from pytest_benchmark.fixture import BenchmarkFixture
@@ -100,3 +104,31 @@ def test_forward_pass_at_roadmap_scale(
     """The objective alone, so the reverse pass's share is visible."""
     theta = objective.initial()
     assert math.isfinite(float(benchmark(objective, theta)))
+
+
+def test_general_model_gradient_update_at_roadmap_scale(
+    benchmark: BenchmarkFixture,
+) -> None:
+    """The same update under the general model, so the extra cost is visible.
+
+    GTR routes through ``torch.linalg.matrix_exp`` per branch where
+    Jukes-Cantor has a closed form, and adds a symmetric eigen-style
+    construction per evaluation. The ratio to the JC number above is the
+    price of having rate parameters to fit at all.
+    """
+    tau = _topology(_TAXA)
+    pi = np.full(4, 0.25)
+    rate = gtr_rate_matrix(np.array([1.6, 0.4, 0.9, 0.7, 2.1, 1.0]), pi)
+    dataset = simulate_alignment(
+        tau=tau, k=4, pi=pi, seed=_SEED, n_sites=_SITES, rate_matrix=rate
+    )
+    objective = SubstitutionModelObjective(tau, 4, dict(dataset.alignment))
+    theta = objective.initial()
+
+    def _update() -> float:
+        point = theta.detach().clone().requires_grad_(True)
+        value = objective(point)
+        torch.autograd.grad(value, point)
+        return float(value.detach())
+
+    assert math.isfinite(benchmark(_update))
