@@ -31,13 +31,24 @@ import torch
 from numpy.testing import assert_allclose
 from phylo.likelihood import pruning, pruning_torch
 from phylo.likelihood.brute_force import brute_force_log_likelihood
+from phylo.likelihood.device import CROSS_DEVICE_RTOL_FLOAT64
 from phylo.sim.jc import jc_rate_matrix
 from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import Node
 
-_ATOL_ORACLE = 1e-9
+# Relative, not absolute -- see issue #111 and the note in
+# test_pruning_rust.py. CROSS_DEVICE_RTOL_FLOAT64 is the float64
+# implementation-agreement bound stated in docs/tex/.
+_RTOL_ORACLE = CROSS_DEVICE_RTOL_FLOAT64
+
 _FD_EPS = 1e-6
-_ATOL_GRADIENT = 1e-6
+
+# Finite differences are far less precise than the likelihood itself, so the
+# gradient bound is its own number rather than the oracle's. Relative for the
+# same reason: the gradient of a sum over sites scales with the site count.
+# Measured worst relative disagreement is 6.1e-07 at the step above, so this
+# leaves better than an order of magnitude.
+_RTOL_GRADIENT = 1e-5
 
 
 def _small_tree_n4() -> Node:
@@ -122,7 +133,7 @@ def test_torch_matches_numpy_oracle() -> None:
         tau, k, pi, dataset.alignment, branch_lengths
     )
 
-    assert_allclose(float(torch_ll), numpy_ll, atol=_ATOL_ORACLE)
+    assert_allclose(float(torch_ll), numpy_ll, rtol=_RTOL_ORACLE)
 
 
 def test_torch_matches_brute_force() -> None:
@@ -137,7 +148,7 @@ def test_torch_matches_brute_force() -> None:
     )
     brute = brute_force_log_likelihood(tau, k, pi, dataset.alignment)
 
-    assert_allclose(float(torch_ll), brute, atol=_ATOL_ORACLE)
+    assert_allclose(float(torch_ll), brute, rtol=_RTOL_ORACLE)
 
 
 def test_rescaled_and_unrescaled_torch_paths_agree() -> None:
@@ -172,7 +183,7 @@ def test_matrix_exp_rate_matrix_path_matches_closed_form() -> None:
         tau, k, pi, dataset.alignment, branch_lengths, rate_matrix=rate_matrix
     )
 
-    assert_allclose(float(general), float(closed_form), atol=_ATOL_ORACLE)
+    assert_allclose(float(general), float(closed_form), rtol=_RTOL_ORACLE)
 
 
 def test_gradient_matches_finite_differences_of_numpy_oracle() -> None:
@@ -209,4 +220,4 @@ def test_gradient_matches_finite_differences_of_numpy_oracle() -> None:
         minus[i] -= _FD_EPS
         finite_diff_grad[i] = (_numpy_ll(plus) - _numpy_ll(minus)) / (2 * _FD_EPS)
 
-    assert_allclose(autograd_grad, finite_diff_grad, atol=_ATOL_GRADIENT)
+    assert_allclose(autograd_grad, finite_diff_grad, rtol=_RTOL_GRADIENT)

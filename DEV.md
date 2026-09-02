@@ -61,7 +61,7 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 | `rust-lint` | `cargo clippy -D warnings`, `cargo fmt --check` |
 | `rust-tests` | `cargo test --locked`, `cargo bench` (informational) |
 | `build` | `pip install .` (no lockfile, mimics fresh consumer), smoke import |
-| `python-tests` | `pytest -m "not release"`, gated on minimum coverage |
+| `python-tests` | `pytest -m "not release"`, gated on minimum coverage; benchmarks skipped unless computational code changed |
 | `docs` | Sphinx build (warnings as errors) |
 | `technical-doc` | Regenerate QA figures (`infra/build_technical_doc.sh`), then LaTeX build (fails on undefined refs/citations, or if the rebuilt `docs/draft.pdf` differs from the committed one) |
 | `audit` | `pip-audit`, `cargo audit` (skips on cache hit if lockfiles are unchanged) |
@@ -76,6 +76,8 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
   * **Use `pytest -m "not release"` while developing.** That is what CI's `python-tests` job runs, so it is the gate a PR is actually judged against. Do not run the full suite to check ordinary work.
   * **The full suite is expensive and its cost is not obvious from the test count.** Measured on one development machine on the same checkout: `pytest -m "not release"` took 131 s over 140 tests; plain `pytest` took 954 s over 141 — one extra test, roughly 7x the wall clock. Exhaustive topological tests dominate, and they grow combinatorially with taxon count.
   * **Plain `pytest` (no `-m` filter) is the release gate's job, not a development command.** `infra/release.sh` runs it as part of cutting a release; run it by hand only when you are cutting one, or when you have changed a release-gated test itself.
+* **Benchmarks are conditional.** They are half the suite's wall clock (36 s of 71 s) and measure code a docs or QA change cannot have altered, so `python-tests` runs them only when the diff against the base branch touches `src/`, `python/phylo/{sim,likelihood,opt,search}/`, `tests/benchmarks/`, or a lockfile or project file. The job itself always runs and always reports — it is a required check, and skipping the job rather than the step would leave it pending and block the merge. Coverage is unaffected, because every line a benchmark reaches is also reached by the regression module it pairs with.
+* **Tolerances on a quantity that scales with problem size are relative.** The log-likelihood is a sum over sites, so an absolute bound fixed at one site count does not transfer to another: the backends agree to ~8e-13 relative at every size, but that same agreement is 7.4e-07 absolute at 200,000 sites. Absolute bounds are correct for quantities that do not scale — a transition probability, a row sum, a Monte Carlo frequency — and are kept there.
 * **Concurrency:** Superseded CI runs on the same branch are automatically cancelled.
 
 ### Core Development Standards
