@@ -19,7 +19,7 @@ carries the domain; `CLAUDE.md` states why keeping it liftable matters.
 | `python/phylo/qa/` | QA figures/tables for the technical document; renders, doesn't recompute. |
 | `src/lib.rs` | Rust extension (`oxiphylo`), exposed through PyO3. |
 | `docs/tex/` | LaTeX source for the technical document. |
-| `infra/build_technical_doc.sh` | Regenerates QA figures, then builds `docs/draft.pdf`. |
+| `infra/build_technical_doc.sh` | Regenerates QA figures, then builds `docs/draft.pdf` (committed). |
 
 *Note: Each directory contains a localized `CLAUDE.md` defining specific constraints (e.g., `sim/` oracles, `search/` constraints). These append to, rather than override, the root `CLAUDE.md`.*
 
@@ -63,7 +63,7 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 | `build` | `pip install .` (no lockfile, mimics fresh consumer), smoke import |
 | `python-tests` | `pytest` suite, gated on minimum coverage |
 | `docs` | Sphinx build (warnings as errors) |
-| `technical-doc` | Regenerate QA figures (`infra/build_technical_doc.sh`), then LaTeX build (fails on undefined refs/citations) |
+| `technical-doc` | Regenerate QA figures (`infra/build_technical_doc.sh`), then LaTeX build (fails on undefined refs/citations, or if the rebuilt `docs/draft.pdf` differs from the committed one) |
 | `audit` | `pip-audit`, `cargo audit` (skips on cache hit if lockfiles are unchanged) |
 
 `lint`, `python-tests`, and `docs` restore a `~/.cache/uv` cache keyed on `uv.lock`'s hash before installing `uv`. `rust-lint`, `rust-tests`, `build`, and those same three jobs restore a shared `~/.cargo/registry`, `~/.cargo/git`, and `target/` cache keyed on `Cargo.lock`'s hash, so `oxiphylo` (built via `maturin`/`pyo3` on every `uv sync` or `pip install .`) compiles from scratch only when a lockfile changes or no job has populated the cache yet. `audit`'s per-week marker cache (above) is unrelated and unaffected.
@@ -104,4 +104,4 @@ Assert scientific validity. Generate fixtures via component-wise simulation unde
 
 ### Technical Document
 
-`docs/tex/` is versioned as code. Update it in the same PR that alters a model, equation, algorithm, or QA figure.
+`docs/tex/` is versioned as code. Update it in the same PR that alters a model, equation, algorithm, or QA figure. `docs/draft.pdf` is committed, not just built: regenerate it with `infra/build_technical_doc.sh` and commit the result in that same PR. CI's `technical-doc` job fails if the committed PDF is stale.

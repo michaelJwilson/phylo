@@ -8,6 +8,14 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
+# docs/draft.pdf is committed, so identical inputs must produce identical
+# bytes. Both matplotlib (the QA figures below) and pdftex (the LaTeX build)
+# honor SOURCE_DATE_EPOCH, embedding it as their PDF /CreationDate instead of
+# the current wall-clock time; a fixed constant keeps every rebuild
+# byte-identical regardless of when it runs, which is what CI's staleness
+# check relies on.
+export SOURCE_DATE_EPOCH=1735689600
+
 uv run python -m phylo.qa.sim_tree \
   --params tests/regression/fixtures/simulation_params_8taxa.yaml \
   --output-dir docs/tex/figures

@@ -219,8 +219,9 @@ jobs:
       - run: pip install "uv==${UV_VERSION}"
       - run: uv sync --locked --extra test
       # TeX Live from the Ubuntu archive rather than a third-party action:
-      # these five packages are what the document needs, and no new GitHub
-      # Action joins the supply chain.
+      # these packages are what the document needs (poppler-utils is for the
+      # staleness check below), and no new GitHub Action joins the supply
+      # chain.
       - name: Install TeX Live
         run: |
           sudo apt-get update
@@ -229,7 +230,8 @@ jobs:
             texlive-latex-base \
             texlive-latex-recommended \
             texlive-fonts-recommended \
-            texlive-science
+            texlive-science \
+            poppler-utils
       # Regenerates the QA figures/captions docs/tex/main.tex includes, then
       # builds docs/draft.pdf -- the same entry point a local build uses (see
       # infra/CLAUDE.md), so CI and a contributor's machine take one path.
@@ -241,6 +243,28 @@ jobs:
         run: |
           if grep -nE 'There were undefined references|Citation .* undefined|Reference .* undefined' docs/draft.log; then
             echo "::error::LaTeX reported undefined references or citations"
+            exit 1
+          fi
+      # docs/draft.pdf is committed (see DEV.md's "Technical Document"
+      # section); catch a PR that edited docs/tex/ or a QA figure without
+      # regenerating and committing the rebuilt PDF. SOURCE_DATE_EPOCH (set
+      # in infra/build_technical_doc.sh) makes a rebuild byte-identical to
+      # itself on one machine, but pdftex's font-subsetting order can still
+      # differ across otherwise-identical TeX Live installs (e.g. this
+      # runner vs. a contributor's machine), producing a different-but
+      # visually-equivalent PDF. Rasterizing both to PNG and comparing those
+      # bytes checks the document's actual rendered content instead of the
+      # PDF container's internal encoding.
+      - name: Check the committed PDF is up to date
+        run: |
+          git show HEAD:docs/draft.pdf > /tmp/committed-draft.pdf
+          mkdir -p /tmp/committed-pages /tmp/built-pages
+          pdftoppm -png -r 150 /tmp/committed-draft.pdf /tmp/committed-pages/page
+          pdftoppm -png -r 150 docs/draft.pdf /tmp/built-pages/page
+          committed_hash="$(cat /tmp/committed-pages/page*.png | sha256sum | cut -d' ' -f1)"
+          built_hash="$(cat /tmp/built-pages/page*.png | sha256sum | cut -d' ' -f1)"
+          if [ "$committed_hash" != "$built_hash" ]; then
+            echo "::error::docs/draft.pdf is stale -- run infra/build_technical_doc.sh and commit the result"
             exit 1
           fi
 
