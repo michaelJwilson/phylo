@@ -197,6 +197,27 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache the uv environment
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+      - name: Cache Cargo registry and the oxiphylo build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+      - run: pip install "uv==${UV_VERSION}"
+      - run: uv sync --locked --extra test
       # TeX Live from the Ubuntu archive rather than a third-party action:
       # these five packages are what the document needs, and no new GitHub
       # Action joins the supply chain.
@@ -209,15 +230,16 @@ jobs:
             texlive-latex-recommended \
             texlive-fonts-recommended \
             texlive-science
-      - name: Build the PDF
-        working-directory: docs/tex
-        run: latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
+      # Regenerates the QA figures/captions docs/tex/main.tex includes, then
+      # builds docs/draft.pdf -- the same entry point a local build uses (see
+      # infra/CLAUDE.md), so CI and a contributor's machine take one path.
+      - name: Build the technical document (QA figures + PDF)
+        run: infra/build_technical_doc.sh
       # latexmk exits 0 on unresolved references and citations, so the log is
       # checked explicitly -- the LaTeX counterpart of the docs job's -W.
       - name: Fail on undefined references or citations
-        working-directory: docs/tex
         run: |
-          if grep -nE 'There were undefined references|Citation .* undefined|Reference .* undefined' main.log; then
+          if grep -nE 'There were undefined references|Citation .* undefined|Reference .* undefined' docs/draft.log; then
             echo "::error::LaTeX reported undefined references or citations"
             exit 1
           fi

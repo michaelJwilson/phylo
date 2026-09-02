@@ -32,3 +32,10 @@ docs/tex/*.out
 docs/tex/*.pdf
 docs/tex/*.toc
 
+# QA figures/captions phylo.qa scripts render for the technical document
+# (infra/build_technical_doc.sh regenerates them)
+docs/tex/figures/
+
+# infra/build_technical_doc.sh's PDF output and its own LaTeX build output
+docs/draft.*
+
