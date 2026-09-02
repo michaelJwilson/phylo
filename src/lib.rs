@@ -1,9 +1,16 @@
 use pyo3::prelude::*;
 
+pub mod pruning;
+
+pub use pruning::pruning_log_likelihood;
+
 /// Doubles an integer.
 ///
-/// Placeholder binding: it demonstrates the Rust-to-Python pattern that real
-/// numerical kernels will follow, and implements no phylogenetics itself.
+/// Placeholder binding: it demonstrates the Rust-to-Python pattern real
+/// numerical kernels follow (`pruning::pruning_log_likelihood` is now the
+/// substantive one) and implements no phylogenetics itself. Left in place
+/// because `phylo.__init__` re-exports it and `tests/test_oxiphylo_bindings.py`
+/// asserts it exists.
 #[pyfunction]
 pub fn double(x: i64) -> i64 {
     x * 2
@@ -14,6 +21,7 @@ pub fn double(x: i64) -> i64 {
 #[pymodule]
 fn oxiphylo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(double, m)?)?;
+    m.add_function(wrap_pyfunction!(pruning_log_likelihood, m)?)?;
     Ok(())
 }
 
