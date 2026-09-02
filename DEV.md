@@ -72,7 +72,7 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 
 * **Size Caps:** Restrict topological move tests to $n \le 10$ (exhaustive enumeration oracle).
 * **No CI Profiling:** Do not rank performance on GitHub runners due to hardware variance. Benchmark on fixed hardware.
-* **Release-Gated:** Long-running scientific validity tests run on release, not per PR. Mark them `@pytest.mark.release` (registered in `pyproject.toml`); `python-tests` runs `pytest -m "not release"`. Run the full suite, release-gated tests included, with `pytest -m release` or plain `pytest`.
+* **Release-Gated:** Long-running scientific validity tests run on release, not per PR. Mark them `@pytest.mark.release` (registered in `pyproject.toml`); `python-tests` runs `pytest -m "not release"`. Run the full suite, release-gated tests included, with plain `pytest` (no `-m` filter) — `infra/release.sh` does this as part of the release gate below.
 * **Concurrency:** Superseded CI runs on the same branch are automatically cancelled.
 
 ### Core Development Standards
@@ -89,6 +89,42 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 2. **Validate:** Must use OSI-approved licenses. Flag items with $<1000$ GitHub stars.
 3. **Lock:** Run `uv lock` or update `Cargo.lock` and commit in the same PR.
 4. **Justify:** Explain the inclusion in the PR description.
+
+### Release
+
+A release is cut from a Release-template issue (`.github/ISSUE_TEMPLATE/release.yml`):
+it drives the repository-consolidation audit (roadmap progress, doc/code
+consistency, duplicated machinery, suggested follow-up tickets) and gates on
+`infra/release.sh` passing before a maintainer adds the `release` label.
+
+1. **Run the gate.** `infra/release.sh` runs every per-PR CI check
+   (`ruff check`, `ruff format --check`, `mypy --strict`, `cargo clippy -D
+   warnings`, `cargo fmt --check`, `cargo test --locked`) plus what CI skips
+   per PR: the full `pytest` suite including `@pytest.mark.release` tests
+   (see "Release-Gated" above), `sphinx-build -W`, and
+   `infra/build_technical_doc.sh`. It runs every check regardless of earlier
+   failures and prints a pass/fail summary at the end; a non-zero exit means
+   at least one check failed.
+2. **Bump the version.** Edit `[package].version` in `Cargo.toml` — the
+   single version source (CLAUDE.md) — then run `cargo build` so
+   `Cargo.lock`'s `oxiphylo` entry picks up the new version, and commit both.
+   `maturin` reads the Python package version from the same field
+   (`dynamic = ["version"]` in `pyproject.toml`), so nothing else needs
+   editing.
+3. **Build the changelog.** Run `uv run towncrier build --version
+   <version>` from the repository root: it consumes every fragment in
+   `changelog.d/`, deletes them, and inserts a dated `## [<version>]` section
+   into `CHANGELOG.md` (see `changelog.d/README.md`). Commit the result.
+4. **Tag and publish.** Open a PR with the version bump and changelog
+   commit; once merged, tag the merge commit (`git tag v<version> && git
+   push origin v<version>`) and publish a GitHub release from that tag,
+   with the new `CHANGELOG.md` section as its body.
+
+**Worked example (first release, `0.1.0`):** `Cargo.toml` and `Cargo.lock`
+already carry `0.1.0` with no `v0.1.0` tag yet, so step 2 is a no-op check
+rather than an edit. `infra/release.sh` passing clean plus the
+consolidation checklist above is what the Release-template issue is
+gating on before step 3–4 cut the tag.
 
 ---
 
