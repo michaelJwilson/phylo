@@ -9,6 +9,7 @@ __pycache__/
 .venv/
 .pytest_cache/
 .benchmarks/
+.coverage
 *.egg-info/
 .ruff_cache/
 
