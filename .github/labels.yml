@@ -40,3 +40,6 @@
 - name: "approved"
   color: "0e8a16"
   description: "A maintainer has approved the posted plan."
+- name: "release"
+  color: "5319e7"
+  description: "infra/release.sh passed clean; ready to tag and publish."
