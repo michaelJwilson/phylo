@@ -21,8 +21,7 @@ This file is authoritative. The rest exist so it does not have to carry everythi
 | `INSTALL.md` | Installing, building, running the tests locally |
 | `DEV.md` | Layout, the CI jobs, repository settings, the CI budget, how a change is reviewed |
 | `ROADMAP.md` | The scientific goal, requirements, and milestones |
-| `STATUS.md` | Coverage: what is done, planned, or untouched — in place of a project board |
-| `CHANGELOG.md` | What has landed, edited directly under `[Unreleased]` |
+| `CHANGELOG.md` | What has landed, per dated release section; built from `changelog.d/` fragments by `towncrier` |
 | `docs/tex/` | The technical document: background, equations, algorithms |
 
 `python/phylo/sim/`, `likelihood/`, `opt/`, `search/`, `qa/`, and `infra/` each carry their own `CLAUDE.md`. Those add what applies only inside one module; they never override this file. A rule that binds the whole repository belongs here, not in one of them.
@@ -38,7 +37,7 @@ This file is authoritative. The rest exist so it does not have to carry everythi
 
 ## Conventions
 *   **Hot Paths:** Prefer vectorized implementations over pure Python (see Performance).
-*   **Documentation Sync:** Any change affecting behavior, CI, dev setup, or math models must update, in the same PR, whichever of these it makes untrue: `README.md`, `CLAUDE.md` (including a module's), `DEV.md`, `INSTALL.md`, `ROADMAP.md`, `docs/tex/`. If the change is user-visible, add a fragment under `changelog.d/` (see `changelog.d/README.md`) rather than editing `CHANGELOG.md` directly — `towncrier` merges fragments into `CHANGELOG.md` at release time, and CI's `towncrier check` enforces one exists. Update the `STATUS.md` row if it changes an item's status.
+*   **Documentation Sync:** Any change affecting behavior, CI, dev setup, or math models must update, in the same PR, whichever of these it makes untrue: `README.md`, `CLAUDE.md` (including a module's), `DEV.md`, `INSTALL.md`, `ROADMAP.md`, `docs/tex/`. If the change is user-visible, add a fragment under `changelog.d/` (see `changelog.d/README.md`) rather than editing `CHANGELOG.md` directly — `towncrier` merges fragments into `CHANGELOG.md` at release time, and CI's `towncrier check` enforces one exists.
 *   **Single Version Source:** The package version lives exclusively in `Cargo.toml`'s `[package].version`.
 *   **Package Surface:** `python/phylo/__init__.py` re-exports nothing beyond the package's own top-level utilities (currently `double`); import submodule contents explicitly (`from phylo.likelihood import ...`), not through the top-level namespace.
 *   **Code Standards:** Use type hints on all Python functions. Do not introduce silent behavior changes (e.g., default parameters). Keep dependencies minimal and justify additions.
@@ -55,7 +54,7 @@ This file is authoritative. The rest exist so it does not have to carry everythi
 *   **Pin to Independent Sources:** Validate expected values against analytic results, brute-force computations, or secondary implementations with stated tolerances.
 *   **Check Math Invariants:** Ensure rows of transition matrices sum to 1, models satisfy detailed balance, gradients match finite differences, and likelihood increases monotonically.
 *   **Cross-Device Agreement Is a Tolerance:** `float32` and `float64` behave differently across CPU, CUDA, and Metal, and deep recursions accumulate that. Agreement is checked against a tolerance stated once in the technical document, never bitwise. A discrepancy inside it is not a bug and must not be "fixed".
-*   **No Coverage Theatre:** Tests asserting only output shapes or successful execution without exceptions are forbidden. Leave gaps unwritten and record them in `STATUS.md` rather than writing meaningless tests.
+*   **No Coverage Theatre:** Tests asserting only output shapes or successful execution without exceptions are forbidden. Leave gaps unwritten and track them as GitHub issues (`infra/TICKETING.md`) rather than writing meaningless tests.
 *   **Scientific Outputs:** The suite must emit plots and tables for the LaTeX technical document. Update the LaTeX captions concurrently.
 
 ## Technical Document & Reference Sources
@@ -99,7 +98,7 @@ This file is authoritative. The rest exist so it does not have to carry everythi
 *   Flag any proposed dependency with $<1,000$ GitHub stars (or equivalent ecosystem metric) for explicit review.
 
 ## Known Gaps
-`STATUS.md` is the single ledger of what exists, what is only recorded as intent, and what is untouched — including the gaps in the current scaffolding. It carries the rule that keeps it honest: the PR that changes an item's status updates its row. Do not keep a second list here.
+GitHub issues and labels are the project board (`infra/TICKETING.md`): what exists, what is only recorded as intent, and what is untouched — including gaps in the current scaffolding — is tracked there, not in a second list in this repository. `ROADMAP.md` records milestone-level progress; file or update an issue for anything narrower.
 
 ## Working with Sub-Agents
 *   **Parallel:** Use isolated git worktrees/PRs for disjoint tasks (e.g., Rust extension scaffold vs. Python test harness).

@@ -38,9 +38,10 @@ extension:
 pip install .
 ```
 
-This makes `phylo.oxiphylo` (currently one example binding, `double`)
-importable from Python. Reinstall after editing anything under `src/` — the
-compiled module does not rebuild itself.
+This makes `phylo.oxiphylo` (currently `double`, an example binding, and
+`pruning_log_likelihood`, the Rust CPU Felsenstein pruning backend behind
+`phylo.likelihood.pruning_rust`) importable from Python. Reinstall after
+editing anything under `src/` — the compiled module does not rebuild itself.
 
 ## Running the tests
 
@@ -72,8 +73,9 @@ cargo clippy --locked --all-targets -- -D warnings
 cargo fmt --check
 ```
 
-Add an entry to `CHANGELOG.md` under `[Unreleased]` for the change as well,
-if it is user-visible.
+Add a fragment under `changelog.d/` for the change as well, if it is
+user-visible (see `changelog.d/README.md`); `towncrier` merges fragments into
+`CHANGELOG.md` at release time.
 
 `pre-commit install` runs these same checks on every `git commit`. It does
 not run the dependency audits below:  CI runs them when a lockfile changes.

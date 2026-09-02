@@ -8,7 +8,6 @@ so the NumPy, PyTorch, and Rust numbers are directly comparable.
 from __future__ import annotations
 
 import math
-from pathlib import Path
 
 import pytest
 from phylo.likelihood import pruning, pruning_rust
@@ -16,7 +15,7 @@ from phylo.sim.params import load_simulation_params
 from phylo.sim.simulate import simulate_alignment
 from pytest_benchmark.fixture import BenchmarkFixture
 
-FIXTURES_DIR = Path(__file__).parent.parent / "regression" / "fixtures"
+from tests._fixtures import FIXTURES_DIR
 
 
 @pytest.mark.parametrize(

@@ -14,13 +14,14 @@ from phylo.qa.sim_problem_sizes import build_caption, main, render_problem_sizes
 from phylo.sim.params import load_simulation_params
 from phylo.sim.tree import preorder
 
-FIXTURES = Path(__file__).parent / "fixtures"
+from tests._fixtures import FIXTURES_DIR
+
 FIXTURE_NAMES = (
     "simulation_params.yaml",
     "simulation_params_small_sites.yaml",
     "simulation_params_8taxa.yaml",
 )
-FIXTURE_PATHS = [FIXTURES / name for name in FIXTURE_NAMES]
+FIXTURE_PATHS = [FIXTURES_DIR / name for name in FIXTURE_NAMES]
 
 
 def test_render_problem_sizes_figure_writes_caption_naming_every_fixture(

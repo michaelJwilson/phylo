@@ -19,8 +19,9 @@ from phylo.qa.sim_example import (
 from phylo.sim.params import load_simulation_params
 from phylo.sim.simulate import simulate_alignment
 
-FIXTURES = Path(__file__).parent / "fixtures"
-PARAMS_PATH = FIXTURES / "simulation_params.yaml"
+from tests._fixtures import FIXTURES_DIR
+
+PARAMS_PATH = FIXTURES_DIR / "simulation_params.yaml"
 
 
 def test_state_label_is_nucleotide_coded_for_k_four() -> None:

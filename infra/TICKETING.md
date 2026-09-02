@@ -31,7 +31,7 @@ the irreducibly manual steps are left to memory.
      repository's conventions, reconciling contradictions rather than
      appending.
    - *Roadmap ingestion*: fold newly provided roadmap suggestions into
-     `ROADMAP.md` and `STATUS.md`, marking what each displaces.
+     `ROADMAP.md`, marking what it displaces.
 5. **Decide on `anthropic/claude-code-action`.** The `/approve` automation
    cannot be built without it, and the allowed-actions list in
    Settings → Actions currently permits only `actions/*` and

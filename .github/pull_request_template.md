@@ -53,7 +53,6 @@ untrue. Check the ones this PR updates, or check "None applicable".
 - [ ] `ROADMAP.md`
 - [ ] `docs/tex/`
 - [ ] `changelog.d/` (add a fragment; see `changelog.d/README.md`, if user-visible)
-- [ ] `STATUS.md` (if this changes an item's status)
 - [ ] None applicable
 
 ### Follow-up / Deferred Work

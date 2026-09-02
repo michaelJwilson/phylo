@@ -13,7 +13,7 @@ carries the domain; `CLAUDE.md` states why keeping it liftable matters.
 | `docs/source/` | Sphinx API documentation. |
 | `python/phylo/` | Python package: re-exports, typed extension stubs, stub CLI. |
 | `python/phylo/sim/` | Data generation and ground-truth retention. |
-| `python/phylo/likelihood/` | Felsenstein pruning; CPU, CUDA, and Metal dispatch. |
+| `python/phylo/likelihood/` | Felsenstein pruning; CPU dispatch landed (NumPy, PyTorch, Rust), CUDA and Metal dispatch not yet implemented. |
 | `python/phylo/opt/` | Continuous parameter fitting via autodiff (PyTorch). |
 | `python/phylo/search/` | Move sets, RL agents, temperature schedules. |
 | `python/phylo/qa/` | QA figures/tables for the technical document; renders, doesn't recompute. |
@@ -61,7 +61,7 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 | `rust-lint` | `cargo clippy -D warnings`, `cargo fmt --check` |
 | `rust-tests` | `cargo test --locked`, `cargo bench` (informational) |
 | `build` | `pip install .` (no lockfile, mimics fresh consumer), smoke import |
-| `python-tests` | `pytest` suite, gated on minimum coverage |
+| `python-tests` | `pytest -m "not release"`, gated on minimum coverage |
 | `docs` | Sphinx build (warnings as errors) |
 | `technical-doc` | Regenerate QA figures (`infra/build_technical_doc.sh`), then LaTeX build (fails on undefined refs/citations, or if the rebuilt `docs/draft.pdf` differs from the committed one) |
 | `audit` | `pip-audit`, `cargo audit` (skips on cache hit if lockfiles are unchanged) |
@@ -72,14 +72,17 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 
 * **Size Caps:** Restrict topological move tests to $n \le 10$ (exhaustive enumeration oracle).
 * **No CI Profiling:** Do not rank performance on GitHub runners due to hardware variance. Benchmark on fixed hardware.
-* **Release-Gated:** Long-running scientific validity tests run on release, not per PR. Mark them `@pytest.mark.release` (registered in `pyproject.toml`); `python-tests` runs `pytest -m "not release"`. Run the full suite, release-gated tests included, with plain `pytest` (no `-m` filter) — `infra/release.sh` does this as part of the release gate below.
+* **Release-Gated:** Long-running scientific validity tests run on release, not per PR. Mark them `@pytest.mark.release` (registered in `pyproject.toml`).
+  * **Use `pytest -m "not release"` while developing.** That is what CI's `python-tests` job runs, so it is the gate a PR is actually judged against. Do not run the full suite to check ordinary work.
+  * **The full suite is expensive and its cost is not obvious from the test count.** Measured on one development machine on the same checkout: `pytest -m "not release"` took 131 s over 140 tests; plain `pytest` took 954 s over 141 — one extra test, roughly 7x the wall clock. Exhaustive topological tests dominate, and they grow combinatorially with taxon count.
+  * **Plain `pytest` (no `-m` filter) is the release gate's job, not a development command.** `infra/release.sh` runs it as part of cutting a release; run it by hand only when you are cutting one, or when you have changed a release-gated test itself.
 * **Concurrency:** Superseded CI runs on the same branch are automatically cancelled.
 
 ### Core Development Standards
 
 * **Reproducibility:** Pin environments entirely. Use `--locked` for CI installs, pin runner images (`ubuntu-24.04`), and strictly use `np.random.default_rng(seed)`.
 * **Versioning:** Maintained strictly in `Cargo.toml` (`[package].version`).
-* **Definition of Done:** Follow `CLAUDE.md`'s checklist. A PR must also update the item's status in `STATUS.md`.
+* **Definition of Done:** Follow `CLAUDE.md`'s checklist.
 * **PR Template:** Every PR starts from `.github/pull_request_template.md`, which carries the Definition-of-Done checklist, a benchmark-numbers table, a second Benchmark-section table for the realized value of any scientific/tolerance regression test the PR touches (test, reference, tolerance, realized value — write "N/A" as text and delete the table if none), a Documentation Sync line, and a Follow-up / Deferred Work section for TODOs left to a tracking issue, all as a reminder, not a CI gate.
 * **Agentic Approach:** Use parallel git worktrees/PRs for disjoint tasks. Use single sequential PRs for coupled changes.
 

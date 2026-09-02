@@ -12,8 +12,9 @@ The pruning recursion, site- and subtree-level compression, the canonical
 form used to key memoized results, and backends: a vectorized NumPy
 reference, a differentiable PyTorch backend (`pruning_torch.py`, float64,
 CPU), a non-differentiable Rust CPU backend (`pruning_rust.py`, wrapping
-`oxiphylo.pruning_log_likelihood` from `src/pruning.rs`), CUDA, and
-Metal/MPS.
+`oxiphylo.pruning_log_likelihood` from `src/pruning.rs`), landed; CUDA and
+Metal/MPS dispatch belong here too but are not yet implemented (ROADMAP.md
+Milestone 3).
 
 ## Local rules
 

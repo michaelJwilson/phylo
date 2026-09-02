@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from itertools import combinations
-from pathlib import Path
 
 import pytest
 from phylo.sim.newick import (
@@ -25,7 +24,8 @@ from phylo.sim.params import load_simulation_params
 from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import Node, preorder
 
-FIXTURES_DIR = Path(__file__).parent / "fixtures"
+from tests._fixtures import FIXTURES_DIR
+
 FIXTURE = FIXTURES_DIR / "simulation_params.yaml"
 
 # simulation_params.yaml's root has 3 children (A, B, ancestor_CD): the

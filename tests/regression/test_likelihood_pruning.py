@@ -23,7 +23,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -34,7 +33,7 @@ from phylo.sim.params import load_simulation_params
 from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import Node, preorder
 
-FIXTURES_DIR = Path(__file__).parent / "fixtures"
+from tests._fixtures import FIXTURES_DIR
 
 
 def _small_tree_n4() -> Node:
