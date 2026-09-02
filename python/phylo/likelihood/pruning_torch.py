@@ -2,7 +2,7 @@
 ``phylo.likelihood.pruning``, the NumPy oracle (CLAUDE.md, "The NumPy
 reference is the oracle and it stays").
 
-Branch lengths are a ``torch.float64`` CPU tensor kept separate from the
+Branch lengths are a tensor kept separate from the
 topology: a ``phylo.sim.tree.Node`` here describes only shape (leaf names,
 children), never a differentiable quantity, while ``branch_lengths`` --
 ordered by ``branch_order(tau)`` -- is the tensor ``torch.autograd``
@@ -48,7 +48,12 @@ def branch_order(tau: Node) -> list[str]:
     return [child.name for _, child in edges(tau)]
 
 
-def branch_lengths_from_tree(tau: Node) -> torch.Tensor:
+def branch_lengths_from_tree(
+    tau: Node,
+    *,
+    dtype: torch.dtype = torch.float64,
+    device: torch.device | str | None = None,
+) -> torch.Tensor:
     """Read ``tau``'s own branch lengths into a tensor, ordered by ``branch_order``.
 
     Convenience for seeding a ``branch_lengths`` tensor from a fixture tree
@@ -64,7 +69,7 @@ def branch_lengths_from_tree(tau: Node) -> torch.Tensor:
     Returns
     -------
     torch.Tensor
-        Shape ``(len(branch_order(tau)),)``, dtype ``torch.float64``.
+        Shape ``(len(branch_order(tau)),)``, in ``dtype`` on ``device``.
 
     Raises
     ------
@@ -77,7 +82,7 @@ def branch_lengths_from_tree(tau: Node) -> torch.Tensor:
             msg = f"non-root node {child.name!r} has no branch_length"
             raise ValueError(msg)
         lengths.append(child.branch_length)
-    return torch.tensor(lengths, dtype=torch.float64)
+    return torch.tensor(lengths, dtype=dtype, device=device)
 
 
 def _jc_transition_probabilities(t: torch.Tensor, k: int) -> torch.Tensor:
@@ -85,7 +90,7 @@ def _jc_transition_probabilities(t: torch.Tensor, k: int) -> torch.Tensor:
     decay = torch.exp(-k * t / (k - 1))
     off_diagonal = (1.0 - decay) / k
     diagonal = 1.0 / k + (k - 1) / k * decay
-    eye = torch.eye(k, dtype=t.dtype)
+    eye = torch.eye(k, dtype=t.dtype, device=t.device)
     return off_diagonal * (1.0 - eye) + diagonal * eye
 
 
@@ -123,7 +128,7 @@ def log_likelihood(
         Leaf name to its observed states, each of shape ``(n_sites,)`` with
         entries in ``[0, k)``.
     branch_lengths : torch.Tensor
-        Shape ``(len(branch_order(tau)),)``, dtype ``torch.float64``. The
+        Shape ``(len(branch_order(tau)),)``, in ``dtype`` on ``device``. The
         tensor autograd differentiates through; kept separate from ``tau``.
     rate_matrix : torch.Tensor | None
         If given, shape ``(k, k)``: a general rate matrix ``Q``, and
@@ -146,7 +151,14 @@ def log_likelihood(
         have shape ``(len(branch_order(tau)),)``, or ``alignment`` is
         missing a leaf of ``tau``.
     """
-    pi_t = torch.as_tensor(pi, dtype=torch.float64)
+    # dtype and device follow branch_lengths, so a caller moves the whole
+    # recursion by moving one tensor -- and float64 stays the default
+    # because branch_lengths_from_tree defaults to it. Metal rejects
+    # float64 outright, so an accelerator path must choose float32 here
+    # rather than have it chosen silently.
+    dtype = branch_lengths.dtype
+    device = branch_lengths.device
+    pi_t = torch.as_tensor(pi, dtype=dtype, device=device)
     if pi_t.shape != (k,):
         msg = f"pi has shape {tuple(pi_t.shape)}, expected ({k},)"
         raise ValueError(msg)
@@ -167,17 +179,19 @@ def log_likelihood(
         raise ValueError(msg)
 
     n_sites = int(torch.as_tensor(alignment[leaves[0].name]).shape[0])
-    log_scale = torch.zeros(n_sites, dtype=torch.float64)
+    log_scale = torch.zeros(n_sites, dtype=dtype, device=device)
 
     def _post_order(node: Node) -> torch.Tensor:
         nonlocal log_scale
         if node.is_leaf:
-            states = torch.as_tensor(alignment[node.name], dtype=torch.long)
-            partial = torch.zeros((n_sites, k), dtype=torch.float64)
+            states = torch.as_tensor(
+                alignment[node.name], dtype=torch.long, device=device
+            )
+            partial = torch.zeros((n_sites, k), dtype=dtype, device=device)
             partial[torch.arange(n_sites), states] = 1.0
             return partial
 
-        partial = torch.ones((n_sites, k), dtype=torch.float64)
+        partial = torch.ones((n_sites, k), dtype=dtype, device=device)
         for child in node.children:
             t = branch_lengths[index[child.name]]
             child_partial = _post_order(child)
