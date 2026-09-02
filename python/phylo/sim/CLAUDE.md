@@ -1,26 +1,21 @@
 # sim/
 
-Generates alignments from a known model and keeps the truth that generated
-them. Everything downstream is tested against data produced here, so an error
-in this module is invisible everywhere and fatal everywhere.
+Generates alignments from a known model (e.g. evolutionary) according to a well
+defined truth fully defined in a yaml.  Scientific validation is provided by test
+according to the known true parameters and expected properties.
 
 Root `CLAUDE.md` holds the repository-wide rules. These are local.
 
 ## What lives here
 
-Simulation of `k`-state characters down a tree under a rate matrix `Q`,
+Simulation of `k`-state, e.g. 4, characters down a binary tree under a rate matrix `Q`,
 branch lengths `t`, and a root distribution `π`: the `k`-state Jukes–Cantor
-model first, then K80, F81, HKY85, and GTR as the constraints relax. The
-simulator takes a `Q` and does not care which name it carries.
+model first, then other models after.
 
 ## Local rules
 
 - **Validate against the analytic result, never against our own likelihood.**
   The technical document gives the closed form for `k`-state Jukes–Cantor
-  transition probabilities. A simulator checked against the pruning code it
-  feeds would agree with it whenever both are wrong in the same way.
-- **Truth ships with the data.** A dataset is `(alignment, Q, t, π, τ, seed)`
-  or it is not a dataset. Losing the parameters that generated an alignment
-  makes it useless for everything except a demo.
-- **Statistical tests state their tolerance and their sample size.** "Within
-  Monte Carlo error" is a number here, not a hope.
+  transition probabilities.
+- **Validation tests state their tolerance and run for a variety of site/taxa sizes according to 
+goal: validation of benchmarking.**
