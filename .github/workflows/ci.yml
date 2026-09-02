@@ -243,6 +243,15 @@ jobs:
             echo "::error::LaTeX reported undefined references or citations"
             exit 1
           fi
+      # docs/draft.pdf is committed (see DEV.md's "Technical Document"
+      # section); catch a PR that edited docs/tex/ or a QA figure without
+      # regenerating and committing the rebuilt PDF.
+      - name: Check the committed PDF is up to date
+        run: |
+          if ! git diff --exit-code -- docs/draft.pdf; then
+            echo "::error::docs/draft.pdf is stale -- run infra/build_technical_doc.sh and commit the result"
+            exit 1
+          fi
 
   audit:
     name: Dependency audit (pip-audit, cargo audit)

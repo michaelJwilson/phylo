@@ -36,6 +36,14 @@ docs/tex/*.toc
 # (infra/build_technical_doc.sh regenerates them)
 docs/tex/figures/
 
-# infra/build_technical_doc.sh's PDF output and its own LaTeX build output
-docs/draft.*
+# infra/build_technical_doc.sh's LaTeX build output. docs/draft.pdf itself
+# is committed (see DEV.md's "Technical Document" section).
+docs/draft.aux
+docs/draft.bbl
+docs/draft.blg
+docs/draft.fdb_latexmk
+docs/draft.fls
+docs/draft.log
+docs/draft.out
+docs/draft.toc
 
