@@ -280,7 +280,13 @@ implies. Generation runs in pre-order, the reverse of pruning.
 \end{algorithm}
 
 Every draw uses an explicitly seeded generator, so a simulated dataset is
-reproducible from its seed. \emph{Not yet implemented.}
+reproducible from its seed. Implemented for the $k$-state Jukes--Cantor case
+in \texttt{phylo.sim} (\texttt{simulate.py}), with topology, branch lengths,
+$k$, $\bpi$, seed, and site count read from a \texttt{simulation\_params.yaml}
+and the generating parameters retained alongside the alignment. Simulated
+substitution frequencies are checked against \eqref{eq:jc} within a
+yaml-declared Monte Carlo tolerance in
+\texttt{tests/regression/test\_jc\_simulate.py}.
 
 \section{Tree search}
 

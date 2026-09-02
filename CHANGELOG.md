@@ -8,6 +8,26 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
 
 ### Added
 
+- `k`-state Jukes–Cantor sequence simulator (`phylo.sim`, #55): closed-form
+  transition probabilities and rate matrix validated against
+  `docs/tex/main.tex`'s eq. `eq:jc` (`jc.py`); a minimal tree representation
+  with Newick emission, since topology is an input to simulation rather than
+  something inferred (`tree.py`); a typed, no-silent-defaults loader for
+  `simulation_params.yaml` (`params.py`); and a pre-order alignment simulator
+  that ships the full generating-parameter bundle `(alignment, node_states,
+  newick, tau, k, pi, seed, n_sites)` with its output (`simulate.py`).
+  Validated in `tests/regression/test_jc_simulate.py` against the analytic
+  transition probabilities within a yaml-declared Monte Carlo tolerance (not
+  against the likelihood/pruning code, which doesn't exist yet), plus the JC
+  math invariants (rows of `P(t)` sum to 1, detailed balance under the
+  uniform stationary distribution) and seeded reproducibility;
+  `tests/regression/test_jc_validation.py` pins the malformed-input error
+  paths. Benchmarked in `tests/benchmarks/test_jc_simulate_bench.py`. Adds
+  `pyyaml` (>16k GitHub stars; was already a transitive `docs`-extra
+  dependency, now direct since `phylo.sim.params` imports it) and promotes
+  `numpy` from the `test` extra to a core dependency, since `phylo.sim` now
+  imports it directly. Closes the Milestone 1 (Simulation Engine) item in
+  `ROADMAP.md`'s Stage 1.
 - Project scaffolding: `uv`-based environment setup (Python 3.12).
 - Rust backend via `maturin`/PyO3, importable as `phylo.oxiphylo` (currently
   one example binding, `double`).

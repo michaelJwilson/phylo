@@ -1,0 +1,23 @@
+# Same topology as simulation_params.yaml, at a smaller site count -- one
+# point in the "variety of site/taxa sizes" sim/CLAUDE.md asks validation
+# tests to cover. tolerance is widened to keep pace with the larger Monte
+# Carlo standard error at this n_sites (~0.003 for p in [0, 1]).
+seed: 20260903
+n_sites: 20000
+tolerance: 0.03
+k: 4
+pi: [0.25, 0.25, 0.25, 0.25]
+tau:
+  name: root
+  children:
+    - name: A
+      branch_length: 0.10
+    - name: B
+      branch_length: 0.25
+    - name: ancestor_CD
+      branch_length: 0.05
+      children:
+        - name: C
+          branch_length: 0.15
+        - name: D
+          branch_length: 0.40

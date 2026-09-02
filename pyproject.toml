@@ -13,10 +13,14 @@ authors = [{ name = "M. J. Wilson" }]
 license = "MIT"
 requires-python = ">=3.12.2"
 readme = "README.md"
-# Intentionally empty: nothing under python/phylo/ imports an external package
-# yet. Add entries as real code depends on them, rather than front-loading an
-# intended stack (see CLAUDE.md, "keep dependencies minimal").
-dependencies = []
+# phylo.sim imports numpy (simulation) and pyyaml (simulation_params.yaml
+# loading) directly, so both are core dependencies rather than front-loaded
+# ahead of need (see CLAUDE.md, "keep dependencies minimal"). Add further
+# entries only as real code depends on them.
+dependencies = [
+    "numpy>=1.26.0",
+    "pyyaml>=6.0.3",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -24,6 +28,7 @@ dev = [
     "mypy>=1.0.0",
     "pre-commit>=3.5.0",
     "pip-audit>=2.7",
+    "types-PyYAML>=6.0",
 ]
 docs = [
     "sphinx>=7,<9",
@@ -33,7 +38,6 @@ test = [
     "pytest>=9.0.3",
     "pytest-cov>=4.0.0",
     "pytest-benchmark>=4",
-    "numpy>=1.26.0",
 ]
 
 [project.scripts]

@@ -1,0 +1,151 @@
+"""Pre-order sequence simulation under the k-state Jukes-Cantor model.
+
+Implements alg. (simulate) of ``docs/tex/main.tex`` (Sec. "Simulation"):
+draw the root state from pi, then walk the tree in pre-order, drawing each
+node's state from the transition-probability row of its parent's state. All
+sites are drawn independently and in parallel via vectorized NumPy
+sampling, rather than one Python-level loop per site.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import numpy as np
+
+from phylo.sim.jc import jc_transition_probabilities
+from phylo.sim.tree import Node, preorder, to_newick
+
+
+@dataclass(frozen=True)
+class SimulatedDataset:
+    """A simulated alignment together with the parameters that generated it.
+
+    Ground truth ships with the data: a dataset without its generating
+    ``(tau, k, pi, seed, n_sites)`` is not validation-usable.
+
+    Parameters
+    ----------
+    alignment : dict[str, np.ndarray]
+        Leaf name to its simulated states, each of shape (n_sites,) with
+        entries in ``[0, k)``.
+    node_states : dict[str, np.ndarray]
+        Every node's (leaf and internal) simulated states, same shape and
+        encoding as ``alignment``. The ancestral truth used to validate
+        simulated substitution frequencies against the analytic model.
+    newick : str
+        The topology, with branch lengths, in Newick format.
+    tau : Node
+        The topology that was simulated over.
+    k : int
+        Number of states.
+    pi : np.ndarray
+        Root state distribution used.
+    seed : int
+        Seed used.
+    n_sites : int
+        Number of sites simulated.
+    """
+
+    alignment: dict[str, np.ndarray]
+    node_states: dict[str, np.ndarray]
+    newick: str
+    tau: Node
+    k: int
+    pi: np.ndarray
+    seed: int
+    n_sites: int
+
+
+def simulate_alignment(
+    tau: Node,
+    k: int,
+    pi: np.ndarray,
+    seed: int,
+    n_sites: int,
+) -> SimulatedDataset:
+    """Simulate an alignment under the k-state Jukes-Cantor model.
+
+    Parameters
+    ----------
+    tau : Node
+        Root of the topology, with branch lengths attached to each
+        non-root node.
+    k : int
+        Number of states.
+    pi : np.ndarray
+        Root state distribution, shape (k,).
+    seed : int
+        Seed for ``np.random.default_rng``, so the dataset is reproducible.
+    n_sites : int
+        Number of alignment columns to simulate.
+
+    Returns
+    -------
+    SimulatedDataset
+        The simulated alignment, ancestral states, and generating truth.
+    """
+    if pi.shape != (k,):
+        msg = f"pi has shape {pi.shape}, expected ({k},)"
+        raise ValueError(msg)
+
+    rng = np.random.default_rng(seed)
+    node_states: dict[str, np.ndarray] = {}
+
+    def _walk(node: Node, parent_states: np.ndarray | None) -> None:
+        if parent_states is None:
+            states = rng.choice(k, size=n_sites, p=pi)
+        else:
+            if node.branch_length is None:
+                msg = f"non-root node {node.name!r} has no branch_length"
+                raise ValueError(msg)
+            transition = jc_transition_probabilities(node.branch_length, k=k)
+            states = _sample_rows(rng, transition, parent_states)
+        node_states[node.name] = states
+        for child in node.children:
+            _walk(child, states)
+
+    _walk(tau, None)
+
+    alignment = {
+        node.name: node_states[node.name] for node in preorder(tau) if node.is_leaf
+    }
+
+    return SimulatedDataset(
+        alignment=alignment,
+        node_states=node_states,
+        newick=to_newick(tau),
+        tau=tau,
+        k=k,
+        pi=pi,
+        seed=seed,
+        n_sites=n_sites,
+    )
+
+
+def _sample_rows(
+    rng: np.random.Generator,
+    transition: np.ndarray,
+    parent_states: np.ndarray,
+) -> np.ndarray:
+    """Draw one categorical sample per site from ``transition``'s parent-state row.
+
+    Parameters
+    ----------
+    rng : np.random.Generator
+        Seeded generator to draw from.
+    transition : np.ndarray
+        Transition-probability matrix, shape (k, k).
+    parent_states : np.ndarray
+        Parent state per site, shape (n_sites,), entries in ``[0, k)``.
+
+    Returns
+    -------
+    np.ndarray
+        Sampled child state per site, shape (n_sites,).
+    """
+    cumulative = np.cumsum(transition, axis=1)
+    cumulative[:, -1] = 1.0  # absorb floating-point drift so every draw lands
+    row_cumulative = cumulative[parent_states]
+    draw = rng.random(size=(int(parent_states.shape[0]),))
+    return np.argmax(draw[:, np.newaxis] < row_cumulative, axis=1)

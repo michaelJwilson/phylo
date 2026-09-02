@@ -15,6 +15,18 @@ whether or not it has members yet.
 .. automodule:: phylo.sim
    :members:
 
+.. automodule:: phylo.sim.tree
+   :members:
+
+.. automodule:: phylo.sim.jc
+   :members:
+
+.. automodule:: phylo.sim.params
+   :members:
+
+.. automodule:: phylo.sim.simulate
+   :members:
+
 .. automodule:: phylo.likelihood
    :members:
 
