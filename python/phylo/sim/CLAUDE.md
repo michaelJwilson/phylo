@@ -12,6 +12,13 @@ Simulation of `k`-state, e.g. 4, characters down a binary tree under a rate matr
 branch lengths `t`, and a root distribution `π`: the `k`-state Jukes–Cantor
 model first, then other models after.
 
+`newick.py` is the package's single source of Newick functionality (root
+`CLAUDE.md`, "Package Surface"): serializing a tree (optionally with
+per-node ancestral states) to Newick, validating a Newick string against
+the rooted-binary-tree grammar, and counting distinct topologies for a
+given taxon count. `tree.py` holds only the `Node` structure and
+traversals; nothing outside `newick.py` builds or parses Newick strings.
+
 ## Local rules
 
 - **Validate against the analytic result, never against our own likelihood.**
