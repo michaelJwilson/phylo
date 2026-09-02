@@ -72,7 +72,7 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 
 * **Size Caps:** Restrict topological move tests to $n \le 10$ (exhaustive enumeration oracle).
 * **No CI Profiling:** Do not rank performance on GitHub runners due to hardware variance. Benchmark on fixed hardware.
-* **Release-Gated:** Long-running scientific validity tests run on release, not per PR.
+* **Release-Gated:** Long-running scientific validity tests run on release, not per PR. Mark them `@pytest.mark.release` (registered in `pyproject.toml`); `python-tests` runs `pytest -m "not release"`. Run the full suite, release-gated tests included, with `pytest -m release` or plain `pytest`.
 * **Concurrency:** Superseded CI runs on the same branch are automatically cancelled.
 
 ### Core Development Standards
