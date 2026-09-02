@@ -274,10 +274,14 @@ jobs:
         run: infra/build_technical_doc.sh
       # latexmk exits 0 on unresolved references and citations, so the log is
       # checked explicitly -- the LaTeX counterpart of the docs job's -W.
-      - name: Fail on undefined references or citations
+      - name: Fail on undefined or duplicated references and citations
         run: |
-          if grep -nE 'There were undefined references|Citation .* undefined|Reference .* undefined' docs/draft.log; then
-            echo "::error::LaTeX reported undefined references or citations"
+          # "multiply defined" matters as much as "undefined": two equations
+          # sharing a label make every \eqref to it point at whichever came
+          # last, silently. A duplicate went unnoticed until it was found by
+          # hand, which is what added it to this pattern.
+          if grep -nE 'There were undefined references|Citation .* undefined|Reference .* undefined|multiply defined' docs/draft.log; then
+            echo "::error::LaTeX reported undefined or multiply-defined references or citations"
             exit 1
           fi
       # docs/draft.pdf is committed (see DEV.md's "Technical Document"

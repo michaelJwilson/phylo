@@ -15,10 +15,13 @@
 \newcommand{\Pmat}{\mathbf{P}}
 \newcommand{\SubMat}{\mathbf{S}}
 \newcommand{\bpi}{\boldsymbol{\pi}}
-\newcommand{\tree}{\tau}
-\newcommand{\branch}{\mathbf{t}}
+\newcommand{\tree}{\mathcal{T}}
+\newcommand{\branch}{\boldsymbol{\tau}}
 \newcommand{\data}{\mathbf{D}}
 \newcommand{\states}{\mathcal{A}}
+\newcommand{\rootnode}{\rho}
+\newcommand{\params}{\boldsymbol{\theta}}
+\newcommand{\objective}{\mathcal{L}}
 
 % Reads a QA caption file into a macro, rather than \input-ing it directly
 % inside \caption -- hyperref builds a PDF-string from the caption argument
@@ -42,7 +45,7 @@
   \endgroup
 }
 
-\title{\texttt{phylo}: Technical Document}
+\title{\texttt{phylo}}
 \author{M.\ J.\ Wilson}
 \date{\today}
 
@@ -50,14 +53,25 @@
 \maketitle
 
 \begin{abstract}
-This document states the science behind \texttt{phylo}: the substitution
-model, the likelihood and the algorithm that evaluates it, the tree-search
-problem and its move sets, the reinforcement-learning formulation layered on
-top, and the computational structure that makes any of it tractable. It also
-holds the captions for the figures and tables the quality-assurance suite
-emits, so that a plot and its description cannot drift apart. Equations and
-algorithms follow the formulations in the sources cited throughout;
-deviations are stated where they occur.
+\noindent
+\texttt{phylo} searches the space of phylogenetic tree topologies with
+reinforcement learning, scoring candidates by their likelihood under a model
+of character substitution. It is built by an agent working to a fixed
+contract: every claim is pinned by a test against an independent oracle,
+every figure is regenerated from the code it reports on, and the conventions
+that make that reviewable are stated in the repository rather than
+rediscovered per change. The optimization machinery is model-agnostic by
+construction --- an unconstrained parameter vector, a differentiable
+objective, and a map back to named constrained parameters --- so the same
+optimizer fits a Potts chain, a hidden Markov model and a phylogeny, and
+discrete moves sit outside it as an operation that builds a new objective
+rather than a step within one. On the phylogenetic side that currently
+delivers a validated simulator, Felsenstein pruning across four backends, and
+branch lengths, exchangeabilities and stationary frequencies fitted by
+automatic differentiation and recovered within their confidence intervals.
+This document states the theory behind all of it, and holds the captions for
+the figures the quality-assurance suite emits, so that a plot and its
+description cannot drift apart.
 \end{abstract}
 
 \tableofcontents
@@ -74,21 +88,65 @@ e.g. the results of a dedicated study to find the best of a number of approaches
 
 \section{Scope and status}
 
-The project's goal is to search the space of phylogenetic tree topologies
-with reinforcement learning, scoring candidates by their likelihood under a
-model of character substitution. This document develops the theory that
-search requires.
+The goal is Milestone~8 of the project roadmap: a policy that proposes tree
+rearrangements and beats classical hill-climbing on held-out simulated data
+at a matched evaluation budget. Everything below is either what that needs or
+what has been built towards it.
 
-Most of it is not implemented yet. The $k$-state Jukes--Cantor substitution
-model, its simulator, and vectorized NumPy Felsenstein pruning (the Pruning
-subsection, \texttt{phylo.likelihood.pruning}) are; the rest of the
-repository is scaffolding --- build, test, benchmark, lint, documentation,
-and audit pipelines around placeholder functions --- and this document is
-written ahead of that implementation so it has a specification to match.
-Sections marked \emph{not yet implemented} describe intent; everything else
-describes mathematics that does not depend on our code.
+Built and validated: the $k$-state Jukes--Cantor and general time-reversible
+substitution models with their simulators; Felsenstein pruning in vectorized
+NumPy, differentiable PyTorch and Rust, each pinned against brute-force
+marginalization; the model-agnostic optimization interface and its optimizer,
+with confidence intervals from the observed information; branch lengths,
+exchangeabilities and stationary frequencies fitted and recovered against
+known truth; and NNI and SPR neighbourhood generators checked exhaustively
+against closed-form neighbour counts.
+
+Not built: subtree and site compression, a canonical topology key, GPU
+dispatch, the search loop that joins the move sets to the optimizer, the
+benchmark harness, and the reinforcement-learning agent itself. Sections
+covering those describe intent, and say so; everything else describes either
+mathematics that does not depend on this implementation, or behaviour a test
+pins.
 
 \section{Notation}
+
+Two vocabularies are kept apart, because the machinery in this document is
+deliberately indifferent to which application it serves. The first describes
+an optimization problem; the second describes a phylogeny. Nothing in the
+first refers to a tree.
+
+\subsection{The optimization abstraction}
+\label{sec:notation-abstraction}
+
+An objective is a differentiable scalar $\objective(\params)$ over an
+unconstrained vector $\params \in \mathbb{R}^d$, together with a map from
+$\params$ to the constrained parameters a model is actually stated in ---
+positive rates, distributions on a simplex. Minimization is the convention
+throughout, so a likelihood-based objective is a negative log-likelihood.
+
+A \emph{discrete move} changes the structure being fitted, and therefore
+changes both the meaning and the dimension $d$ of $\params$. It is not a step
+within an optimization; it constructs a new objective.
+
+\begin{table}[htbp]
+  \centering
+  \begin{tabular}{ll}
+    \toprule
+    Symbol & Meaning \\
+    \midrule
+    $\params$, $d$ & unconstrained parameter vector and its dimension \\
+    $\objective(\params)$ & scalar objective, minimized \\
+    $\nabla \objective$, $\nabla^2 \objective$ & its gradient and Hessian \\
+    \bottomrule
+  \end{tabular}
+  \caption{Symbols for the optimization abstraction, which is shared by every
+  application.}
+  \label{tab:symbols-abstraction}
+\end{table}
+
+\subsection{The phylogenetic application}
+\label{sec:notation-application}
 
 Let $\states$ be the finite state space of a single character, with
 $k = |\states|$; for nucleotide data $\states = \{A, C, G, T\}$ and $k = 4$.
@@ -96,11 +154,10 @@ The data $\data$ are an alignment of $n$ taxa over $m$ sites, so
 $\data \in \states^{n \times m}$, with $\data_{\cdot s}$ the observed column
 at site $s$.
 
-A phylogeny is a pair $(\tree, \branch)$: a tree topology $\tree$ whose
-$n$ leaves carry the taxa, and a vector $\branch$ of non-negative branch
-lengths, measured in expected substitutions per site. Internal nodes
-represent unobserved ancestors. Table~\ref{tab:symbols} collects the symbols
-used throughout.
+A phylogeny is a pair $(\tree, \branch)$: a topology $\tree$ whose $n$ leaves
+carry the taxa, and a vector $\branch$ of non-negative branch lengths,
+measured in expected substitutions per site. Internal nodes represent
+unobserved ancestors, and $\rootnode$ denotes the root.
 
 \begin{table}[htbp]
   \centering
@@ -112,135 +169,17 @@ used throughout.
     $n$, $m$ & number of taxa, number of sites \\
     $\tree$ & tree topology \\
     $\branch$ & vector of branch lengths \\
+    $\rootnode$ & the root node \\
     $\Q$ & instantaneous rate matrix, $k \times k$ \\
     $\Pmat(t)$ & transition-probability matrix over a branch of length $t$ \\
     $\bpi$ & root (and, under reversibility, stationary) distribution \\
     $L_u(i)$ & partial likelihood at node $u$ given state $i$ \\
     \bottomrule
   \end{tabular}
-  \caption{Symbols used in this document.}
+  \caption{Symbols for the phylogenetic application. The substitution model
+  these describe is developed in Appendix~\ref{app:substitution}.}
   \label{tab:symbols}
 \end{table}
-
-\section{The substitution model}
-
-Character evolution along a branch is a continuous-time Markov chain on
-$\states$ with rate matrix $\Q$, whose off-diagonal entries $q_{ij} \ge 0$
-give the instantaneous rate of substitution from state $i$ to state $j$ and
-whose rows sum to zero,
-%
-\begin{equation}
-  q_{ii} = -\sum_{j \neq i} q_{ij}.
-  \label{eq:generator}
-\end{equation}
-%
-Transition probabilities over a branch of length $t$ follow from the matrix
-exponential,
-%
-\begin{equation}
-  \Pmat(t) = \exp(\Q t), \qquad
-  P_{ij}(t) = \Pr(X_t = j \mid X_0 = i).
-  \label{eq:transition}
-\end{equation}
-%
-$\Pmat(t)$ is a stochastic matrix: $P_{ij}(t) \ge 0$ and each row sums to
-one. Both properties are invariants the implementation is tested against.
-
-\subsection{Reversibility and the root distribution}
-\label{sec:reversibility}
-
-The models used here are time-reversible with respect to a distribution
-$\bpi$, meaning they satisfy detailed balance,
-%
-\begin{equation}
-  \pi_i q_{ij} = \pi_j q_{ji} \quad \text{for all } i, j.
-  \label{eq:detailed-balance}
-\end{equation}
-%
-Reversibility has two consequences we rely on. First, $\bpi$ is the
-stationary distribution of the chain, which makes it the natural choice for
-the distribution of states at the root. Second, the likelihood is invariant
-to where the root is placed on the tree --- Felsenstein's \emph{pulley
-principle} \citep{felsenstein2004} --- so an unrooted topology suffices for
-inference, and re-rooting is a test the implementation must pass rather than
-a modelling decision.
-
-A general reversible rate matrix factorizes as
-%
-\begin{equation}
-  q_{ij} = s_{ij} \pi_j \quad (i \neq j), \qquad s_{ij} = s_{ji},
-  \label{eq:gtr}
-\end{equation}
-%
-which is the general time-reversible (GTR) model; the familiar JC69, K80, and
-HKY85 models are constrained special cases \citep{felsenstein2004}. Branch
-lengths measure expected substitutions per site, which fixes the scale of
-$\Q$ through the normalization
-%
-\begin{equation}
-  -\sum_{i} \pi_i q_{ii} = 1 .
-  \label{eq:normalisation}
-\end{equation}
-%
-Without \eqref{eq:normalisation}, $\Q$ and $\branch$ trade off against each
-other and neither is identifiable.
-
-\subsection{The general time-reversible model}
-\label{sec:gtr}
-
-Jukes--Cantor has no free rate parameters, so there is nothing in $\Q$ or
-$\bpi$ to estimate under it. The general reversible model supplies some:
-%
-\begin{equation}
-  \Q_{ij} = s_{ij} \, \pi_j \quad (i \neq j), \qquad
-  \Q_{ii} = -\sum_{j \neq i} \Q_{ij},
-  \label{eq:gtr}
-\end{equation}
-%
-with $s$ symmetric --- the \emph{exchangeabilities} --- and $\bpi$ the
-stationary distribution. Detailed balance, $\pi_i \Q_{ij} = \pi_j \Q_{ji}$,
-follows immediately from the symmetry of $s$, so \eqref{eq:gtr} is reversible
-by construction rather than by assumption, and the eigendecomposition
-\eqref{eq:eigen} applies exactly.
-
-Two normalizations are gauges rather than conventions, and a third appears
-once $\bpi$ is fitted. Each removes a direction along which the likelihood is
-exactly flat; a flat direction makes the observed information singular, so
-without them no parameter of the model has a confidence interval at all.
-First, $\Q$ and $c\Q$ describe the same process at branch lengths $t$ and
-$t/c$, so $\Q$ is scaled to one expected substitution per unit time,
-$-\sum_i \pi_i \Q_{ii} = 1$; this is what makes a branch length mean
-``expected substitutions per site''. Second, the same freedom reappears in
-$s$, since scaling every entry is undone by that normalization, so one entry
-is held at $1$. Third, $\bpi$ is optimized through a softmax whose first
-logit is pinned, since adding a constant to all of them changes nothing.
-
-Setting every $s_{ij}$ equal and $\bpi$ uniform must reproduce the
-Jukes--Cantor rate matrix exactly, which is how the implementation is
-validated --- against a model this document has already pinned against its
-own closed form, rather than against a restatement of \eqref{eq:gtr}.
-
-\subsection{The \texorpdfstring{$k$}{k}-state Jukes--Cantor model}
-\label{sec:jc}
-
-The most constrained case is worth stating in closed form, because it gives
-the simulator an oracle that owes nothing to our likelihood code. Take all
-exchange rates equal and $\bpi$ uniform on $k$ states. Under the
-normalization \eqref{eq:normalisation}, the transition probabilities over a
-branch of length $t$ are
-%
-\begin{equation}
-  P_{ii}(t) = \frac{1}{k} + \frac{k-1}{k}\, e^{-kt/(k-1)}, \qquad
-  P_{ij}(t) = \frac{1}{k} - \frac{1}{k}\, e^{-kt/(k-1)} \quad (i \neq j).
-  \label{eq:jc}
-\end{equation}
-%
-At $t = 0$ this gives the identity, and as $t \to \infty$ every entry tends
-to $1/k$, the stationary distribution. For $k = 4$ it is JC69
-\citep{felsenstein2004}. Simulated substitution frequencies are checked
-against \eqref{eq:jc} within Monte Carlo error, which tests the simulator
-independently of the pruning implementation --- if both were validated
-against each other, a shared error would pass unnoticed.
 
 \section{The likelihood}
 
@@ -348,10 +287,9 @@ that is achievable in \texttt{float32} at all, however good the kernel.
 
 Both numbers sit better than an order of magnitude above the measured
 agreement, leaving room for a device that reorders reductions differently
-from the CPU. They live in \texttt{phylo.likelihood.device}, and the
-\texttt{float32} figure is exercised on CPU --- the same arithmetic Metal
-will do --- so it is checked by continuous integration on runners that have
-no accelerator at all.
+from the CPU. The \texttt{float32} figure is exercised on CPU --- the same
+arithmetic Metal will do --- so it is checked by continuous integration on
+runners that have no accelerator at all.
 
 \subsection{Differentiable backends}
 
@@ -409,13 +347,11 @@ implies. Generation runs in pre-order, the reverse of pruning.
 \end{algorithm}
 
 Every draw uses an explicitly seeded generator, so a simulated dataset is
-reproducible from its seed. Implemented for the $k$-state Jukes--Cantor case
-in \texttt{phylo.sim} (\texttt{simulate.py}), with topology, branch lengths,
-$k$, $\bpi$, seed, and site count read from a \texttt{simulation\_params.yaml}
-and the generating parameters retained alongside the alignment. Simulated
-substitution frequencies are checked against \eqref{eq:jc} within a
-yaml-declared Monte Carlo tolerance in
-\texttt{tests/regression/test\_jc\_simulate.py}.
+reproducible from its seed. Topology, branch lengths, $k$, $\bpi$, seed and
+site count are declared in a parameters file, and the generating truth is
+retained alongside the alignment, so a dataset always carries what produced
+it. Simulated substitution frequencies are checked against \eqref{eq:jc}
+within a declared Monte Carlo tolerance.
 
 Table~\ref{tab:sim-problem-sizes} in Section~\ref{sec:qa} lists every
 simulation regression fixture at the problem sizes actually run, read
@@ -610,7 +546,7 @@ differences,
 %
 with $h$ chosen to balance truncation against round-off. This check is a
 required test for any differentiable component, and is implemented for every
-objective the optimizer accepts (\texttt{phylo.opt}).
+objective the optimizer accepts.
 
 \subsection{The optimization interface}
 \label{sec:opt-interface}
@@ -729,20 +665,20 @@ cannot drift apart.
   \label{fig:sim-tree}
 \end{figure}
 
-Figure~\ref{fig:sim-tree} is the first: the topology and branch lengths
-\texttt{phylo.sim.simulate} draws an alignment over, rendered by
-\texttt{phylo.qa.sim\_tree} from the same 8-taxon regression fixture as
-\texttt{tests/regression/test\_jc\_simulate.py}.
-\texttt{infra/build\_technical\_doc.sh} regenerates the figure and the
-caption above --- read verbatim from the file the script writes alongside
-it --- on every build, so the two cannot drift apart.
+Every figure in this section is regenerated on every build of this document,
+from the same regression fixtures the test suite runs, and its caption is
+read verbatim from the file the generating script writes alongside it. A
+figure and its description therefore cannot drift apart, and neither can
+drift from what is actually tested; that guarantee is stated here once and
+holds for all of them.
 
-Table~\ref{tab:sim-problem-sizes} tabulates the taxa count, site count,
-seed, and Monte Carlo tolerance of every simulation regression fixture,
-rendered by \texttt{phylo.qa.sim\_problem\_sizes} directly from the three
-\texttt{simulation\_params.yaml} files rather than restated by hand, so the
-numbers in this document cannot drift from what the regression suite
-actually runs.
+Figure~\ref{fig:sim-tree} is the first: the topology and branch lengths an
+alignment is drawn over, at the 8-taxon fixture, with the leading simulated
+sites shown beside each leaf.
+
+Table~\ref{tab:sim-problem-sizes} tabulates the taxa count, site count, seed
+and Monte Carlo tolerance of every simulation regression fixture, read from
+the fixtures themselves rather than restated by hand.
 
 \qacaptionread{figures/sim_problem_sizes_caption.txt}{\simProblemSizesCaption}
 \begin{table}[htbp]
@@ -753,10 +689,10 @@ actually runs.
 \end{table}
 
 Figure~\ref{fig:sim-example} shows a complete generated instance at the
-smallest of those sizes: the Newick string \texttt{phylo.sim.newick.to\_newick}
-produces for the 4-taxon fixture, and the leading simulated sites of the
-alignment, nucleotide-coded for this $k = 4$ model, rendered by
-\texttt{phylo.qa.sim\_example}.
+smallest of those sizes: the 4-taxon topology with its branch lengths ---
+$\rootnode$ the root, Greek letters its internal ancestors --- and the
+leading simulated sites of the alignment, nucleotide-coded for this $k = 4$
+model.
 
 \qacaptionread{figures/sim_example_caption.txt}{\simExampleCaption}
 \begin{figure}[htbp]
@@ -769,8 +705,8 @@ alignment, nucleotide-coded for this $k = 4$ model, rendered by
 Figure~\ref{fig:jc-transition} closes the simulation section by checking the
 simulator against the model it is supposed to realize. The curves are the
 closed-form transition probabilities of eq.~\eqref{eq:jc}; the markers are
-the substitution frequencies \texttt{phylo.sim.simulate} actually produced,
-one pair per branch. Agreement here is what licenses using simulated data as
+the substitution frequencies the simulator actually produced, one pair per
+branch. Agreement here is what licenses using simulated data as
 ground truth everywhere else in this document: the simulator is validated
 against the analytic form, never against the pruning code it feeds.
 
@@ -951,5 +887,120 @@ Section~\ref{sec:extensions} and throughout \citep{felsenstein2004}:
     another edge. The neighbourhood is quadratic in $n$, so each step costs
     more, but the larger reach escapes local optima that trap NNI.
 \end{description}
+
+\section{The substitution model}
+\label{app:substitution}
+
+Character evolution along a branch is a continuous-time Markov chain on
+$\states$ with rate matrix $\Q$, whose off-diagonal entries $q_{ij} \ge 0$
+give the instantaneous rate of substitution from state $i$ to state $j$ and
+whose rows sum to zero,
+%
+\begin{equation}
+  q_{ii} = -\sum_{j \neq i} q_{ij}.
+  \label{eq:generator}
+\end{equation}
+%
+Transition probabilities over a branch of length $t$ follow from the matrix
+exponential,
+%
+\begin{equation}
+  \Pmat(t) = \exp(\Q t), \qquad
+  P_{ij}(t) = \Pr(X_t = j \mid X_0 = i).
+  \label{eq:transition}
+\end{equation}
+%
+$\Pmat(t)$ is a stochastic matrix: $P_{ij}(t) \ge 0$ and each row sums to
+one. Both properties are invariants the implementation is tested against.
+
+\subsection{Reversibility and the root distribution}
+\label{sec:reversibility}
+
+The models used here are time-reversible with respect to a distribution
+$\bpi$, meaning they satisfy detailed balance,
+%
+\begin{equation}
+  \pi_i q_{ij} = \pi_j q_{ji} \quad \text{for all } i, j.
+  \label{eq:detailed-balance}
+\end{equation}
+%
+Reversibility has two consequences we rely on. First, $\bpi$ is the
+stationary distribution of the chain, which makes it the natural choice for
+the distribution of states at the root. Second, the likelihood is invariant
+to where the root is placed on the tree --- Felsenstein's \emph{pulley
+principle} \citep{felsenstein2004} --- so an unrooted topology suffices for
+inference, and re-rooting is a test the implementation must pass rather than
+a modelling decision.
+
+Every reversible rate matrix factorizes in the same way, which is the general
+time-reversible (GTR) model of Section~\ref{sec:gtr}, eq.~\eqref{eq:gtr}; the
+familiar JC69, K80 and HKY85 models are constrained special cases
+\citep{felsenstein2004}. Branch lengths measure expected substitutions per
+site, which fixes the scale of $\Q$ through the normalization
+%
+\begin{equation}
+  -\sum_{i} \pi_i q_{ii} = 1 .
+  \label{eq:normalisation}
+\end{equation}
+%
+Without \eqref{eq:normalisation}, $\Q$ and $\branch$ trade off against each
+other and neither is identifiable.
+
+\subsection{The general time-reversible model}
+\label{sec:gtr}
+
+Jukes--Cantor has no free rate parameters, so there is nothing in $\Q$ or
+$\bpi$ to estimate under it. The general reversible model supplies some:
+%
+\begin{equation}
+  \Q_{ij} = s_{ij} \, \pi_j \quad (i \neq j), \qquad
+  \Q_{ii} = -\sum_{j \neq i} \Q_{ij},
+  \label{eq:gtr}
+\end{equation}
+%
+with $s$ symmetric --- the \emph{exchangeabilities} --- and $\bpi$ the
+stationary distribution. Detailed balance, $\pi_i \Q_{ij} = \pi_j \Q_{ji}$,
+follows immediately from the symmetry of $s$, so \eqref{eq:gtr} is reversible
+by construction rather than by assumption, and the eigendecomposition
+\eqref{eq:eigen} applies exactly.
+
+Two normalizations are gauges rather than conventions, and a third appears
+once $\bpi$ is fitted. Each removes a direction along which the likelihood is
+exactly flat; a flat direction makes the observed information singular, so
+without them no parameter of the model has a confidence interval at all.
+First, $\Q$ and $c\Q$ describe the same process at branch lengths $t$ and
+$t/c$, so $\Q$ is scaled to one expected substitution per unit time,
+$-\sum_i \pi_i \Q_{ii} = 1$; this is what makes a branch length mean
+``expected substitutions per site''. Second, the same freedom reappears in
+$s$, since scaling every entry is undone by that normalization, so one entry
+is held at $1$. Third, $\bpi$ is optimized through a softmax whose first
+logit is pinned, since adding a constant to all of them changes nothing.
+
+Setting every $s_{ij}$ equal and $\bpi$ uniform must reproduce the
+Jukes--Cantor rate matrix exactly, which is how the implementation is
+validated --- against a model this document has already pinned against its
+own closed form, rather than against a restatement of \eqref{eq:gtr}.
+
+\subsection{The \texorpdfstring{$k$}{k}-state Jukes--Cantor model}
+\label{sec:jc}
+
+The most constrained case is worth stating in closed form, because it gives
+the simulator an oracle that owes nothing to our likelihood code. Take all
+exchange rates equal and $\bpi$ uniform on $k$ states. Under the
+normalization \eqref{eq:normalisation}, the transition probabilities over a
+branch of length $t$ are
+%
+\begin{equation}
+  P_{ii}(t) = \frac{1}{k} + \frac{k-1}{k}\, e^{-kt/(k-1)}, \qquad
+  P_{ij}(t) = \frac{1}{k} - \frac{1}{k}\, e^{-kt/(k-1)} \quad (i \neq j).
+  \label{eq:jc}
+\end{equation}
+%
+At $t = 0$ this gives the identity, and as $t \to \infty$ every entry tends
+to $1/k$, the stationary distribution. For $k = 4$ it is JC69
+\citep{felsenstein2004}. Simulated substitution frequencies are checked
+against \eqref{eq:jc} within Monte Carlo error, which tests the simulator
+independently of the pruning implementation --- if both were validated
+against each other, a shared error would pass unnoticed.
 
 \end{document}
