@@ -46,12 +46,14 @@ with reinforcement learning, scoring candidates by their likelihood under a
 model of character substitution. This document develops the theory that
 search requires.
 
-The code implements none of it yet. The repository is scaffolding --- build,
-test, benchmark, lint, documentation, and audit pipelines around placeholder
-functions --- and this document is written ahead of the implementation so
-that the implementation has a specification to match. Sections marked
-\emph{not yet implemented} describe intent; everything else describes
-mathematics that does not depend on our code.
+Most of it is not implemented yet. The $k$-state Jukes--Cantor substitution
+model, its simulator, and vectorized NumPy Felsenstein pruning (the Pruning
+subsection, \texttt{phylo.likelihood.pruning}) are; the rest of the
+repository is scaffolding --- build, test, benchmark, lint, documentation,
+and audit pipelines around placeholder functions --- and this document is
+written ahead of that implementation so it has a specification to match.
+Sections marked \emph{not yet implemented} describe intent; everything else
+describes mathematics that does not depend on our code.
 
 \section{Notation}
 
