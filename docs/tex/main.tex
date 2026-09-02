@@ -572,7 +572,80 @@ Markov decision process $(\mathcal{S}, \mathcal{A}, P, R, \gamma)$
 The natural performance measure is not the likelihood reached but the
 likelihood reached \emph{per likelihood evaluation}: every method converges
 given unbounded evaluations, so the comparison against a hill-climbing
-baseline has to be made at equal budget. \emph{Not yet implemented.}
+baseline has to be made at equal budget.
+
+\subsection{Why this reward, and what it implies}
+\label{sec:rl-reward}
+
+The reward is a difference of log-likelihoods, which is not an arbitrary
+choice: it makes the undiscounted return telescope. Over a trajectory
+$\tree_0, \dots, \tree_T$,
+%
+\begin{equation}
+  \sum_{t=0}^{T-1} R_t
+    = \sum_{t=0}^{T-1} \bigl[ \log \objective(\tree_{t+1})
+        - \log \objective(\tree_t) \bigr]
+    = \log \objective(\tree_T) - \log \objective(\tree_0),
+  \label{eq:telescope}
+\end{equation}
+%
+so the return of an episode is exactly the total improvement it achieved,
+independent of the path taken to it. A policy maximizing expected return is
+therefore maximizing the quantity the benchmark measures, with no reward
+shaping to justify separately.
+
+This forces $\gamma = 1$. Any $\gamma < 1$ breaks the telescoping and
+prefers improvement found early over the same improvement found late ---
+defensible when a trajectory may not terminate, but here episodes are capped
+by an evaluation budget, so the return is a finite sum and needs no
+discounting to converge.
+
+\subsection{Policy gradient and its baseline}
+\label{sec:rl-gradient}
+
+The action set is the move neighbourhood, whose size varies with $n$ and with
+the move type, so the policy scores candidate moves rather than indexing a
+fixed action space: $\pi_{\params}(a \mid s) \propto \exp f_{\params}(s, a)$ over
+the available $a$. The gradient of expected return is the standard score-function
+estimator \citep{suttonbarto2018},
+%
+\begin{equation}
+  \nabla_{\params} J(\params)
+    = \mathbb{E}_{\pi_{\params}} \Bigl[
+        \sum_{t=0}^{T-1} \nabla_{\params} \log \pi_{\params}(a_t \mid s_t)
+        \bigl( G_t - b(s_t) \bigr) \Bigr],
+  \qquad
+  G_t = \sum_{u=t}^{T-1} R_u,
+  \label{eq:policy-gradient}
+\end{equation}
+%
+with $b(s_t)$ a baseline that leaves the estimator unbiased --- it multiplies
+a term of zero expectation --- while reducing its variance. The variance
+matters more here than the bias-free property: $G_t$ is a sum of
+log-likelihood differences whose scale depends on the alignment, so without a
+baseline the gradient magnitude varies by orders of magnitude between
+problems. A learned state-value estimate $\hat{v}(s_t)$ is the usual choice
+and is the one that makes $G_t - b(s_t)$ an advantage.
+
+\subsection{Credit assignment}
+\label{sec:rl-credit}
+
+Tree search makes the credit-assignment problem sharp. A move that unlocks a
+region of the space may itself lower the likelihood, with the gain arriving
+several moves later; by \eqref{eq:telescope} the return correctly attributes
+that gain to the whole trajectory, but the per-step estimator in
+\eqref{eq:policy-gradient} must still spread it over the actions that earned
+it. Two consequences for an implementation. Episodes cannot be truncated
+arbitrarily, since a truncation that lands between the sacrifice and the
+payoff teaches the opposite of the truth. And a greedy baseline --- hill
+climbing --- is exactly a policy that refuses every negative $R_t$, so
+beating it requires the agent to accept some, which is the behaviour the
+variance-reduced estimator has to be able to learn rather than average away
+\citep{suttonbarto2018, lapan2020}.
+
+\emph{Not yet implemented.} Milestone~8 is where this is built; the search
+loop it will replace, hill climbing over the same move sets, is itself not
+yet built.
 
 \section{Computational structure}
 
