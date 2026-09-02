@@ -55,7 +55,7 @@ This file is authoritative. The rest exist so it does not have to carry everythi
 *   **Check Math Invariants:** Ensure rows of transition matrices sum to 1, models satisfy detailed balance, gradients match finite differences, and likelihood increases monotonically.
 *   **Cross-Device Agreement Is a Tolerance:** `float32` and `float64` behave differently across CPU, CUDA, and Metal, and deep recursions accumulate that. Agreement is checked against a tolerance stated once in the technical document, never bitwise. A discrepancy inside it is not a bug and must not be "fixed".
 *   **No Coverage Theatre:** Tests asserting only output shapes or successful execution without exceptions are forbidden. Leave gaps unwritten and track them as GitHub issues (`infra/TICKETING.md`) rather than writing meaningless tests.
-*   **Scientific Outputs:** The suite must emit plots and tables for the LaTeX technical document. Update the LaTeX captions concurrently.
+*   **Scientific Outputs:** The suite must emit plots and tables for the LaTeX technical document. Update the LaTeX captions concurrently. Every figure is rendered from the code it reports on, ships with a caption naming the seed, sizes and model that produced it, and is committed under `docs/tex/figures/` so a changed plot is visible in review rather than only after a document build.
 
 ## Technical Document & Reference Sources
 `docs/tex/` is treated as code. Cite these texts where they carry the material and explicitly state any deviations from their standard algorithms. The 25 core references are categorized as a routing table based on what they inform:
@@ -77,6 +77,8 @@ This file is authoritative. The rest exist so it does not have to carry everythi
 *   **Information/Quantum:** Blahut (*Algebraic Codes for Data Transmission*); Nielsen & Chuang (*Quantum Computation and Quantum Information* — background only)
 
 **Expected Reader:** a well-educated developer with scientific and performance-computing background, but not an application expert, e.g. phylogenetics. This sets the formatting contract for `docs/tex/`: keep the body streamlined — hyperlinks and citations over inline derivation — and push required application background (e.g. NNI, other standard algorithms) into a dedicated appendix, cited from the point of use rather than re-derived there. Treat the main text as a high-level overview of the current best-known approach (simulation, models) in terms of the roadmap, not an exhaustive record; link out to supporting docs, with plots, and results for dedicated studies that informed the technical doc.
+
+**Figures follow the same contract, in the register of an academic letter.** `python/phylo/qa/style.py` fixes it once and every QA script draws inside it: a serif face matching the body text, one-column sizing, a recessive frame, and no ornament that carries no information. Identity is never colour alone — the palette is a fixed, never-cycled colourblind-safe order, paired index-for-index with markers and linestyles so a figure survives greyscale printing, and a fifth series is a reason to facet rather than to invent a hue. A figure states its own evidence: where a claim is checked against a tolerance, the caption gives the realized value beside it.
 
 ## Writing Style
 1.  **Be concise and direct:** Omit needless words, use active voice, and lead with the most important fact.

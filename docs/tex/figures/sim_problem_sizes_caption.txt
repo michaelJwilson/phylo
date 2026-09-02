@@ -1,0 +1,1 @@
+Problem-size parameters across the 3 simulation regression fixtures backing the Jukes-Cantor simulation test: taxa count, site count, seed, and the Monte Carlo tolerance each validates simulated substitution frequencies within.
