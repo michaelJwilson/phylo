@@ -48,6 +48,8 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 | `technical-doc` | LaTeX build (fails on undefined refs/citations) |
 | `audit` | `pip-audit`, `cargo audit` (skips on cache hit if lockfiles are unchanged) |
 
+`lint`, `python-tests`, and `docs` restore a `~/.cache/uv` cache keyed on `uv.lock`'s hash before installing `uv`. `rust-lint`, `rust-tests`, `build`, and those same three jobs restore a shared `~/.cargo/registry`, `~/.cargo/git`, and `target/` cache keyed on `Cargo.lock`'s hash, so `oxiphylo` (built via `maturin`/`pyo3` on every `uv sync` or `pip install .`) compiles from scratch only when a lockfile changes or no job has populated the cache yet. `audit`'s per-week marker cache (above) is unrelated and unaffected.
+
 ### CI & Performance Budget
 
 * **Size Caps:** Restrict topological move tests to $n \le 10$ (exhaustive enumeration oracle).

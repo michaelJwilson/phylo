@@ -39,6 +39,8 @@ not made a tagged release yet — everything so far lives under `[Unreleased]`.
 
 ### Changed
 
+- CI caches the `uv` environment (`lint`, `python-tests`, `docs`) and the Cargo registry plus the `oxiphylo` `target/` build (`rust-lint`, `rust-tests`, `build`, and those same three jobs), keyed on `uv.lock` and `Cargo.lock` respectively, so the six jobs that install both toolchains stop doing it cold and the extension stops recompiling three times per PR.
+
 - Doc reorganization for structural infra/application separation (#32):
   dropped the explicit `Domain`/`Axis` label columns from `DEV.md`'s
   repository-layout table and `README.md`'s documentation table, and
