@@ -11,7 +11,9 @@ Root `CLAUDE.md` holds the repository-wide rules. These are local.
 The pruning recursion, site- and subtree-level compression, the canonical
 form used to key memoized results, and backends: a vectorized NumPy
 reference, a differentiable PyTorch backend (`pruning_torch.py`, float64,
-CPU), an efficient CPU path, CUDA, and Metal/MPS.
+CPU), a non-differentiable Rust CPU backend (`pruning_rust.py`, wrapping
+`oxiphylo.pruning_log_likelihood` from `src/pruning.rs`), CUDA, and
+Metal/MPS.
 
 ## Local rules
 
