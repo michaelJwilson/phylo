@@ -36,6 +36,18 @@ untrue. Check the ones this PR updates, or check "None applicable".
 - [ ] `STATUS.md` (if this changes an item's status)
 - [ ] None applicable
 
+### Follow-up / Deferred Work
+
+<!--
+Anything intentionally left as a TODO rather than done in this PR. Link the
+tracking issue (new or existing) that covers it.
+-->
+
+- [ ] None — nothing deferred
+- **What's deferred:**
+- **Why it's deferred rather than done here:**
+- **Tracking issue:**
+
 ### Definition of Done
 
 - [ ] **Regression test:** asserts scientific validity (not just shape/execution) and pins the expected output.
