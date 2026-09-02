@@ -39,6 +39,9 @@ whether or not it has members yet.
 .. automodule:: phylo.opt.constrain
    :members:
 
+.. automodule:: phylo.opt.fit
+   :members:
+
 .. automodule:: phylo.opt.potts
    :members:
 
