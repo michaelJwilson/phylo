@@ -12,7 +12,9 @@ Sync" rules. Fill in every section; delete none of them.
 <!--
 Required whenever a hot function is new or changed (CLAUDE.md, Performance /
 Definition of Done). Report baseline vs. new numbers from pytest-benchmark
-or criterion. Write "N/A — no hot-path change" if this PR doesn't touch one.
+or criterion using the table below. If this PR doesn't touch a hot path,
+write "N/A — no hot-path change" as text and delete the table instead of
+leaving it rendered with blank cells.
 -->
 
 | Function | Baseline | This PR | Delta |
@@ -29,7 +31,8 @@ closed-form JC probabilities, or
 `tests/benchmarks/test_pruning_rust_bench.py::test_numpy_vs_rust_forward_pass`,
 which pins the Rust oracle against NumPy with `abs_tol=1e-9`. Report the
 realized value even when it passes, not just the tolerance it was checked
-against. Write "N/A" if this PR has no such test.
+against, using the table below. If this PR has no such test, write "N/A" as
+text and delete the table instead of leaving it rendered with blank cells.
 -->
 
 | Test | Reference | Tolerance (atol/rtol) | Realized value |
