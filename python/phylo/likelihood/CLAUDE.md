@@ -16,6 +16,10 @@ CPU), a non-differentiable Rust CPU backend (`pruning_rust.py`, wrapping
 Metal/MPS dispatch belong here too but are not yet implemented (ROADMAP.md
 Milestone 3).
 
+`objective.py` adapts the recursion to `phylo.opt`'s fitting interface. It
+lives here, not in `opt/`, because that package may import no application
+module — the dependency runs application to infrastructure, never back.
+
 ## Local rules
 
 - **The NumPy reference is the oracle and it stays.** Every accelerated
@@ -33,6 +37,14 @@ Milestone 3).
   transformation sits inside the autodiff graph.
 - **Memoize on the canonical form.** A topology has many Newick spellings;
   keying a cache on a raw string silently recomputes trees already scored.
+- **Only the sum of the two root branches is estimable.** Under a reversible
+  model the likelihood does not depend on where the root sits along the
+  branch it subdivides, so on a rooted binary tree those two branches are
+  confounded — measured at 3.6e-12 of log-likelihood across a 9:1 shift,
+  against 14.7 for two non-root siblings. `objective.py` fits the pair as one
+  parameter and reports their sum; halving it back is a drawing convention,
+  never an estimate. A tree in the trifurcating-root convention has no such
+  pair, which is why inference is normally done on unrooted topologies.
 - **Differentiable backends keep branch lengths out of the topology.**
   `pruning_torch.py` takes branch lengths as a `torch.float64` tensor
   ordered by `branch_order(tau)`, separate from the `Node` tree; it never

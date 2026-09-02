@@ -60,3 +60,39 @@ def free_from_log_simplex(log_probs: torch.Tensor) -> torch.Tensor:
         ``log_simplex(free) == log_probs``.
     """
     return log_probs[..., 1:] - log_probs[..., :1]
+
+
+def positive(free: torch.Tensor) -> torch.Tensor:
+    """Map unconstrained reals to strictly positive values.
+
+    An exponential rather than a softplus: it is exactly invertible in
+    floating point, where ``log(expm1(x))`` loses precision for small ``x``,
+    and a branch length near zero is exactly the case that has to round-trip.
+
+    Parameters
+    ----------
+    free : torch.Tensor
+        Unconstrained parameters, any shape.
+
+    Returns
+    -------
+    torch.Tensor
+        Positive values, same shape.
+    """
+    return torch.exp(free)
+
+
+def free_from_positive(values: torch.Tensor) -> torch.Tensor:
+    """Invert :func:`positive`.
+
+    Parameters
+    ----------
+    values : torch.Tensor
+        Strictly positive values, any shape.
+
+    Returns
+    -------
+    torch.Tensor
+        Unconstrained parameters satisfying ``positive(free) == values``.
+    """
+    return torch.log(values)
