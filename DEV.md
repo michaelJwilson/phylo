@@ -9,7 +9,6 @@ carries the domain; `CLAUDE.md` states why keeping it liftable matters.
 
 | Path | Contents |
 | --- | --- |
-| `infra/` | CI/CD, agentic workflow, experiment tracking (Aim). |
 | `benches/`, `tests/` | Criterion benchmarks (Rust), pytest suite, and integration tests. |
 | `docs/source/` | Sphinx API documentation. |
 | `python/phylo/` | Python package: re-exports, typed extension stubs, stub CLI. |
@@ -48,6 +47,8 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 | `technical-doc` | LaTeX build (fails on undefined refs/citations) |
 | `audit` | `pip-audit`, `cargo audit` (skips on cache hit if lockfiles are unchanged) |
 
+`lint`, `python-tests`, and `docs` restore a `~/.cache/uv` cache keyed on `uv.lock`'s hash before installing `uv`. `rust-lint`, `rust-tests`, `build`, and those same three jobs restore a shared `~/.cargo/registry`, `~/.cargo/git`, and `target/` cache keyed on `Cargo.lock`'s hash, so `oxiphylo` (built via `maturin`/`pyo3` on every `uv sync` or `pip install .`) compiles from scratch only when a lockfile changes or no job has populated the cache yet. `audit`'s per-week marker cache (above) is unrelated and unaffected.
+
 ### CI & Performance Budget
 
 * **Size Caps:** Restrict topological move tests to $n \le 10$ (exhaustive enumeration oracle).
@@ -60,6 +61,7 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 * **Reproducibility:** Pin environments entirely. Use `--locked` for CI installs, pin runner images (`ubuntu-24.04`), and strictly use `np.random.default_rng(seed)`.
 * **Versioning:** Maintained strictly in `Cargo.toml` (`[package].version`).
 * **Definition of Done:** Follow `CLAUDE.md`'s checklist. A PR must also update the item's status in `STATUS.md`.
+* **PR Template:** Every PR starts from `.github/pull_request_template.md`, which carries the Definition-of-Done checklist, a benchmark-numbers slot, and a Documentation Sync line as a reminder, not a CI gate.
 * **Agentic Approach:** Use parallel git worktrees/PRs for disjoint tasks. Use single sequential PRs for coupled changes.
 
 ### Dependency Management
