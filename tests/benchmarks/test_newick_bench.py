@@ -8,15 +8,13 @@ paths through ``to_newick``).
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 from phylo.sim.newick import to_newick
 from phylo.sim.params import load_simulation_params
 from phylo.sim.simulate import simulate_alignment
 from pytest_benchmark.fixture import BenchmarkFixture
 
-FIXTURES_DIR = Path(__file__).parent.parent / "regression" / "fixtures"
+from tests._fixtures import FIXTURES_DIR
 
 
 @pytest.mark.parametrize(

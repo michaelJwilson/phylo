@@ -10,8 +10,6 @@ of any simulation.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
@@ -20,7 +18,8 @@ from phylo.sim.params import load_simulation_params
 from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import edges
 
-FIXTURES_DIR = Path(__file__).parent / "fixtures"
+from tests._fixtures import FIXTURES_DIR
+
 FIXTURE = FIXTURES_DIR / "simulation_params.yaml"
 
 # A variety of site and taxa sizes, per sim/CLAUDE.md's local rule, sharing

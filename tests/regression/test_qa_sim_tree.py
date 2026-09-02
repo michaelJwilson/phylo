@@ -15,7 +15,7 @@ from phylo.qa.sim_tree import build_caption, main, render_sim_tree_figure, tree_
 from phylo.sim.params import load_simulation_params
 from phylo.sim.tree import Node, preorder
 
-FIXTURES = Path(__file__).parent / "fixtures"
+from tests._fixtures import FIXTURES_DIR
 
 
 def _expected_depth(node: Node, parent_depth: float, target: str) -> float | None:
@@ -30,7 +30,7 @@ def _expected_depth(node: Node, parent_depth: float, target: str) -> float | Non
 
 
 def test_tree_layout_depths_match_branch_length_sums() -> None:
-    params = load_simulation_params(FIXTURES / "simulation_params_8taxa.yaml")
+    params = load_simulation_params(FIXTURES_DIR / "simulation_params_8taxa.yaml")
     layout = tree_layout(params.tau)
 
     for node in preorder(params.tau):
@@ -41,7 +41,7 @@ def test_tree_layout_depths_match_branch_length_sums() -> None:
 
 
 def test_tree_layout_gives_every_leaf_a_distinct_ordered_y() -> None:
-    params = load_simulation_params(FIXTURES / "simulation_params_8taxa.yaml")
+    params = load_simulation_params(FIXTURES_DIR / "simulation_params_8taxa.yaml")
     layout = tree_layout(params.tau)
     leaves = [node.name for node in preorder(params.tau) if node.is_leaf]
 
@@ -52,7 +52,7 @@ def test_tree_layout_gives_every_leaf_a_distinct_ordered_y() -> None:
 def test_render_sim_tree_figure_writes_caption_with_generating_truth(
     tmp_path: Path,
 ) -> None:
-    params_path = FIXTURES / "simulation_params_8taxa.yaml"
+    params_path = FIXTURES_DIR / "simulation_params_8taxa.yaml"
     params = load_simulation_params(params_path)
 
     qa_figure = render_sim_tree_figure(params_path, tmp_path)
@@ -70,7 +70,7 @@ def test_main_cli_writes_the_same_figure_as_the_library_call(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    params_path = FIXTURES / "simulation_params_8taxa.yaml"
+    params_path = FIXTURES_DIR / "simulation_params_8taxa.yaml"
     monkeypatch.setattr(
         "sys.argv",
         ["sim_tree", "--params", str(params_path), "--output-dir", str(tmp_path)],

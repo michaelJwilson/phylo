@@ -9,7 +9,6 @@ CLAUDE.md's >=10x GPU threshold is measured against once a backend exists.
 from __future__ import annotations
 
 import math
-from pathlib import Path
 
 import pytest
 from phylo.likelihood.pruning import log_likelihood
@@ -17,7 +16,7 @@ from phylo.sim.params import load_simulation_params
 from phylo.sim.simulate import simulate_alignment
 from pytest_benchmark.fixture import BenchmarkFixture
 
-FIXTURES_DIR = Path(__file__).parent.parent / "regression" / "fixtures"
+from tests._fixtures import FIXTURES_DIR
 
 
 @pytest.mark.parametrize(
