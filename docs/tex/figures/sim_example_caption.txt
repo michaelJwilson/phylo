@@ -1,1 +1,1 @@
-Worked example: 4-taxon alignment simulated under the Jukes-Cantor model (seed 20260902, 200000 sites total), showing the generated Newick topology and the first 10 of 200000 simulated sites.
+Worked example: 4-taxon alignment simulated under the Jukes-Cantor model (seed 20260902, 200\_000 sites total), showing the topology with branch lengths -- rho the root, Greek letters its internal ancestors -- and the first 10 of 200\_000 simulated sites.

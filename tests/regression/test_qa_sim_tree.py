@@ -10,12 +10,24 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pytest
-from phylo.qa.sim_tree import build_caption, main, render_sim_tree_figure, tree_layout
+from phylo.qa.figure import state_label
+from phylo.qa.sim_tree import (
+    SITES_SHOWN,
+    build_caption,
+    main,
+    render_sim_tree,
+    render_sim_tree_figure,
+    tree_layout,
+)
 from phylo.sim.params import load_simulation_params
+from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import Node, preorder
 
 from tests._fixtures import FIXTURES_DIR
+
+PARAMS_PATH = FIXTURES_DIR / "simulation_params_8taxa.yaml"
 
 
 def _expected_depth(node: Node, parent_depth: float, target: str) -> float | None:
@@ -87,3 +99,49 @@ def test_main_cli_writes_the_same_figure_as_the_library_call(
     captured = capsys.readouterr()
     assert str(figure_path) in captured.out
     assert str(caption_path) in captured.out
+
+
+def test_every_leaf_gets_its_own_sequence_aligned_to_its_row() -> None:
+    # The figure's claim is that these sequences came from this tree, so the
+    # check is that each leaf's text is its own simulated states, placed at
+    # that leaf's y. Pinned against the alignment, not against the drawing.
+    params = load_simulation_params(PARAMS_PATH)
+    dataset = simulate_alignment(
+        tau=params.tau,
+        k=params.k,
+        pi=params.pi,
+        seed=params.seed,
+        n_sites=SITES_SHOWN,
+    )
+    _, ax = plt.subplots()
+    layout = render_sim_tree(params.tau, ax, alignment=dataset.alignment, k=params.k)
+
+    drawn = {
+        text.get_text(): text.get_position()[1]
+        for text in ax.texts
+        if text.get_fontfamily() == ["monospace"]
+    }
+    plt.close("all")
+
+    leaves = [node.name for node in preorder(params.tau) if node.is_leaf]
+    assert len(drawn) == len(leaves)
+    for leaf in leaves:
+        expected = "".join(
+            state_label(int(state), params.k)
+            for state in dataset.alignment[leaf][:SITES_SHOWN]
+        )
+        assert expected in drawn
+        assert drawn[expected] == layout[leaf][1]
+
+
+def test_no_sequences_are_drawn_when_no_alignment_is_given() -> None:
+    # The parameter is optional, and a tree without an alignment must not
+    # acquire an empty column of text.
+    params = load_simulation_params(PARAMS_PATH)
+    _, ax = plt.subplots()
+    render_sim_tree(params.tau, ax)
+
+    monospace = [text for text in ax.texts if text.get_fontfamily() == ["monospace"]]
+    plt.close("all")
+
+    assert monospace == []

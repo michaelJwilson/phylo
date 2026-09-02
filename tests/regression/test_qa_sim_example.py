@@ -10,14 +10,16 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from phylo.qa.figure import latex_integer, state_label
 from phylo.qa.sim_example import (
     build_caption,
+    display_newick,
     main,
     render_sim_example_figure,
-    state_label,
 )
 from phylo.sim.params import load_simulation_params
 from phylo.sim.simulate import simulate_alignment
+from phylo.sim.tree import Node, preorder
 
 from tests._fixtures import FIXTURES_DIR
 
@@ -43,7 +45,7 @@ def test_render_sim_example_figure_writes_caption_with_generating_truth(
     assert qa_figure.figure_path.stat().st_size > 0
     assert qa_figure.caption == build_caption(params, n_sites_shown=10)
     assert str(params.seed) in qa_figure.caption
-    assert str(params.n_sites) in qa_figure.caption
+    assert latex_integer(params.n_sites) in qa_figure.caption
     assert "4-taxon" in qa_figure.caption
     assert "10" in qa_figure.caption
 
@@ -99,3 +101,45 @@ def test_main_cli_writes_the_same_figure_as_the_library_call(
     captured = capsys.readouterr()
     assert str(figure_path) in captured.out
     assert str(caption_path) in captured.out
+
+
+def test_display_newick_uses_rho_for_the_root_and_greek_for_ancestors() -> None:
+    # The raw serialization keeps names like "ancestor_CD"; the display form
+    # replaces them, because an unescaped underscore is mathtext syntax and
+    # the meaning is already visible from the tree.
+    params = load_simulation_params(PARAMS_PATH)
+
+    rendered = display_newick(params.tau)
+
+    assert rendered.endswith(r"\rho")
+    assert r"\alpha" in rendered
+    assert "ancestor" not in rendered
+    # Leaf labels carry their branch length, escaped for mathtext.
+    assert r"A\_0.1" in rendered
+    assert r"D\_0.4" in rendered
+
+
+def test_display_newick_names_every_leaf_exactly_once() -> None:
+    params = load_simulation_params(PARAMS_PATH)
+    leaves = [node.name for node in preorder(params.tau) if node.is_leaf]
+
+    rendered = display_newick(params.tau)
+
+    for leaf in leaves:
+        assert rendered.count(f"{leaf}\\_") == 1
+
+
+def test_display_newick_refuses_a_tree_with_too_many_ancestors() -> None:
+    # Guards the guard: the symbol table is finite, and running off its end
+    # must say so rather than raise IndexError from inside a comprehension.
+    deep: Node = Node(name="leaf", branch_length=0.1)
+    for index in range(9):
+        deep = Node(
+            name=f"internal_{index}",
+            branch_length=0.1,
+            children=(deep, Node(name=f"leaf_{index}", branch_length=0.1)),
+        )
+    root = Node(name="root", branch_length=None, children=(deep,))
+
+    with pytest.raises(ValueError, match="more than 8 internal ancestors"):
+        display_newick(root)

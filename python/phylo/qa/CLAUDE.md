@@ -35,7 +35,15 @@ the LaTeX build; this package does not itself invoke `latexmk` or know where
   separately from what actually ran.
 - **A caption file is plain text, not LaTeX.** `docs/tex/main.tex` pulls it in
   verbatim via `\input`, so it must not contain unescaped LaTeX special
-  characters (`_`, `%`, `\`, `&`, `#`).
+  characters (`_`, `%`, `\`, `&`, `#`). The single exception is `\_`, which
+  `figure.latex_integer` uses as a thousands separator. This is enforced by
+  `figure.check_latex_safe`, called from every writer, rather than asserted
+  once per caption test: a contract every caller must satisfy belongs in the
+  function every caller goes through.
+- **A table is typeset, not drawn.** `figure.write_qa_table` emits a LaTeX
+  `tabular` fragment for `main.tex` to `\input`. A matplotlib table saved as
+  an image does not match the surrounding type, does not scale with the
+  document, and cannot be selected or searched.
 - **Regression-test the layout, not the rendering.** matplotlib output isn't
   numerically pinnable; the coordinates and text a script computes before
   handing them to matplotlib are, and that is what a test pins.
