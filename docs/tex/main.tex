@@ -249,48 +249,6 @@ scaling factors. Rescaling changes the arithmetic but not the result: the
 rescaled and direct computations must agree to within floating-point
 tolerance on small problems where both run.
 
-\subsection{The cross-device tolerance}
-\label{sec:tolerance}
-
-Backends run on different hardware in different precisions, so agreement
-between them is a tolerance and never bitwise equality. Two numbers, because
-one would not do:
-
-\begin{center}
-\begin{tabular}{lll}
-  \toprule
-  Comparison & Relative tolerance & Why \\
-  \midrule
-  \texttt{float64} both sides & $10^{-11}$ & CUDA and CPU support it \\
-  either side \texttt{float32} & $10^{-6}$ & Metal supports nothing wider \\
-  \bottomrule
-\end{tabular}
-\end{center}
-
-PyTorch's Metal backend rejects \texttt{float64}, so every Apple Silicon
-comparison is a \texttt{float32} one; a single tolerance loose enough to
-admit those would let a broken \texttt{float64} backend pass, which is why
-the bound is keyed on the lowest precision taking part.
-
-The tolerances are \emph{relative}, and that is forced rather than chosen.
-The total log-likelihood is a sum over sites, so its magnitude --- and any
-absolute discrepancy in it --- grows with $m$. Measuring \texttt{float32}
-against \texttt{float64} on the regression fixtures, the absolute deviation
-runs from $4.4 \times 10^{-3}$ at $m = 2 \times 10^{4}$ to
-$5.0 \times 10^{-2}$ at $m = 2 \times 10^{5}$, an order of magnitude of
-spread, while the relative deviation stays flat at
-$3.4$--$5.4 \times 10^{-8}$: roughly $0.4$ times \texttt{float32} epsilon,
-which is the floor. An absolute bound fixed at one problem size does not
-transfer to another. At $|\ln L| \sim 2.4 \times 10^{5}$ adjacent
-\texttt{float32} values are $0.0156$ apart, so no absolute bound tighter than
-that is achievable in \texttt{float32} at all, however good the kernel.
-
-Both numbers sit better than an order of magnitude above the measured
-agreement, leaving room for a device that reorders reductions differently
-from the CPU. The \texttt{float32} figure is exercised on CPU --- the same
-arithmetic Metal will do --- so it is checked by continuous integration on
-runners that have no accelerator at all.
-
 \subsection{Differentiable backends}
 
 Branch lengths $\branch$ are what gradient-based fitting and tree search
