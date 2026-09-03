@@ -28,14 +28,9 @@ from phylo.opt.fit import (
     observed_information,
     parameter_covariance,
 )
-from phylo.opt.hmm import (
-    HmmObjective,
-    align_states,
-    baum_welch,
-    load_hmm_params,
-    simulate_sequences,
-)
+from phylo.opt.hmm import HmmObjective, align_states, baum_welch
 from phylo.opt.potts import PottsObjective, load_potts_params, simulate_chains
+from phylo.sim.hmm import load_hmm_params, simulate_sequences
 
 from tests._fixtures import FIXTURES_DIR
 
@@ -64,7 +59,7 @@ def _hmm_objective(seed_offset: int = 0) -> tuple[HmmObjective, torch.Tensor]:
     base = load_hmm_params(HMM_FIXTURE)
     params = replace(base, seed=base.seed + seed_offset)
     objective = HmmObjective(
-        simulate_sequences(params), params.n_states, params.n_symbols
+        simulate_sequences(params).observations, params.n_states, params.n_symbols
     )
     truth = objective.theta_from_truth(
         params.initial, params.transition, params.emission
@@ -202,7 +197,7 @@ def test_hmm_interval_coverage_approaches_nominal_with_sample_size() -> None:
             base, seed=base.seed + 7919 * replicate, n_sequences=4 * base.n_sequences
         )
         objective = HmmObjective(
-            simulate_sequences(params), params.n_states, params.n_symbols
+            simulate_sequences(params).observations, params.n_states, params.n_symbols
         )
         result = fit(objective)
         assert result.converged
@@ -233,7 +228,7 @@ def test_the_gradient_fit_agrees_with_baum_welch() -> None:
     # coordinates, no constraint map. Two algorithms reaching the same
     # optimum is evidence neither of them alone provides.
     params = load_hmm_params(HMM_FIXTURE)
-    observations = simulate_sequences(params)
+    observations = simulate_sequences(params).observations
     objective = HmmObjective(observations, params.n_states, params.n_symbols)
 
     gradient_result = fit(objective)
@@ -292,7 +287,7 @@ def test_an_estimate_on_the_boundary_has_no_interval() -> None:
     base = load_hmm_params(HMM_FIXTURE)
     params = replace(base, n_sequences=30, sequence_length=5)
     objective = HmmObjective(
-        simulate_sequences(params), params.n_states, params.n_symbols
+        simulate_sequences(params).observations, params.n_states, params.n_symbols
     )
     result = fit(objective)
     fitted = torch.exp(objective.constrain(result.theta)["log_emission"])

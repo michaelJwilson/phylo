@@ -1,6 +1,6 @@
 # Ground truth for the discrete-HMM reference instance
-# (tests/regression/test_opt_hmm.py). Every field is required -- see
-# python/phylo/opt/hmm.py and python/phylo/opt/CLAUDE.md.
+# (tests/regression/opt/test_opt_hmm.py, tests/regression/sim/test_hmm_simulate.py).
+# Every field is required -- see python/phylo/sim/hmm.py and sim/CLAUDE.md.
 #
 # The emission rows are deliberately well separated: a near-uniform emission
 # makes the hidden states nearly exchangeable, and a recovery test on an
@@ -27,3 +27,10 @@ emission:
   - [0.70, 0.15, 0.10, 0.05]
   - [0.05, 0.65, 0.20, 0.10]
   - [0.10, 0.10, 0.25, 0.55]
+
+# Absolute tolerance a sim validation test checks simulated frequencies
+# against their exact (enumeration) or analytic (stationary distribution)
+# counterpart within. Monte Carlo standard error at 4500 draws (600
+# sequences, 1 symbol per sequence at a fixed position) is ~0.007 for a
+# probability near 0.3; 0.02 is under three of those.
+tolerance: 0.02

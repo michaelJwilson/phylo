@@ -11,7 +11,8 @@ from __future__ import annotations
 import math
 
 import torch
-from phylo.opt.hmm import HmmObjective, load_hmm_params, simulate_sequences
+from phylo.opt.hmm import HmmObjective
+from phylo.sim.hmm import load_hmm_params, simulate_sequences
 from pytest_benchmark.fixture import BenchmarkFixture
 
 from tests._fixtures import FIXTURES_DIR
@@ -22,7 +23,7 @@ FIXTURE = FIXTURES_DIR / "hmm_params.yaml"
 def test_hmm_objective_benchmark(benchmark: BenchmarkFixture) -> None:
     params = load_hmm_params(FIXTURE)
     objective = HmmObjective(
-        simulate_sequences(params), params.n_states, params.n_symbols
+        simulate_sequences(params).observations, params.n_states, params.n_symbols
     )
     theta = objective.theta_from_truth(
         params.initial, params.transition, params.emission
@@ -38,7 +39,7 @@ def test_hmm_objective_benchmark(benchmark: BenchmarkFixture) -> None:
 def test_hmm_objective_and_gradient_benchmark(benchmark: BenchmarkFixture) -> None:
     params = load_hmm_params(FIXTURE)
     objective = HmmObjective(
-        simulate_sequences(params), params.n_states, params.n_symbols
+        simulate_sequences(params).observations, params.n_states, params.n_symbols
     )
     theta = objective.theta_from_truth(
         params.initial, params.transition, params.emission
