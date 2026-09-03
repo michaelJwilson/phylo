@@ -175,29 +175,52 @@ jobs:
       # Coverage is unaffected: every line the benchmarks reach is also
       # reached by the regression module DEV.md's Test Layout requires each of
       # them to pair with, so the suite stays at 100% either way.
-      - name: Decide whether the benchmarks need to run
-        id: benchmarks
+      # `infra/select_tests.py` turns the changed files into the test paths to
+      # run and the modules to measure coverage over (issue #161). It derives
+      # dependents from the import graph -- a change to `likelihood` runs
+      # `search`, which imports it -- and answers "everything" for any change
+      # it cannot attribute to one module: a lockfile, a shared fixture, this
+      # workflow. The unsafe answer is the one that looks like a saving.
+      #
+      # Nothing is selected when the diff changed no code, because the suite
+      # would then run the same tests over the same source as the last run on
+      # main. The job still runs and still reports: skipping the *step* rather
+      # than the job is what keeps a required check from sitting pending and
+      # blocking the merge (issue #109).
+      - name: Decide which tests the change needs
+        id: selection
         run: |
-          base="origin/${{ github.base_ref || 'main' }}"
-          git fetch --no-tags --depth=1 origin "${{ github.base_ref || 'main' }}" || true
-          changed="$(git diff --name-only "$base"...HEAD || git ls-files)"
+          # Selection is a pull-request optimisation only. On a push to main
+          # the whole suite runs with package-wide coverage, which is what
+          # stops a module no pull request selected from rotting unnoticed --
+          # the other half of the trade, per DEV.md. `infra/release.sh` does
+          # the same at release.
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "::notice::not a pull request -- running the whole suite"
+            echo "paths=tests" >> "$GITHUB_OUTPUT"
+            echo "cov=--cov=phylo" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base="origin/${{ github.base_ref }}"
+          git fetch --no-tags --depth=1 origin "${{ github.base_ref }}" || true
+          changed="$(git diff --name-only "$base"...HEAD)"
           echo "changed files:"; echo "$changed" | sed 's/^/  /'
-          if echo "$changed" | grep -qE '^(src/|python/phylo/(sim|likelihood|opt|learn|search)/|tests/benchmarks/|Cargo\.(toml|lock)|pyproject\.toml|uv\.lock)'; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::computational code changed -- running benchmarks"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::no computational code changed -- skipping benchmarks"
-          fi
-      - name: Run the suite
+          echo "$changed" | python3 infra/select_tests.py >> "$GITHUB_OUTPUT"
+          echo "$changed" | python3 infra/select_tests.py | sed 's/^/::notice::/'
+      - name: Run the selected tests
         run: |
-          if [ "${{ steps.benchmarks.outputs.run }}" = "true" ]; then
-            uv run pytest -m "not release" \
-              --cov=phylo --cov-report=term-missing --cov-fail-under=90
-          else
-            uv run pytest -m "not release" --ignore=tests/benchmarks \
-              --cov=phylo --cov-report=term-missing --cov-fail-under=90
+          paths="${{ steps.selection.outputs.paths }}"
+          cov="${{ steps.selection.outputs.cov }}"
+          if [ -z "$paths" ]; then
+            echo "::notice::no code changed -- the suite would repeat main's last run"
+            exit 0
           fi
+          # The gate is 90% of what was selected. Where everything is
+          # selected that is the package, as before; where a subset is, the
+          # claim is that each touched module is covered by its own tests.
+          # DEV.md states the difference.
+          uv run pytest -m "not release" $paths \
+            $cov --cov-report=term-missing --cov-fail-under=90
 
   docs:
     name: Docs build (Sphinx)
