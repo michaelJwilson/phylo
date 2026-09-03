@@ -182,7 +182,7 @@ jobs:
           git fetch --no-tags --depth=1 origin "${{ github.base_ref || 'main' }}" || true
           changed="$(git diff --name-only "$base"...HEAD || git ls-files)"
           echo "changed files:"; echo "$changed" | sed 's/^/  /'
-          if echo "$changed" | grep -qE '^(src/|python/phylo/(sim|likelihood|opt|search)/|tests/benchmarks/|Cargo\.(toml|lock)|pyproject\.toml|uv\.lock)'; then
+          if echo "$changed" | grep -qE '^(src/|python/phylo/(sim|likelihood|opt|learn|search)/|tests/benchmarks/|Cargo\.(toml|lock)|pyproject\.toml|uv\.lock)'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "::notice::computational code changed -- running benchmarks"
           else

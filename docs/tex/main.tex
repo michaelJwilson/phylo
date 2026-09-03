@@ -658,9 +658,48 @@ beating it requires the agent to accept some, which is the behaviour the
 variance-reduced estimator has to be able to learn rather than average away
 \citep{suttonbarto2018, lapan2020}.
 
-\emph{Not yet implemented.} Milestone~8 is where this is built; the search
-loop it will replace, hill climbing over the same move sets, is itself not
-yet built.
+\subsection{Status: the estimator, on a landscape that is not a tree}
+\label{sec:rl-status}
+
+The machinery above is implemented and the phylogenetic environment is not.
+That split is deliberate. An interface justified by one application is shaped
+by it, so the estimator is developed against a reference environment chosen
+for having nothing to do with trees: single-site flips over the same 1-D
+Potts chain that Section~\ref{sec:qa} fits continuously. One model, appearing
+once as an objective and once as a search problem, is what makes the shared
+abstraction a demonstration rather than a claim.
+
+Two properties of that landscape make it a usable testbed. Its reward
+decomposes exactly into the two features the policy scores, so hill climbing
+is the weight vector proportional to $(J, 1)$ --- the baseline sits
+\emph{inside} the policy class, and beating it is a statement about learning
+rather than about two unrelated algorithms. And it is small enough to
+enumerate: every configuration can be scored, so ``found the best one'' is
+checkable, exactly as Section~\ref{sec:hill-climbing} enumerates topologies
+below eight taxa.
+
+Enumeration also supplies the oracle the estimator itself is checked against.
+With a finite action set and a finite horizon the trajectory set is finite,
+so $J(\params)$ is a closed form and $\nabla J$ follows by differentiating it;
+the sampled estimator is then an unbiasedness claim to be checked rather than
+cited. Measured on that oracle: the enumerated gradient agrees with central
+finite differences to $1.5 \times 10^{-11}$ relative, and the sampled
+estimator with the enumerated gradient to $9.9 \times 10^{-3}$ over
+$6000$ episodes. A myopic variant --- crediting each action with its own
+reward instead of everything that followed --- is off by $71\%$, which is the
+margin that makes the check worth running.
+
+On that landscape a learned policy beats hill climbing at a matched decision
+budget, reaching the enumerated optimum from $86.6\%$ of the $81$ starting
+configurations against greedy's $80.2\%$, in $8$ of $8$ training seeds. The
+mechanism is the one Section~\ref{sec:rl-credit} predicts: the episode ends at
+a local maximum, so a policy that occasionally accepts a negative $R_t$ can
+route around a barrier a greedy searcher walks into. This is a harder problem
+than the tree fixture of Section~\ref{sec:hill-climbing}, where the optimum
+led the runner-up by $41.6$ log units and hill climbing was never challenged.
+
+\emph{Not yet implemented:} the phylogenetic environment, PPO, and a learned
+state-value baseline. Milestone~8 needs all three.
 
 \section{Computational structure}
 

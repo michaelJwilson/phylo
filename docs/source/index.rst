@@ -30,10 +30,28 @@ whether or not it has members yet.
 .. automodule:: phylo.sim.simulate
    :members:
 
+.. automodule:: phylo.sim.newick
+   :members:
+
 .. automodule:: phylo.likelihood
    :members:
 
 .. automodule:: phylo.likelihood.objective
+   :members:
+
+.. automodule:: phylo.likelihood.pruning
+   :members:
+
+.. automodule:: phylo.likelihood.pruning_torch
+   :members:
+
+.. automodule:: phylo.likelihood.pruning_rust
+   :members:
+
+.. automodule:: phylo.likelihood.brute_force
+   :members:
+
+.. automodule:: phylo.likelihood.device
    :members:
 
 .. automodule:: phylo.opt
@@ -54,5 +72,32 @@ whether or not it has members yet.
 .. automodule:: phylo.opt.hmm
    :members:
 
+.. automodule:: phylo.learn
+   :members:
+
+.. automodule:: phylo.learn.environment
+   :members:
+
+.. automodule:: phylo.learn.policy
+   :members:
+
+.. automodule:: phylo.learn.potts
+   :members:
+
+.. automodule:: phylo.learn.rollout
+   :members:
+
+.. automodule:: phylo.learn.reinforce
+   :members:
+
+.. automodule:: phylo.learn.exact
+   :members:
+
 .. automodule:: phylo.search
+   :members:
+
+.. automodule:: phylo.search.topology
+   :members:
+
+.. automodule:: phylo.search.infer
    :members:
