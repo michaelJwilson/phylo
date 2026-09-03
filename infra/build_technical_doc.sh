@@ -28,6 +28,12 @@ uv run python -m phylo.qa.jc_transition \
   --params tests/regression/fixtures/simulation_params.yaml \
   --output-dir docs/tex/figures
 
+# Brute-force marginalization costs k**m for m internal nodes, so this runs on
+# the 4-taxon fixture and nowhere larger.
+uv run python -m phylo.qa.backend_agreement \
+  --params tests/regression/fixtures/simulation_params.yaml \
+  --output-dir docs/tex/figures
+
 uv run python -m phylo.qa.sim_problem_sizes \
   --params tests/regression/fixtures/simulation_params.yaml \
   --params tests/regression/fixtures/simulation_params_small_sites.yaml \
@@ -69,6 +75,12 @@ uv run python -m phylo.qa.search_topologies \
 # The reward-surface comparison scores all 105 topologies twice, once of them
 # at one optimization per topology. Same reason as above.
 uv run python -m phylo.qa.rl_reward_surface \
+  --params tests/regression/fixtures/simulation_params_6taxa.yaml \
+  --output-dir docs/tex/figures
+
+# A site-count sweep with replicates at each size: the slowest figure in the
+# build, and the only measurement of the accuracy requirement.
+uv run python -m phylo.qa.topology_accuracy \
   --params tests/regression/fixtures/simulation_params_6taxa.yaml \
   --output-dir docs/tex/figures
 

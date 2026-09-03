@@ -54,24 +54,30 @@
 
 \begin{abstract}
 \noindent
-\texttt{phylo} searches the space of phylogenetic tree topologies with
-reinforcement learning, scoring candidates by their likelihood under a model
-of character substitution. It is built by an agent working to a fixed
-contract: every claim is pinned by a test against an independent oracle,
-every figure is regenerated from the code it reports on, and the conventions
-that make that reviewable are stated in the repository rather than
-rediscovered per change. The optimization machinery is model-agnostic by
-construction --- an unconstrained parameter vector, a differentiable
-objective, and a map back to named constrained parameters --- so the same
-optimizer fits a Potts chain, a hidden Markov model and a phylogeny, and
-discrete moves sit outside it as an operation that builds a new objective
-rather than a step within one. On the phylogenetic side that currently
-delivers a validated simulator, Felsenstein pruning across four backends, and
-branch lengths, exchangeabilities and stationary frequencies fitted by
-automatic differentiation and recovered within their confidence intervals.
-This document states the theory behind all of it, and holds the captions for
-the figures the quality-assurance suite emits, so that a plot and its
-description cannot drift apart.
+Phylogenetic inference is a discrete search whose every objective evaluation
+contains a continuous optimization, and the two halves do not separate: a
+better topology scored with badly fitted parameters looks worse than a poor
+one scored well. This document reports machinery for that problem, built to
+the standard that each claim is pinned against a source sharing no code with
+what it checks. The optimization interface is model-agnostic by construction
+--- an unconstrained parameter vector, a differentiable objective, and a map
+back to named constrained parameters --- and fits a Potts chain, a hidden
+Markov model, branch lengths and the general time-reversible model through
+the same three methods. Discrete moves sit deliberately outside it: a move
+changes what the parameter vector means, so it builds a new objective rather
+than stepping within one, and the topology search that does so needed no
+change to the optimizer. Felsenstein pruning agrees with brute-force
+marginalization to $4.0 \times 10^{-14}$ relative across three backends;
+fitted parameters are recovered inside intervals whose coverage is measured
+against its nominal rate; hill climbing reaches the exhaustively enumerated
+optimum, and the alignment size at which it recovers the generating topology
+is measured against a stated bound. A reinforcement-learning estimator is
+checked against an exact enumeration of its own gradient, and the cheap
+reward a tree-searching agent would train on is validated against the
+maximized one it replaces --- correlation $0.9568$ over all $105$ topologies
+on six taxa, at $323$ times less cost. No comparison against established
+inference software has been run, and no trained policy proposes moves yet;
+Section~\ref{sec:planned} states what those claims would require.
 \end{abstract}
 
 \tableofcontents
@@ -86,37 +92,87 @@ approach (simulation, models) in line with the roadmap, not an exhaustive record
 detail, plots, and results for support are linked to dedicated supporting documents,
 e.g. the results of a dedicated study to find the best of a number of approaches.
 
-\section{Scope and status}
+\section{Introduction}
+\label{sec:intro}
 
-The goal is Milestone~8 of the project roadmap: a policy that proposes tree
-rearrangements and beats classical hill-climbing on held-out simulated data
-at a matched evaluation budget. Everything below is either what that needs or
-what has been built towards it.
+Inferring a phylogeny is a mixed discrete--continuous optimization problem.
+The discrete half is a search over tree topologies, whose count grows as
+$(2n-5)!!$ and passes $10^{18}$ by twenty taxa. The continuous half is a fit,
+per candidate, of that tree's branch lengths and substitution parameters ---
+and the two do not separate, because a better topology scored with badly
+fitted parameters looks worse than a poor one scored well. Every evaluation
+of the discrete objective therefore contains a continuous optimization.
 
-Built and validated: the $k$-state Jukes--Cantor and general time-reversible
-substitution models with their simulators; Felsenstein pruning in vectorized
-NumPy, differentiable PyTorch and Rust, each pinned against brute-force
-marginalization; the model-agnostic optimization interface and its optimizer,
-with confidence intervals from the observed information; branch lengths,
-exchangeabilities and stationary frequencies fitted and recovered against
-known truth; and NNI and SPR neighbourhood generators checked exhaustively
-against closed-form neighbour counts.
+Classical heuristics propose topological moves by a fixed, hand-designed
+rule: nearest-neighbour interchange, subtree prune-and-regraft, and their
+compositions, applied greedily. The question this project asks is whether a
+learned policy proposes better ones at a matched evaluation budget.
 
-Not built: subtree and site compression, a canonical topology key, GPU
-dispatch, the search loop that joins the move sets to the optimizer, the
-benchmark harness, and the reinforcement-learning agent itself. Sections
-covering those describe intent, and say so; everything else describes either
-mathematics that does not depend on this implementation, or behaviour a test
-pins.
+That question has a prerequisite the literature usually leaves implicit. A
+learned proposal policy is only worth building on top of machinery whose
+answers are known to be right, and "known to be right" has a specific
+meaning here: pinned against a source that shares no code with the thing it
+checks. This document reports that machinery and the checks that pin it.
 
-\section{Notation}
+\subsection{Contributions}
+\label{sec:contributions}
+
+\begin{enumerate}
+  \item An optimization interface that is model-agnostic by construction ---
+    an unconstrained parameter vector, a differentiable objective, and a map
+    back to named constrained parameters --- demonstrated by fitting four
+    instances through it unchanged: a Potts chain, a hidden Markov model,
+    branch lengths on a tree, and the general time-reversible model
+    (Section~\ref{sec:opt-interface}).
+  \item The identification of discrete moves as an operation \emph{outside}
+    that interface: a move changes what the parameter vector means, so it
+    constructs a new objective rather than stepping within one
+    (Section~\ref{sec:opt-interface}). Tree search is the first consumer of
+    that seam, and needed no change to the optimizer.
+  \item Felsenstein pruning in three backends, each pinned against
+    brute-force marginalization to a relative deviation of
+    $4.0 \times 10^{-14}$ (Figure~\ref{fig:backend-agreement}).
+  \item Parameter recovery inside confidence intervals from the observed
+    Fisher information, with the intervals' coverage measured against its
+    nominal rate rather than assumed (Figures~\ref{fig:opt-recovery} and
+    \ref{fig:opt-coverage}), and the estimability of the root branch pair
+    established rather than asserted (Figure~\ref{fig:opt-branch-recovery}).
+  \item The data requirement for topology recovery, measured against this
+    project's own accuracy bound (Figure~\ref{fig:topology-accuracy}).
+  \item A reinforcement-learning estimator checked against an exact
+    trajectory-enumeration oracle, and a cheap phylogenetic reward validated
+    against the expensive one it stands in for
+    (Figure~\ref{fig:rl-reward-surface}).
+\end{enumerate}
+
+\subsection{What this document does not claim}
+\label{sec:not-claimed}
+
+No comparison against IQ-TREE~2, RAxML-NG, or any other established
+inference package has been run. Nothing here is evidence of competitiveness,
+and the figures that would supply it are marked as outstanding in
+Section~\ref{sec:planned}. The largest problem exercised is eight taxa,
+bounded by the exhaustive enumeration used as the oracle; no result is
+reported on GPU hardware; and no trained policy proposes topological moves
+yet. Claims are confined to what a test pins.
+
+\section{Methods}
+\label{sec:methods}
+
+The machinery, in the order it composes: what the symbols mean, the
+likelihood, the simulator that generates data with the truth retained, the
+search over topologies, the continuous fit inside it, and the
+reinforcement-learning formulation that would replace the search's proposal
+rule.
+
+\subsection{Notation}
 
 Two vocabularies are kept apart, because the machinery in this document is
 deliberately indifferent to which application it serves. The first describes
 an optimization problem; the second describes a phylogeny. Nothing in the
 first refers to a tree.
 
-\subsection{The optimization abstraction}
+\subsubsection{The optimization abstraction}
 \label{sec:notation-abstraction}
 
 An objective is a differentiable scalar $\objective(\params)$ over an
@@ -145,7 +201,7 @@ within an optimization; it constructs a new objective.
   \label{tab:symbols-abstraction}
 \end{table}
 
-\subsection{The phylogenetic application}
+\subsubsection{The phylogenetic application}
 \label{sec:notation-application}
 
 Let $\states$ be the finite state space of a single character, with
@@ -181,7 +237,7 @@ unobserved ancestors, and $\rootnode$ denotes the root.
   \label{tab:symbols}
 \end{table}
 
-\section{The likelihood}
+\subsection{The likelihood}
 
 Sites are modelled as independent given $(\tree, \branch, \Q, \bpi)$, so the
 log-likelihood is a sum over columns,
@@ -199,7 +255,7 @@ linear in $n$ by exploiting the tree's conditional independence structure
 \citep{felsenstein2004}; it is the sum-product algorithm on a tree
 \citep{mackay2003, koller2009}.
 
-\subsection{Pruning}
+\subsubsection{Pruning}
 
 Define the partial likelihood $L_u(i)$ as the probability of the data at the
 leaves below node $u$, given that $u$ is in state $i$. At a leaf with
@@ -249,7 +305,8 @@ scaling factors. Rescaling changes the arithmetic but not the result: the
 rescaled and direct computations must agree to within floating-point
 tolerance on small problems where both run.
 
-\subsection{Differentiable backends}
+\subsubsection{Differentiable backends}
+\label{sec:backends}
 
 Branch lengths $\branch$ are what gradient-based fitting and tree search
 differentiate through, so an accelerated backend must keep them in the
@@ -264,7 +321,8 @@ $\epsilon = 10^{-6}$) to $\mathrm{atol} = 10^{-6}$, the coarser bound set by
 the finite-difference truncation and rounding error at that step size, not
 by the autodiff computation itself.
 
-\subsection{Rate variation across sites}
+\subsubsection{Rate variation across sites}
+\label{sec:rate-variation}
 
 Sites evolve at different rates. The standard treatment draws a
 site-specific rate multiplier $r$ from a discretized gamma distribution with
@@ -280,7 +338,7 @@ mean one, and averages the site likelihood over the $c$ rate categories,
 multiplying the cost of a likelihood evaluation by $c$
 \citep{felsenstein2004}. \emph{Not yet implemented.}
 
-\section{Simulation}
+\subsection{Simulation}
 
 Simulation is how the implementation is tested: draw data from known
 parameters, then check that each component recovers what the generating model
@@ -317,10 +375,10 @@ directly from each fixture's yaml; Figure~\ref{fig:sim-example} there shows
 a complete generated instance at the smallest of them --- the Newick string
 and the leading simulated sites of the alignment.
 
-\section{Tree search}
+\subsection{Tree search}
 \label{sec:search}
 
-\subsection{The size of the problem}
+\subsubsection{The size of the problem}
 
 The number of distinct unrooted binary topologies on $n$ taxa is the double
 factorial $(2n - 5)!!$ \citep{rosen2019}, which grows faster than exponentially
@@ -345,7 +403,7 @@ scores better.
   \label{tab:treecount}
 \end{table}
 
-\subsection{Move sets}
+\subsubsection{Move sets}
 
 Two rearrangement neighbourhoods define the search graph
 \citep{felsenstein2004}: NNI and SPR, defined in
@@ -359,7 +417,7 @@ and recomputing only the invalidated path is what makes tree search
 affordable, and is a design requirement on the likelihood engine rather than
 an optimization to add later.
 
-\subsection{Canonical serialization}
+\subsubsection{Canonical serialization}
 \label{sec:canonical}
 
 Newick notation is not a unique encoding: one topology admits many strings,
@@ -402,7 +460,7 @@ the same string exactly when they are the same topology, checked by randomly
 re-rooting and permuting the children of one tree and against distinct trees;
 and parsing a canonical string reproduces the tree that produced it.
 
-\subsection{Extensions to the move set}
+\subsubsection{Extensions to the move set}
 \label{sec:extensions}
 
 Three extensions target the same bottleneck: the number of likelihood
@@ -444,7 +502,7 @@ replacing recurring subtrees by dictionary symbols --- an extended alphabet
 over the canonical string \citep{blahut2003} --- shortening the sequence the
 transformer attends over.
 
-\subsection{Hill climbing}
+\subsubsection{Hill climbing}
 \label{sec:hill-climbing}
 
 The simplest search that uses the move sets above: score the current
@@ -468,7 +526,7 @@ be a step inside a fit over a fixed-length vector. It builds a new objective,
 and this loop is what owns that construction. The optimizer needed no
 knowledge of trees to serve it.
 
-\subsection{Parsimony and likelihood}
+\subsubsection{Parsimony and likelihood}
 
 The \emph{large parsimony} problem asks for the topology minimizing the
 number of state changes needed to explain the data. We keep the search
@@ -480,7 +538,7 @@ counting changes, and it is statistically consistent where parsimony can be
 positively misleading \citep{felsenstein2004} --- at the cost of a far more
 expensive score.
 
-\section{Gradients}
+\subsection{Gradients}
 
 Fitting $(\branch, \Q, \bpi)$ for a candidate topology is a continuous
 optimization, and gradients make it tractable. Differentiating
@@ -526,7 +584,7 @@ with $h$ chosen to balance truncation against round-off. This check is a
 required test for any differentiable component, and is implemented for every
 objective the optimizer accepts.
 
-\subsection{The optimization interface}
+\subsubsection{The optimization interface}
 \label{sec:opt-interface}
 
 The optimizer is deliberately ignorant of what it optimizes. It takes an
@@ -563,7 +621,7 @@ tree with that pair fitted as their sum. The intervals are asymptotic, and
 Section~\ref{sec:qa} reports how fast they reach their nominal coverage and
 shows the root invariance directly.
 
-\section{Reinforcement-learning formulation}
+\subsection{Reinforcement-learning formulation}
 \label{sec:rl}
 
 Classical heuristics propose moves by a fixed, hand-designed rule. We ask
@@ -589,7 +647,7 @@ likelihood reached \emph{per likelihood evaluation}: every method converges
 given unbounded evaluations, so the comparison against a hill-climbing
 baseline has to be made at equal budget.
 
-\subsection{Why this reward, and what it implies}
+\subsubsection{Why this reward, and what it implies}
 \label{sec:rl-reward}
 
 The reward is a difference of log-likelihoods, which is not an arbitrary
@@ -615,7 +673,7 @@ defensible when a trajectory may not terminate, but here episodes are capped
 by an evaluation budget, so the return is a finite sum and needs no
 discounting to converge.
 
-\subsection{Policy gradient and its baseline}
+\subsubsection{Policy gradient and its baseline}
 \label{sec:rl-gradient}
 
 The action set is the move neighbourhood, whose size varies with $n$ and with
@@ -642,7 +700,7 @@ baseline the gradient magnitude varies by orders of magnitude between
 problems. A learned state-value estimate $\hat{v}(s_t)$ is the usual choice
 and is the one that makes $G_t - b(s_t)$ an advantage.
 
-\subsection{Credit assignment}
+\subsubsection{Credit assignment}
 \label{sec:rl-credit}
 
 Tree search makes the credit-assignment problem sharp. A move that unlocks a
@@ -658,7 +716,7 @@ beating it requires the agent to accept some, which is the behaviour the
 variance-reduced estimator has to be able to learn rather than average away
 \citep{suttonbarto2018, lapan2020}.
 
-\subsection{Status: the estimator, on a landscape that is not a tree}
+\subsubsection{Status: the estimator, on a landscape that is not a tree}
 \label{sec:rl-status}
 
 The machinery above is implemented and the phylogenetic environment is not.
@@ -698,7 +756,7 @@ route around a barrier a greedy searcher walks into. This is a harder problem
 than the tree fixture of Section~\ref{sec:hill-climbing}, where the optimum
 led the runner-up by $41.6$ log units and hill climbing was never challenged.
 
-\subsection{The phylogenetic environment, and the reward it can afford}
+\subsubsection{The phylogenetic environment, and the reward it can afford}
 \label{sec:rl-phylo}
 
 The application instance is now built: a state is a topology, an action is a
@@ -748,7 +806,7 @@ than any missing machinery.
 
 \emph{Not yet implemented:} PPO and a learned state-value baseline.
 
-\section{Computational structure}
+\subsection{Computational structure}
 
 Likelihood evaluation dominates the run time: every proposed move costs at
 least one evaluation, and search proposes many. Its structure is favourable
@@ -772,7 +830,7 @@ $O(n \, m \, k \, c)$ floating-point values for $n$ taxa, $m$ sites, $k$
 states, and $c$ rate categories, before any caching of unchanged subtrees
 across proposals.
 
-\section{Quality assurance}
+\section{Results}
 \label{sec:qa}
 
 The test suite is expected to establish scientific validity, not to exercise
@@ -788,8 +846,18 @@ build of this document, from the fixtures the test suite runs, and its
 caption is read verbatim from the file its generating script writes. So a
 figure cannot drift from its description, nor either from what is tested.
 That holds for all of them; the paragraphs below say only why each is here,
-since its caption already says what it shows. Figure~\ref{fig:sim-tree} opens
-the sequence with the object everything downstream consumes.
+since its caption already says what it shows.
+
+The results are grouped by the claim they support, not by the order the
+build emits them. Each subsection states one claim and the evidence for it.
+
+\subsection{The simulator generates what it says it generates}
+\label{sec:res-sim}
+
+Everything downstream consumes simulated data, so a fault here would be
+invisible in every figure after it and fatal to all of them.
+Figure~\ref{fig:sim-tree} opens the sequence with the object everything
+downstream consumes.
 
 \qacaptionread{figures/sim_tree_caption.txt}{\simTreeCaption}
 \begin{figure}[htbp]
@@ -841,6 +909,27 @@ factorized structure: a Potts chain in an external field and a discrete
 hidden Markov model. Neither is phylogenetic, which is the point. An
 interface demonstrated on one model is shaped by that model.
 
+\subsection{The likelihood agrees with a source that shares no code with it}
+\label{sec:res-likelihood}
+
+Three backends compute the same recursion, so agreement among them says only
+that they were written from the same description. What licenses the
+recursion is brute-force marginalization over every ancestral assignment,
+which shares no code with it and costs $k^m$ for $m$ internal nodes --- the
+reason the check runs where it does and not at scale.
+Figure~\ref{fig:backend-agreement} reports it.
+
+\qacaptionread{figures/backend_agreement_caption.txt}{\backendAgreementCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\linewidth]{figures/backend_agreement}
+  \caption{\backendAgreementCaption}
+  \label{fig:backend-agreement}
+\end{figure}
+
+\subsection{The optimizer recovers parameters it was not told}
+\label{sec:res-opt}
+
 \qacaptionread{figures/opt_recovery_caption.txt}{\optRecoveryCaption}
 \begin{figure}[htbp]
   \centering
@@ -873,6 +962,9 @@ Section~\ref{sec:reversibility} as a statement about estimability. The pair
 contributes one parameter, not two, and fitting both leaves the observed
 information singular and every interval in panel~(a) undefined.
 
+\subsection{The phylogenetic fit recovers its own parameters}
+\label{sec:res-phylo-fit}
+
 \qacaptionread{figures/opt_branch_recovery_caption.txt}{\optBranchRecoveryCaption}
 \begin{figure}[htbp]
   \centering
@@ -901,6 +993,9 @@ it. Below eight taxa the enumeration in panel~(b) is affordable, and it is
 what turns ``the search found the best tree'' from an assertion into a
 checkable claim --- the only independent oracle this project has for the
 discrete half of the problem.
+
+\subsection{The search finds the best tree, and needs this much data to do it}
+\label{sec:res-search}
 
 \qacaptionread{figures/search_trajectory_caption.txt}{\searchTrajectoryCaption}
 \begin{figure}[htbp]
@@ -934,6 +1029,24 @@ the same problem. Panel~(b) exists because the cheap surface has exactly one
 free parameter, and a result that held only at the value we happened to pick
 would not be a result.
 
+Both of those run on one alignment. Whether the search recovers the
+generating tree at all depends on whether the alignment carries the signal to
+distinguish it, and \texttt{ROADMAP.md} sets a bound on the resulting error
+--- a normalized Robinson--Foulds distance of $0.05$ --- that nothing had
+measured. Figure~\ref{fig:topology-accuracy} measures it against the site
+count, which is the quantity that decides the answer.
+
+\qacaptionread{figures/topology_accuracy_caption.txt}{\topologyAccuracyCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.8\linewidth]{figures/topology_accuracy}
+  \caption{\topologyAccuracyCaption}
+  \label{fig:topology-accuracy}
+\end{figure}
+
+\subsection{The reward an agent can afford tracks the one it stands in for}
+\label{sec:res-reward}
+
 \qacaptionread{figures/rl_reward_surface_caption.txt}{\rlRewardSurfaceCaption}
 \begin{figure}[htbp]
   \centering
@@ -941,6 +1054,95 @@ would not be a result.
   \caption{\rlRewardSurfaceCaption}
   \label{fig:rl-reward-surface}
 \end{figure}
+
+\section{Discussion}
+\label{sec:discussion}
+
+Two results are worth separating from the rest, because they were not what
+was expected.
+
+The first is that the abstraction held. An optimization interface written
+without reference to any model was expected to need widening once a real
+application arrived; it did not. Branch lengths, exchangeabilities and
+stationary frequencies fit through the same three methods that fit a Potts
+chain, and the topology search that consumes them required no change to the
+optimizer at all. The seam that made that work is the one in
+Section~\ref{sec:opt-interface}: a discrete move changes what the parameter
+vector means, so it builds a new objective instead of stepping inside one.
+Stating that as an exclusion, rather than absorbing moves into the optimizer,
+is what kept the interface model-agnostic.
+
+The second is that the fitted likelihood does not totally order topologies.
+Fitting each of the 105 unrooted topologies on six taxa produces only 52
+distinct maxima: where the branch that would distinguish two trees is fitted
+to zero, both collapse to the same polytomy and share a likelihood exactly.
+This is a property of the objective, not of the optimizer, and it has a
+practical consequence --- any statistic over topology rankings is
+discontinuous in the fitted values, so a rank correlation computed on them is
+not reproducible across machines. Section~\ref{sec:res-reward} reports a
+linear correlation for that reason.
+
+\subsection{Threats to validity}
+\label{sec:threats}
+
+The exhaustive enumeration that makes ``found the best tree'' checkable also
+bounds where it can be checked: $(2n-5)!!$ passes ten thousand at eight
+taxa. Every search result here is therefore established at a size where
+hill climbing is not challenged --- on the six-taxon fixture the optimum
+leads the runner-up by $41.6$ log units and greedy reaches it from every
+start. That the searches succeed is evidence the machinery is correct, and no
+evidence at all about the hard instances the project exists to attack.
+
+The simulated data is generated by the same models the likelihood assumes, so
+model misspecification is untested by construction. Real alignments violate
+those assumptions, and Milestone~9 is where that is confronted.
+
+\subsection{Planned work}
+\label{sec:planned}
+
+The claims this document cannot yet make, and the figures that would make
+them:
+
+\begin{description}
+  \item[Competitiveness.] Maximized log-likelihood against evaluation budget,
+    for the learned policy, hill climbing, IQ-TREE~2 and RAxML-NG on shared
+    seeds. Requires those packages in the environment and the benchmark
+    harness of Milestone~7. Until it exists, no statement in this document
+    compares the method to established software.
+  \item[A trained phylogenetic agent.] The learning curve of a policy over
+    tree moves. The obstacle is a fixture rather than machinery: separating a
+    policy from greedy needs a problem harder than exhaustive enumeration can
+    referee, so the oracle that validates the search cannot validate the
+    agent that replaces it.
+  \item[Scale.] Runtime and memory against $n$ and $L$ across the range
+    \texttt{ROADMAP.md} specifies. Memory is deterministic and can be
+    reported here; runtime cannot, since a figure in this document is
+    regenerated by continuous integration on hardware that varies, and a
+    timing committed into it would neither reproduce nor mean anything. Those
+    numbers live in the benchmark suite.
+  \item[Rate variation across sites, and GPU dispatch.] Both are specified in
+    Section~\ref{sec:rate-variation} and Section~\ref{sec:backends} and
+    neither is built.
+\end{description}
+
+\section{Conclusions}
+\label{sec:conclusions}
+
+A model-agnostic optimization interface serves four instances unchanged, and
+excluding discrete moves from it is what makes that possible rather than a
+limitation of it. Felsenstein pruning agrees with brute-force marginalization
+to $4.0 \times 10^{-14}$ relative across three backends. Parameters are
+recovered inside intervals whose coverage is measured rather than assumed.
+Hill climbing reaches the exhaustively enumerated optimum, and the alignment
+size at which it does so is measured against this project's own accuracy
+bound. A reinforcement-learning estimator is checked against an exact
+enumeration of its own gradient, and the cheap reward a phylogenetic agent
+would train on is validated against the expensive one it replaces.
+
+What remains is the part the project is named for: a policy that proposes
+better moves than the hand-designed rule, demonstrated against established
+software on problems large enough for the comparison to matter. The
+machinery for it is built and pinned. The evidence is not.
 
 \section{Sources}
 
