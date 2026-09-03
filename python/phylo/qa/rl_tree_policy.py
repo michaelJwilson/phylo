@@ -62,16 +62,15 @@ ROLLOUTS_PER_START = 16
 # same reason.
 TRAINING_SEEDS = 8
 
-# 80 episodes to fit a one-parameter policy. Chosen against the alternative
-# rather than by habit: over budgets of 40, 80, 160 and 640 episodes the
-# success rate moves from 0.505 to 0.487 and the weight rises monotonically,
-# so a larger budget makes the policy *more* deterministic and therefore more
-# like the baseline it is being compared against. The null result is a
-# property of the environment, not of an undertrained agent, and
-# `test_search_tree_policy.py` pins that at a second budget. The smaller one
-# is used here because every pull request regenerates this figure.
-ITERATIONS = 10
-BATCH = 8
+# 640 episodes, and the budget is a measurement rather than a habit. At 80 the
+# policy leads greedy on 13 of 16 seeds and is still *worse on average*,
+# because three of those seeds never leave the neighbourhood of the untrained
+# policy: training has not converged, and a result read there measures the
+# budget. At 640 the spread across seeds falls from 0.130 to 0.014 and the
+# comparison is stable. Reporting the shorter budget's 13-of-16 while its mean
+# sits below the baseline would be choosing the statistic that flatters.
+ITERATIONS = 40
+BATCH = 16
 
 
 def _environment(
@@ -109,7 +108,7 @@ def _environment(
 
 def measure(
     params: SimulationParams,
-) -> tuple[np.ndarray, np.ndarray, float, list[float], int, int]:
+) -> tuple[np.ndarray, np.ndarray, float, list[float], int, int, float]:
     """Run the comparison this figure reports.
 
     Parameters
@@ -119,11 +118,12 @@ def measure(
 
     Returns
     -------
-    tuple[np.ndarray, np.ndarray, float, list[float], int, int]
+    tuple[np.ndarray, np.ndarray, float, list[float], int, int, float]
         Every topology's score ascending; the scores of the states no NNI move
         improves; greedy's success rate; the learned policy's success rate per
-        training seed; the number of episodes each policy was trained on; and
-        the taxon count.
+        training seed; the number of episodes each policy was trained on; the
+        taxon count; and an untrained policy's success rate, the control that
+        separates "learned nothing" from "learned the baseline".
     """
     environment, taxa = _environment(params, MoveSet.NNI)
     topologies = list(enumerate_topologies(taxa))
@@ -151,6 +151,21 @@ def measure(
         [greedy_rollout(environment, start, HORIZON).states[-1] for start in starts]
     )
 
+    untrained = LinearPolicy(environment.n_features())
+    # One generator for the whole sweep. Constructing it inside the
+    # comprehension would reseed it per rollout and measure a single episode
+    # repeated, which reads as a rate of exactly zero.
+    control_rng = np.random.default_rng(99)
+    control = reached(
+        [
+            rollout(environment, untrained, control_rng, HORIZON, start=start).states[
+                -1
+            ]
+            for start in starts
+            for _ in range(ROLLOUTS_PER_START)
+        ]
+    )
+
     learned = []
     episodes = 0
     for seed in range(TRAINING_SEEDS):
@@ -174,7 +189,7 @@ def measure(
                 ]
             )
         )
-    return scores, optima, greedy, learned, episodes, len(taxa)
+    return scores, optima, greedy, learned, episodes, len(taxa), control
 
 
 def build_figure(
@@ -184,6 +199,7 @@ def build_figure(
     learned: list[float],
     episodes: int,
     n_taxa: int,
+    control: float,
     params: SimulationParams,
 ) -> tuple[Figure, str]:
     """Assemble the two-panel figure and its caption.
@@ -265,11 +281,11 @@ def build_figure(
         f"standard deviation of {deltas.std(ddof=1):.4f} across seeds, and "
         f"{latex_integer(int((deltas > 0).sum()))} of "
         f"{latex_integer(TRAINING_SEEDS)} seeds ahead. That is not a "
-        "difference, and it is not undertraining: over a 16-fold range of "
-        "budget the rate moves from 0.505 to 0.487 while the fitted weight "
-        "rises, so more training makes the policy more deterministic and so "
-        "more like the baseline. Panel (a) says why it cannot be one here: an "
-        "episode ends "
+        "difference. It is not that nothing was learned: an untrained policy, "
+        f"uniform over the same moves, reaches the maximum on {control:.3f} of "
+        "episodes, so training moves the policy across most of the distance "
+        "from chance to the baseline and then stops there. Panel (a) says why "
+        "it stops there: an episode ends "
         "when no move improves, so every run terminates at one of those rules "
         "and the task is which trap to enter rather than how to leave it, "
         "while a policy scoring moves by this environment's single feature -- "

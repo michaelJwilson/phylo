@@ -162,5 +162,8 @@ whether or not it has members yet.
 .. automodule:: phylo.qa.rl_reward_surface
    :members:
 
+.. automodule:: phylo.qa.rl_tree_policy
+   :members:
+
 .. automodule:: phylo.qa.topology_accuracy
    :members:
