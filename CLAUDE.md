@@ -3,13 +3,13 @@
 Guidance for Claude Code when working in this repository.
 
 ## Writing Style
-1.  **Time is money and context windows are finite and vital:** Be as concise as possible, use active voice, and lead with (only) the most important facts first.
+1.  **(Reviewer) Time is money and context windows are finite and vital:** Be as concise as possible, use active voice, and lead with (only) the most important facts first.
 2.  **Be precise:** Use exact facts and numbers ("40% faster") instead of vague intensifiers ("much faster").
 3.  **Stay neutral and objective:** Avoid hype, subjective opinions, and weak qualifiers. Use nouns and verbs; avoid adjectives and adverbs.
 4.  **Provide evidence:** Back every claim in PRs/commits with benchmark numbers, test validated outputs, or reproductions.
 5.  **Maintain formatting:** Apply naming, terminology, and syntax consistently.
 
-**Expected Reader:** a well-educated developer with scientific and performance-computing background, but not an application expert, e.g. phylogenetics. Keep tech. doc. streamlined — hyperlinks and citations over inline derivation — and push required application background (e.g. NNI, other standard algorithms) into a dedicated appendix, cited from the point of use rather than re-derived there. Treat the main text as a high-level overview of the current best-known approach (simulation, models, results) in terms of the roadmap, not an exhaustive record; link out to supporting docs, with plots, and results for dedicated studies that informed the technical doc. Adopt the style of an academic paper/letter.
+**Expected Reader:** a well-educated developer with scientific and performance-computing background, but not an application expert, e.g. phylogenetics. Keep tech. doc. streamlined — hyperlinks and citations over inline derivation — and push required application background (e.g. NNI, other standard algorithms) into a dedicated appendix, cited from the point of use rather than re-derived there. Treat the main text as a high-level overview of the current best-known approach (simulation, models, results) in terms of the roadmap, not an exhaustive record; link out to supporting docs, with plots, and results for dedicated studies that informed the technical doc. Adopt the style of an academic paper, supported by textbook style appendices on domain-specific material likely new to the developer.
 
 ## Project
 `phylo` is a high-performance scientific repository. Correctness and reproducibility of numerical and scientific results take priority over convenience.
@@ -34,9 +34,8 @@ This file is authoritative. The remainder exist so there is not replication, and
 | `TICKETS.md` | The titles of the tickets that remain between `STATUS.md` and `ROADMAP.md` |
 | `CHANGELOG.md` | What has landed, per dated release section; built from `changelog.d/` fragments by `towncrier` |
 | `docs/tex/` | The technical document: background, equations, algorithms |
-| `docs/CLAUDE.md` | How that document is built and kept true: what is committed, what is generated, and what a caption may report |
 
-`python/phylo/sim/`, `likelihood/`, `opt/`, `learn/`, `search/`, `qa/`, `infra/`, and `docs/` each carry their own `CLAUDE.md`. Those add what applies only inside one module; they never override this file. A rule that binds the whole repository belongs here, not in one of them.
+`python/phylo/sim/`, `likelihood/`, `opt/`, `learn/`, `search/`, `qa/`, `infra/`, and `docs/` each carry their own `CLAUDE.md`. Those add what applies only inside one module; they never override this file expect for the vital **writing style rules to be adopted at all times**. A rule that binds the whole repository belongs here, not in one of them.
 
 ## Environment & Tooling
 *   **Python (3.12):** Manage via `uv`. Run `uv sync --locked --all-extras`. Regenerate locks with `uv lock` and commit `uv.lock` in the same PR.
@@ -67,6 +66,7 @@ This file is authoritative. The remainder exist so there is not replication, and
 *   **Cross-Device Agreement Is a Tolerance:** `float32` and `float64` behave differently across CPU, CUDA, and Metal, and deep recursions accumulate that. Agreement is checked against the tolerance stated in `likelihood/CLAUDE.md`, with the measurements it is derived from, and implemented in `phylo.likelihood.device`, never bitwise. A discrepancy inside it is not a bug and must not be "fixed". Two rules that fall out of it: the tolerance is **relative**, because the log-likelihood is a sum over sites and an absolute bound fixed at one problem size does not transfer to another; and it is keyed on the **lowest precision** in the comparison, because Metal cannot do `float64` and one bound loose enough for `float32` would let a broken `float64` backend pass.
 *   **No Coverage Theatre:** Tests asserting only output shapes or successful execution without exceptions are forbidden. Leave gaps unwritten and track them as GitHub issues rather than writing meaningless tests.
 *   **Scientific Outputs:** The suite must emit plots and tables for the LaTeX technical document. Update the LaTeX captions concurrently. Every figure is rendered from the code it reports on, ships with a caption naming the seed, sizes and model that produced it, and is committed under `docs/tex/figures/` so a changed plot is visible in review rather than only after a document build.
+*   **Time is money:** test and build frameworks should be justified, time/computationally, e.g. cahced; a high priority is to standup a minimal implementation against the ROADMAP.md with corresponding ablation studies with a fast test-driven development cycle.  Rely on the tests run on a PR as final validation where appropriate (late in development), rather than duplicating the effort - you will monitor the PR and fix issues before merging.
 
 ## Technical Document & Reference Sources
 `docs/tex/` is treated as code. Cite these texts where they carry the material, and state any deviation from their standard algorithms explicitly. The core references are a routing table, grouped by what they inform:
