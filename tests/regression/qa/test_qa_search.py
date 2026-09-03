@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 from phylo.qa import search_topologies, search_trajectory
 from phylo.sim.params import SimulationParams, load_simulation_params
-from phylo.sim.tree import Node
+from phylo.sim.tree import Node, preorder
 
 from tests._fixtures import FIXTURES_DIR
 
@@ -207,6 +207,6 @@ def test_the_search_finds_the_generating_tree_and_rejects_a_worse_one() -> None:
     assert recovered
     assert found_score > other_score
     assert difference
-    assert all(
-        node.branch_length is not None or node.name == "root" for node in (found, other)
-    )
+    for root in (found, other):
+        for node in preorder(root):
+            assert node is root or node.branch_length is not None
