@@ -22,8 +22,24 @@ from phylo.opt.potts import PottsObjective
 
 # The whole point of the abstraction: the optimizer may not know what it is
 # optimizing. Stated as module prefixes rather than names so a new
-# application module is covered the day it is added.
-FORBIDDEN_PREFIXES = ("phylo.sim", "phylo.likelihood", "phylo.search")
+# application module is covered the day it is added. `phylo.sim.graph` and
+# `phylo.sim.potts` are named individually rather than covered by a bare
+# `phylo.sim` prefix: they are model-agnostic Markov-random-field machinery
+# with no phylogenetic content -- symmetric to `phylo.numerics`, which `opt`
+# already imports freely -- so `phylo.opt.potts.simulate_chains` may build a
+# 1-D chain through them (issue #170) while every phylogenetics-specific
+# submodule of `phylo.sim` (Newick, trees, the JC/GTR alignment simulator)
+# stays forbidden.
+FORBIDDEN_PREFIXES = (
+    "phylo.sim.jc",
+    "phylo.sim.gtr",
+    "phylo.sim.simulate",
+    "phylo.sim.newick",
+    "phylo.sim.tree",
+    "phylo.sim.params",
+    "phylo.likelihood",
+    "phylo.search",
+)
 
 
 def _imported_modules(source: Path) -> set[str]:

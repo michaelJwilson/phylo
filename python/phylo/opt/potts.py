@@ -19,6 +19,15 @@ one optimizer is expected to serve both.
 ``h``, so ``h`` is fixed to ``logsumexp(h) == 0`` via
 :func:`phylo.opt.constrain.log_simplex`. Without that the model is
 unidentifiable and a fitted field has no value to compare against truth.
+
+**The chain is the ``N = 1`` lattice (issue #170).** ``simulate_chains``
+below builds a 1-D graph via ``phylo.sim.graph.lattice_graph`` and dispatches
+to ``phylo.sim.potts.simulate_potts``'s exact backward-message sampler,
+rather than carrying its own copy of that recursion. `opt/CLAUDE.md`'s
+general "no application imports" rule names ``phylo.sim`` because most of it
+is phylogenetics-specific (Newick, trees, the JC/GTR alignment simulator);
+``phylo.sim.graph`` and ``phylo.sim.potts`` are the model-agnostic exception,
+symmetric to ``phylo.numerics``, so this import is not one of those.
 """
 
 from __future__ import annotations
@@ -31,8 +40,9 @@ import numpy as np
 import torch
 import yaml
 
-from phylo.numerics import sample_rows
 from phylo.opt.constrain import free_from_log_simplex, log_simplex
+from phylo.sim.graph import BoundaryCondition, lattice_graph
+from phylo.sim.potts import PottsLatticeParams, simulate_potts
 
 _REQUIRED_FIELDS = frozenset(
     {"seed", "n_chains", "chain_length", "n_states", "coupling", "field"}
@@ -154,9 +164,14 @@ def log_partition(
 def simulate_chains(params: PottsParams) -> np.ndarray:
     """Draw ``n_chains`` exact samples from the truth in ``params``.
 
-    Exact, not MCMC: the chain's backward messages give the conditional
-    distributions directly, so the fixture carries no equilibration
-    assumption (root ``CLAUDE.md``, "Simulate Component-Wise").
+    A thin wrapper over the general lattice sampler: the chain is built as
+    the ``N = 1`` case of :func:`~phylo.sim.graph.lattice_graph`, and
+    :func:`~phylo.sim.potts.simulate_potts` dispatches it to the exact
+    backward-message sampler -- no MCMC, no equilibration assumption (root
+    ``CLAUDE.md``, "Simulate Component-Wise"). ``burn_in``/``sweeps``/``thin``
+    are required fields of the general params type but unused on this exact
+    path, so they are set to inert values (0, 1, 1) rather than threaded
+    through ``PottsParams``, which has no such fixture-level knobs.
 
     Parameters
     ----------
@@ -168,23 +183,22 @@ def simulate_chains(params: PottsParams) -> np.ndarray:
     np.ndarray
         Integer states, shape ``(n_chains, chain_length)``.
     """
-    rng = np.random.default_rng(params.seed)
-    field = params.field
-    log_transfer = params.coupling * np.eye(params.n_states) + field[np.newaxis, :]
-
-    # backward[i] is the log weight of everything from site i+1 onward, given
-    # the state at site i; backward[-1] is empty and so zero.
-    backward = np.zeros((params.chain_length, params.n_states))
-    for i in range(params.chain_length - 2, -1, -1):
-        backward[i] = _logsumexp(log_transfer + backward[i + 1][np.newaxis, :], axis=1)
-
-    chains = np.empty((params.n_chains, params.chain_length), dtype=np.int64)
-    first = _softmax(field + backward[0])
-    chains[:, 0] = rng.choice(params.n_states, size=params.n_chains, p=first)
-    for i in range(1, params.chain_length):
-        conditional = _softmax(log_transfer + backward[i][np.newaxis, :], axis=1)
-        chains[:, i] = sample_rows(rng, conditional, chains[:, i - 1])
-    return chains
+    graph = lattice_graph(
+        (params.chain_length,), BoundaryCondition.OPEN, params.coupling
+    )
+    lattice_params = PottsLatticeParams(
+        n_states=params.n_states,
+        shape=(params.chain_length,),
+        boundary=BoundaryCondition.OPEN,
+        coupling=params.coupling,
+        field=params.field,
+        n_chains=params.n_chains,
+        burn_in=0,
+        sweeps=1,
+        thin=1,
+        seed=params.seed,
+    )
+    return simulate_potts(graph, params.field, params.seed, lattice_params)
 
 
 class PottsObjective:
@@ -260,17 +274,3 @@ class PottsObjective:
                 free_from_log_simplex(as_tensor),
             ]
         )
-
-
-def _logsumexp(values: np.ndarray, axis: int) -> np.ndarray:
-    peak = values.max(axis=axis, keepdims=True)
-    total = peak + np.log(np.exp(values - peak).sum(axis=axis, keepdims=True))
-    result: np.ndarray = total.squeeze(axis)
-    return result
-
-
-def _softmax(values: np.ndarray, axis: int = -1) -> np.ndarray:
-    shifted = values - values.max(axis=axis, keepdims=True)
-    weights = np.exp(shifted)
-    result: np.ndarray = weights / weights.sum(axis=axis, keepdims=True)
-    return result

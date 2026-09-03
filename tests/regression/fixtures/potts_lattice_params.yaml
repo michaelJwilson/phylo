@@ -1,0 +1,19 @@
+# Ground truth for the Potts-lattice reference fixture
+# (tests/regression/sim/test_potts.py). Every field is required -- see
+# python/phylo/sim/potts.py and python/phylo/sim/CLAUDE.md.
+#
+# A 3x3 open lattice: small enough that Gibbs sampling mixes in well under
+# the stated burn-in, large enough to exercise the general (non-1-D) path.
+#
+# The field is written in whatever gauge is convenient; the loader
+# canonicalizes it to logsumexp(h) == 0, since h and h + c are the same model.
+seed: 20260903
+n_states: 3
+shape: [3, 3]
+boundary: open
+coupling: 0.6
+field: [0.30, -0.10, -0.20]
+n_chains: 200
+burn_in: 300
+sweeps: 4
+thin: 3

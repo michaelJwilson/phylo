@@ -29,6 +29,17 @@ the rooted-binary-tree grammar, and counting distinct topologies for a
 given taxon count. `tree.py` holds only the `Node` structure and
 traversals; nothing outside `newick.py` builds or parses Newick strings.
 
+`graph.py` and `potts.py` (issue #170) are the one part of this module
+that names no phylogenetic application: a `PottsGraph` (nodes, a per-edge
+coupling, an explicit boundary condition), an N-D lattice built as an
+instance of it -- a 1-D chain is `lattice_graph((L,), ...)`, not a second
+type -- and a `k`-state Potts sampler on top. An open 1-D chain has an
+exact backward-message sampler; every other graph is sampled by
+single-site Gibbs/heat-bath MCMC. `phylo.opt.potts.simulate_chains` builds
+its 1-D chain on this rather than on its own copy of the recursion, which
+is why `opt/CLAUDE.md` names these two submodules as its one exception to
+"no application imports".
+
 ## Local rules
 
 - **Validate against the analytic result, never against our own likelihood.**

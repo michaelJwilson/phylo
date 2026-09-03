@@ -35,11 +35,18 @@ Apple Silicon path the memory requirement in `ROADMAP.md` assumes.
 
 ## Local rules
 
-- **No application imports.** Nothing here may import from `phylo.sim`,
-  `phylo.likelihood` or `phylo.search`. This is asserted by
-  `tests/regression/test_opt_objective.py`, not left to review: a single
+- **No application imports.** Nothing here may import from `phylo.likelihood`,
+  `phylo.search`, or a phylogenetics-specific submodule of `phylo.sim`
+  (`jc`, `gtr`, `simulate`, `newick`, `tree`, `params`). This is asserted by
+  `tests/regression/opt/test_opt_objective.py`, not left to review: a single
   convenience import turns the abstraction back into a phylogenetics-specific
-  optimizer, and neither `ruff` nor `mypy` would notice.
+  optimizer, and neither `ruff` nor `mypy` would notice. `phylo.sim.graph`
+  and `phylo.sim.potts` are the one exception: model-agnostic Markov-random-
+  field machinery, symmetric to `phylo.numerics`, which `opt` already imports
+  freely. `potts.py`'s `simulate_chains` uses them to build its 1-D chain as
+  the `N = 1` case of the general lattice (issue #170) rather than carrying a
+  second copy of the sampling recursion. The direction stays one-way:
+  `phylo.sim` may never import `phylo.opt`.
 - **Constraints by construction, not by projection.** Branch lengths through
   a log or softplus map, the root distribution through a softmax, rate
   parameters positive through a log map. An optimizer that has to be stopped

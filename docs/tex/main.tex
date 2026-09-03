@@ -168,6 +168,8 @@ For statistical physics applications, we consider an $N$-dimensional lattice whe
 \end{equation}
 where $J_{ij}$ represents coupling strengths and $h_i$ the external field \citep{mezard2009}. Continuous optimization fits $(J, h)$ via autodiff through Belief Propagation \citep{koller2009}. Structural moves are proposed via algorithms such as Swendsen-Wang.
 
+The graph this section states abstractly is a \texttt{phylo.sim.graph.PottsGraph} in code: nodes, one $J_{ij}$ per edge, and an explicit boundary condition. \texttt{lattice\_graph} builds an $N$-dimensional lattice as an instance of it -- a 1-D chain is $N=1$, not a second implementation -- and \texttt{phylo.sim.potts.simulate\_potts} draws configurations from the result, exactly by transfer matrix on an open chain and by single-site Gibbs/heat-bath MCMC otherwise.
+
 \subsection{Hidden Markov Models (HMMs)}
 In sequence decoding, the state is the unobserved path $Z$, with transition matrix $A$ and emission matrix $B$. Optimization fits $A$ and $B$ by differentiating through the Forward-Backward algorithm, while discrete sequence paths are updated via Iterated Conditional Modes (ICM) or Viterbi decoding \citep{mackay2003}.
 
