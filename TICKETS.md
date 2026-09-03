@@ -12,14 +12,10 @@ A parenthesized number is an issue already filed.
 ## Milestone 1.1 — Simulation & Ground Truth Engine
 
 - Define one fixture API across trees, lattices and chains (#132)
-- Extend the Potts fixture to a 2-D grid, and put all three applications on the
-  same footing (#149)
-- Simulate N-D Potts lattices with declared couplings and external fields
-- Simulate Markov random fields on a general graph
+- Simulate Potts models on N-D lattices and general Markov random fields, with
+  declared couplings and external fields (#170)
 - Promote the HMM from an optimizer fixture to a first-class simulator with
-  retained ground truth
-- Validate lattice spin distributions against the closed-form partition
-  function at enumerable sizes
+  retained ground truth (#171)
 - Additional evolutionary models (#107)
 - Rate variation across sites, in the simulator and every backend
 - Simulate at the declared scale — `n` to 1000, `L` to 11000 — and report the
@@ -28,9 +24,9 @@ A parenthesized number is an issue already filed.
 ## Milestone 1.2 — Differentiable Likelihood & Energy Engine
 
 - Belief propagation on the Potts lattice, with the transfer matrix as its
-  oracle
-- Transfer-matrix energy for the 2-D strip, exact at enumerable widths
-- Expose forward-backward as an evaluator, not as Baum-Welch's internals
+  oracle (#172)
+- Transfer-matrix energy for the 2-D strip, exact at enumerable widths (#172)
+- Expose forward-backward as an evaluator, not as Baum-Welch's internals (#173)
 - One energy/likelihood evaluator API across the three problem classes,
   asserted by an import-graph test
 - CUDA dispatch for the pruning recursion, pinned against the NumPy oracle
@@ -54,9 +50,9 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.4 — Discrete Move Sets & Classical Baselines
 
-- Swendsen-Wang and Wolff cluster updates on the Potts lattice
-- Viterbi decoding, pinned against brute-force path enumeration
-- Iterated conditional modes over HMM state paths
+- Swendsen-Wang and Wolff cluster updates on the Potts lattice (#174)
+- Viterbi decoding, pinned against brute-force path enumeration (#175)
+- Iterated conditional modes over HMM state paths (#176)
 - Make the rooted/unrooted distinction explicit and give topologies a canonical
   key (#114)
 - Multi-SPR neighbourhoods, each stating in which sense it is complete and what
@@ -73,11 +69,11 @@ A parenthesized number is an issue already filed.
 - Potts and HMM environments behind `phylo.learn.Environment`
 - A feature set for the tree environment, with the unidentifiable-constant
   invariance pinned
-- A tree fixture hard enough to separate a policy from greedy
+- A tree fixture hard enough to separate a policy from greedy (#177)
 - PPO and a learned state-value critic
 - Truth as a terminal penalty, never a training signal
 - Train a phylogenetic policy and report its learning curve against the
-  enumerated expected return
+  enumerated expected return (#178)
 
 ## Milestone 2.2 — Curriculum Learning
 
