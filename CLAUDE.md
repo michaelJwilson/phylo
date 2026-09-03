@@ -3,14 +3,14 @@
 Guidance for Claude Code when working in this repository.
 
 ## Project
-`snakes_and_ladders` is a high-performance scientific repository. Correctness and reproducibility of numerical/scientific results take priority over convenience.
+`phylo` is a high-performance scientific repository. Correctness and reproducibility of numerical and scientific results take priority over convenience.
 
-Two intentions are supported, and keeping them separable is required:
+Two concerns are supported, and they must stay separable:
 
-*   **Infrastructure:** the correctness and development paradigm - build, the checks, the release process, the agentic workflow. None of it mentions a given application, e.g. phylogenetics.
-*   **Application:** e.g. phylogenetic substitution models, likelihoods, tree search, and standards required for this science.
+*   **Infrastructure:** the build, the checks, the release process, the agentic workflow. None of it names an application.
+*   **Application:** phylogenetic substitution models, likelihoods, tree search, and the standards this science requires.
 
-An infrastructure rule that acquires an application reference loses the separation of concerns. `DEV.md` and `README.md` subscribe to this structurally — infrastructure content separate / before application and file structure (`infra/` vs. `python/phylo/*`, `docs/tex/`) does the rest.
+An infrastructure rule that acquires an application reference has lost the separation. Structure enforces it: `README.md` and `DEV.md` put infrastructure before application, and the file layout keeps them apart (`infra/` against `python/phylo/*` and `docs/tex/`).
 
 ## Repository Map
 This file is authoritative. The remainder exist so there is not replication, and each has a defined task:
@@ -45,20 +45,20 @@ This file is authoritative. The remainder exist so there is not replication, and
 ## Performance
 *   **GPU (PyTorch, Triton, JAX):** Target if the hot path is data-parallel and earns $\ge 10\times$ speedup over vectorized NumPy at realistic problem sizes.
 *   **Rust Backend (`oxiphylo`):** Target for CPU-bound hot paths (control flow, tree traversal, irregular memory access, small sizes).
-*   **Autodiff:** **PyTorch**, decided. Its MPS backend is the mature path on Apple Silicon, which `ROADMAP.md` targets alongside CUDA. Not yet a dependency: it is added by the first PR whose code imports it.
+*   **Autodiff:** **PyTorch**, decided. Its MPS backend is the path on Apple Silicon, which `ROADMAP.md` targets alongside CUDA.
 *   **Measurement:** Benchmark candidates against the NumPy reference before committing to a port. Report both numbers in the PR.
 *   **The Oracle:** Every accelerated kernel keeps its pure Python/NumPy implementation as an oracle. Regression tests must pin the accelerated output against it within an explicit tolerance.
 
 ## Testing & Quality Assurance
-*   **Simulate Component-Wise:** Build fixtures by simulating from a known generative model. Test components individually and in combination.
+*   **Simulate Component-Wise:** Build fixtures by simulating from a known generative model under an explicitly seeded generator. Test components individually and in combination.
 *   **Pin to Independent Sources:** Validate expected values against analytic results, brute-force computations, or secondary implementations with stated tolerances.
-*   **Check known math properties/Invariants:**
+*   **Check Math Invariants:** Rows of a transition matrix sum to 1, a reversible model satisfies detailed balance, gradients match finite differences, and a fit's likelihood increases monotonically.
 *   **Cross-Device Agreement Is a Tolerance:** `float32` and `float64` behave differently across CPU, CUDA, and Metal, and deep recursions accumulate that. Agreement is checked against the tolerance stated in `likelihood/CLAUDE.md`, with the measurements it is derived from, and implemented in `phylo.likelihood.device`, never bitwise. A discrepancy inside it is not a bug and must not be "fixed". Two rules that fall out of it: the tolerance is **relative**, because the log-likelihood is a sum over sites and an absolute bound fixed at one problem size does not transfer to another; and it is keyed on the **lowest precision** in the comparison, because Metal cannot do `float64` and one bound loose enough for `float32` would let a broken `float64` backend pass.
 *   **No Coverage Theatre:** Tests asserting only output shapes or successful execution without exceptions are forbidden. Leave gaps unwritten and track them as GitHub issues rather than writing meaningless tests.
 *   **Scientific Outputs:** The suite must emit plots and tables for the LaTeX technical document. Update the LaTeX captions concurrently. Every figure is rendered from the code it reports on, ships with a caption naming the seed, sizes and model that produced it, and is committed under `docs/tex/figures/` so a changed plot is visible in review rather than only after a document build.
 
 ## Technical Document & Reference Sources
-`docs/tex/` is treated as code. Cite these texts where they carry the material and explicitly state any deviations from their standard algorithms. The 25 core references are categorized as a routing table based on what they inform:
+`docs/tex/` is treated as code. Cite these texts where they carry the material, and state any deviation from their standard algorithms explicitly. The core references are a routing table, grouped by what they inform:
 
 **Infrastructure (Build, Structure, and Speed)**
 *   **Software Craft:** Martin (*Clean Code*); Blandy et al. (*Programming Rust*)
@@ -79,7 +79,7 @@ This file is authoritative. The remainder exist so there is not replication, and
 ## Writing Style
 1.  **Be concise and direct:** Omit needless words, use active voice, and lead with the most important fact.
 2.  **Be concrete and precise:** Use exact facts and numbers ("40% faster") instead of vague intensifiers ("much faster").
-3.  **Stay neutral and objective:** Avoid hype, subjective opinions, weak qualifiers.  use nouns and verbs, avoid adjectives and adverbs.
+3.  **Stay neutral and objective:** Avoid hype, subjective opinions, and weak qualifiers. Use nouns and verbs; avoid adjectives and adverbs.
 4.  **Provide evidence:** Back every claim in PRs/commits with benchmark numbers, test validated outputs, or reproductions.
 5.  **Maintain formatting:** Apply naming, terminology, and syntax consistently.
 
