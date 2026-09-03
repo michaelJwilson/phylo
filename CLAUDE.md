@@ -3,17 +3,17 @@
 Guidance for Claude Code when working in this repository.
 
 ## Project
-`phylo` is a high-performance scientific repository. Correctness and reproducibility of numerical/scientific results take priority over convenience.
+`snakes_and_ladders` is a high-performance scientific repository. Correctness and reproducibility of numerical/scientific results take priority over convenience.
 
-Two separable things live here, and keeping them separable is a constraint rather than an observation:
+Two intentions are supported, and keeping them separable is required:
 
-*   **Infrastructure:** the build, the checks, the release process, the agentic workflow. None of it mentions phylogenetics; all of it would transplant to an unrelated scientific project unchanged.
-*   **Application:** substitution models, likelihoods, tree search, and the standards that make claims about them credible. Specific to this science.
+*   **Infrastructure:** the correctness and development paradigm - build, the checks, the release process, the agentic workflow. None of it mentions a given application, e.g. phylogenetics.
+*   **Application:** e.g. phylogenetic substitution models, likelihoods, tree search, and standards required for this science.
 
-An infrastructure rule that acquires a phylogenetic assumption stops being liftable; an application rule hidden in build configuration stops being reviewable by someone who knows the science. `DEV.md` and `README.md` carry this structurally — infrastructure content ordered before application content, rather than labeled row by row — and file placement (`infra/` vs. `python/phylo/*`, `docs/tex/`) does the rest.
+An infrastructure rule that acquires an application reference loses the separation of concerns. `DEV.md` and `README.md` subscribe to this structurally — infrastructure content separate / before application and file structure (`infra/` vs. `python/phylo/*`, `docs/tex/`) does the rest.
 
 ## Repository Map
-This file is authoritative. The rest exist so it does not have to carry everything, and each has one job:
+This file is authoritative. The remainder exist so there is not replication, and each has a defined task:
 
 | Document | Job |
 | --- | --- |
