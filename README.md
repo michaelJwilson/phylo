@@ -85,6 +85,7 @@ Beyond the usual, three rules shape what the suite is allowed to contain:
 | [DEV.md](DEV.md) | Repository layout, test layout, CI jobs, the CI budget, the release procedure |
 | [CHANGELOG.md](CHANGELOG.md) | What has landed, per dated release |
 | `CLAUDE.md` | The authoritative conventions |
+| `docs/CLAUDE.md` | How the technical document is built and kept true |
 | `docs/source/` | Sphinx API documentation, built from the docstrings |
 
 ---

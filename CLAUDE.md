@@ -23,8 +23,9 @@ This file is authoritative. The remainder exist so there is not replication, and
 | `ROADMAP.md` | The scientific goal, requirements, and milestones |
 | `CHANGELOG.md` | What has landed, per dated release section; built from `changelog.d/` fragments by `towncrier` |
 | `docs/tex/` | The technical document: background, equations, algorithms |
+| `docs/CLAUDE.md` | How that document is built and kept true: what is committed, what is generated, and what a caption may report |
 
-`python/phylo/sim/`, `likelihood/`, `opt/`, `search/`, `qa/`, and `infra/` each carry their own `CLAUDE.md`. Those add what applies only inside one module; they never override this file. A rule that binds the whole repository belongs here, not in one of them.
+`python/phylo/sim/`, `likelihood/`, `opt/`, `learn/`, `search/`, `qa/`, `infra/`, and `docs/` each carry their own `CLAUDE.md`. Those add what applies only inside one module; they never override this file. A rule that binds the whole repository belongs here, not in one of them.
 
 ## Environment & Tooling
 *   **Python (3.12):** Manage via `uv`. Run `uv sync --locked --all-extras`. Regenerate locks with `uv lock` and commit `uv.lock` in the same PR.
@@ -76,7 +77,7 @@ This file is authoritative. The remainder exist so there is not replication, and
 *   **Phylogenetics:** Felsenstein (*Inferring Phylogenies*); Durbin et al. (*Biological Sequence Analysis*); Compeau & Pevzner (*Bioinformatics Algorithms*); Pachter & Sturmfels (*Algebraic Statistics for Computational Biology*)
 *   **Information/Quantum:** Blahut (*Algebraic Codes for Data Transmission*); Nielsen & Chuang (*Quantum Computation and Quantum Information* — background only)
 
-**Expected Reader:** a well-educated developer with scientific and performance-computing background, but not an application expert, e.g. phylogenetics. This sets the formatting contract for `docs/tex/`: keep the body streamlined — hyperlinks and citations over inline derivation — and push required application background (e.g. NNI, other standard algorithms) into a dedicated appendix, cited from the point of use rather than re-derived there. Treat the main text as a high-level overview of the current best-known approach (simulation, models) in terms of the roadmap, not an exhaustive record; link out to supporting docs, with plots, and results for dedicated studies that informed the technical doc.
+**Expected Reader:** a well-educated developer with scientific and performance-computing background, but not an application expert, e.g. phylogenetics. `docs/CLAUDE.md` draws the formatting contract that follows from it, along with the rules that keep a committed, CI-regenerated document true.
 
 **Figures follow the same contract, in the register of an academic letter.** `python/phylo/qa/style.py` fixes it once and every QA script draws inside it: a serif face matching the body text, one-column sizing, a recessive frame, and no ornament that carries no information. Identity is never colour alone — the palette is a fixed, never-cycled colourblind-safe order, paired index-for-index with markers and linestyles so a figure survives greyscale printing, and a fifth series is a reason to facet rather than to invent a hue. A figure states its own evidence: where a claim is checked against a tolerance, the caption gives the realized value beside it.
 
