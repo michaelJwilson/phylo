@@ -422,3 +422,70 @@ def _regraft(
         merged, drop=[(x, y)], add=[(x, new_id), (y, new_id), (new_id, pruned_root)]
     )
     return grafted, new_id
+
+
+def robinson_foulds(first: Topology, second: Topology) -> int:
+    """Robinson-Foulds distance: splits in one topology and not the other.
+
+    The symmetric difference of the two split sets, which is the standard
+    definition for unrooted trees (Robinson & Foulds 1981; Felsenstein,
+    *Inferring Phylogenies*, ch. 30). Zero exactly when the topologies are
+    the same tree, so it refines the equality `leaf_bipartitions` already
+    gives into a distance.
+
+    Parameters
+    ----------
+    first, second : Topology
+        Unrooted binary topologies over the same leaf set.
+
+    Returns
+    -------
+    int
+        The number of splits present in one and not the other. Even, since a
+        split missing from one tree is matched by one missing from the other
+        when both are binary over the same leaves.
+
+    Raises
+    ------
+    ValueError
+        If the two topologies do not carry the same leaves. A distance
+        between trees over different taxa is not defined.
+    """
+    if _leaf_names(first) != _leaf_names(second):
+        msg = "cannot compare topologies over different leaf sets"
+        raise ValueError(msg)
+    return len(leaf_bipartitions(first) ^ leaf_bipartitions(second))
+
+
+def normalized_robinson_foulds(first: Topology, second: Topology) -> float:
+    """Robinson-Foulds distance scaled to ``[0, 1]``.
+
+    Divided by the number of **internal** splits the two trees hold between
+    them, so the figure is comparable across taxon counts -- which is what
+    makes a bound like ``ROADMAP.md``'s ``<= 0.05`` mean the same thing at 6
+    taxa and at 60.
+
+    The trivial splits are excluded from the denominator deliberately. Every
+    tree over the same leaves induces all of them, so they never contribute
+    to the numerator; leaving them in the denominator would shrink every
+    distance by a factor that depends on the taxon count, and would weaken
+    the bound above without saying so. For two binary unrooted trees on ``n``
+    leaves the denominator is ``2(n - 3)``, and the distance reaches ``1.0``
+    when the trees share no internal split.
+
+    Returns
+    -------
+    float
+        ``0.0`` for the same topology, ``1.0`` when the two share no internal
+        split. Trees with no internal edge at all -- fewer than four taxa --
+        score ``0.0`` rather than dividing by zero.
+    """
+    internal = sum(
+        1
+        for topology in (first, second)
+        for split in leaf_bipartitions(topology)
+        if 1 < len(split) < len(_leaf_names(topology)) - 1
+    )
+    if internal == 0:
+        return 0.0
+    return robinson_foulds(first, second) / internal
