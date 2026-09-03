@@ -7,8 +7,8 @@ sub-second gradient updates at n = 100 -- which until now was asserted rather
 than measured. One update means one objective evaluation plus one reverse
 pass, which is what an optimizer step costs; the line search L-BFGS runs on
 top of that is a separate multiplier, and is why the fit benchmark in
-tests/benchmarks/test_opt_fit_bench.py is not simply this number times the
-iteration count.
+tests/benchmarks/test_opt_fit_bench.py is not this number times the iteration
+count.
 
 The 100-taxon topology is generated here rather than added as a fixture:
 nothing is simulated from it that a test asserts against, so it carries no
