@@ -13,7 +13,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from phylo.opt.hmm import load_hmm_params
 from phylo.opt.potts import load_potts_params
 from phylo.qa import opt_coverage
 from phylo.qa.opt_coverage import (
@@ -24,6 +23,7 @@ from phylo.qa.opt_coverage import (
     hmm_coverage,
     potts_coverage,
 )
+from phylo.sim.hmm import load_hmm_params
 
 from tests._fixtures import FIXTURES_DIR
 

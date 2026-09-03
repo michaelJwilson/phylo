@@ -8,7 +8,7 @@ code with what it checks.
 | --- | --- | --- |
 | [`potts_chain.ipynb`](potts_chain.ipynb) | Potts chain in an external field | Exhaustive enumeration of the partition function; enumeration of all 81 configurations |
 | [`phylo_tree.ipynb`](phylo_tree.ipynb) | Phylogenetic trees, 6 taxa | Brute-force marginalization over ancestral states; all 105 unrooted topologies enumerated |
-| [`hmm.ipynb`](hmm.ipynb) | Discrete hidden Markov model | Enumeration over all `3**8` hidden paths; Baum-Welch as an independent algorithm |
+| [`hmm.ipynb`](hmm.ipynb) | Discrete hidden Markov model | Enumeration over all `3**8` hidden paths; the retained hidden path; Baum-Welch as an independent algorithm |
 
 Each ends with a **Further Work** section naming what it could not demonstrate
 and the issue that carries it. Those sections are the point as much as the

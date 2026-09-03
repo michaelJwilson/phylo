@@ -18,173 +18,26 @@ states, so a fitted parameter set matches truth only up to a permutation. The
 model is otherwise identifiable; every row is gauge-fixed by
 :func:`phylo.opt.constrain.log_simplex`. A recovery test must align the
 permutation before comparing.
+
+Ground truth and data generation live in :mod:`phylo.sim.hmm`; this module
+holds only the fitting objective, its independent EM oracle, and the
+state-alignment helper a recovery test needs.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
 from itertools import permutations
-from pathlib import Path
 
 import numpy as np
 import torch
-import yaml
 
-from phylo.numerics import sample_rows
 from phylo.opt.constrain import free_from_log_simplex, log_simplex
 
 # How far apart the emission rows start, in unconstrained units. Large
 # enough to leave the stationary point, small enough not to preselect an
 # answer: at 1.0 a state favours its symbol by a factor of e.
 _SYMMETRY_BREAK = 1.0
-
-_REQUIRED_FIELDS = frozenset(
-    {
-        "seed",
-        "n_sequences",
-        "sequence_length",
-        "n_states",
-        "n_symbols",
-        "initial",
-        "transition",
-        "emission",
-    }
-)
-
-
-@dataclass(frozen=True)
-class HmmParams:
-    """Fully-specified truth for an HMM fixture.
-
-    Parameters
-    ----------
-    n_states : int
-        Hidden states, >= 2.
-    n_symbols : int
-        Emission alphabet size, >= 2.
-    sequence_length : int
-        Observations per sequence, >= 2. A length-1 sequence carries no
-        transition and would leave the transition matrix unidentifiable.
-    n_sequences : int
-        Independent sequences simulated from the truth.
-    initial : np.ndarray
-        True initial distribution, shape ``(n_states,)``.
-    transition : np.ndarray
-        True transition matrix, shape ``(n_states, n_states)``, rows summing
-        to 1.
-    emission : np.ndarray
-        True emission matrix, shape ``(n_states, n_symbols)``, rows summing
-        to 1.
-    seed : int
-        Seed for ``np.random.default_rng``.
-    """
-
-    n_states: int
-    n_symbols: int
-    sequence_length: int
-    n_sequences: int
-    initial: np.ndarray
-    transition: np.ndarray
-    emission: np.ndarray
-    seed: int
-
-
-def load_hmm_params(path: Path) -> HmmParams:
-    """Load and validate an HMM fixture yaml.
-
-    Parameters
-    ----------
-    path : Path
-        Path to the yaml file.
-
-    Returns
-    -------
-    HmmParams
-        The parsed, validated truth.
-
-    Raises
-    ------
-    ValueError
-        If a required field is missing, a size is too small to identify the
-        parameters, or a distribution has the wrong shape or does not sum
-        to 1.
-    """
-    raw = yaml.safe_load(path.read_text())
-
-    missing = _REQUIRED_FIELDS - raw.keys()
-    if missing:
-        msg = f"{path}: missing required field(s) {sorted(missing)}"
-        raise ValueError(msg)
-
-    n_states = int(raw["n_states"])
-    n_symbols = int(raw["n_symbols"])
-    sequence_length = int(raw["sequence_length"])
-    if n_states < 2:
-        msg = f"{path}: n_states must be >= 2, got {n_states}"
-        raise ValueError(msg)
-    if n_symbols < 2:
-        msg = f"{path}: n_symbols must be >= 2, got {n_symbols}"
-        raise ValueError(msg)
-    if sequence_length < 2:
-        msg = f"{path}: sequence_length must be >= 2, got {sequence_length}"
-        raise ValueError(msg)
-
-    initial = _stochastic(raw["initial"], (n_states,), path, "initial")
-    transition = _stochastic(
-        raw["transition"], (n_states, n_states), path, "transition"
-    )
-    emission = _stochastic(raw["emission"], (n_states, n_symbols), path, "emission")
-
-    return HmmParams(
-        n_states=n_states,
-        n_symbols=n_symbols,
-        sequence_length=sequence_length,
-        n_sequences=int(raw["n_sequences"]),
-        initial=initial,
-        transition=transition,
-        emission=emission,
-        seed=int(raw["seed"]),
-    )
-
-
-def _stochastic(
-    raw: object, shape: tuple[int, ...], path: Path, name: str
-) -> np.ndarray:
-    values = np.asarray(raw, dtype=np.float64)
-    if values.shape != shape:
-        msg = f"{path}: {name} has shape {values.shape}, expected {shape}"
-        raise ValueError(msg)
-    sums = values.sum(axis=-1)
-    if not np.allclose(sums, 1.0):
-        msg = f"{path}: {name} rows sum to {sums.tolist()}, expected 1.0"
-        raise ValueError(msg)
-    return values
-
-
-def simulate_sequences(params: HmmParams) -> np.ndarray:
-    """Draw observation sequences by ancestral sampling from the truth.
-
-    Parameters
-    ----------
-    params : HmmParams
-        The generating truth.
-
-    Returns
-    -------
-    np.ndarray
-        Integer observations, shape ``(n_sequences, sequence_length)``.
-    """
-    rng = np.random.default_rng(params.seed)
-    observations = np.empty(
-        (params.n_sequences, params.sequence_length), dtype=np.int64
-    )
-    states = rng.choice(params.n_states, size=params.n_sequences, p=params.initial)
-    observations[:, 0] = sample_rows(rng, params.emission, states)
-    for t in range(1, params.sequence_length):
-        states = sample_rows(rng, params.transition, states)
-        observations[:, t] = sample_rows(rng, params.emission, states)
-    return observations
 
 
 class HmmObjective:

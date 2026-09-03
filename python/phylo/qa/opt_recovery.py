@@ -25,12 +25,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from phylo.opt.fit import constrained_standard_errors, covers, fit
-from phylo.opt.hmm import (
-    HmmObjective,
-    HmmParams,
-    align_states,
-    simulate_sequences,
-)
+from phylo.opt.hmm import HmmObjective, align_states
 from phylo.opt.potts import (
     PottsObjective,
     PottsParams,
@@ -39,6 +34,7 @@ from phylo.opt.potts import (
 from phylo.qa.figure import QAFigure
 from phylo.qa.runner import HMM_PARAMS, POTTS_PARAMS, figure_main
 from phylo.qa.style import INK_MUTED, ONE_COLUMN_WIDE, letter_style, series_style
+from phylo.sim.hmm import HmmParams, simulate_sequences
 
 # Two-sided normal quantile for the 95% bars drawn here, matching
 # phylo.opt.fit.covers.
@@ -106,7 +102,7 @@ def hmm_recovery(
         transition and emission entries in that order.
     """
     objective = HmmObjective(
-        simulate_sequences(params), params.n_states, params.n_symbols
+        simulate_sequences(params).observations, params.n_states, params.n_symbols
     )
     result = fit(objective)
     estimate = objective.constrain(result.theta)

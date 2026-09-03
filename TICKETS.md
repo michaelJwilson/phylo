@@ -14,8 +14,6 @@ A parenthesized number is an issue already filed.
 - Define one fixture API across trees, lattices and chains (#132)
 - Simulate Potts models on N-D lattices and general Markov random fields, with
   declared couplings and external fields (#170)
-- Promote the HMM from an optimizer fixture to a first-class simulator with
-  retained ground truth (#171)
 - Additional evolutionary models (#107)
 - Rate variation across sites, in the simulator and every backend
 - Simulate at the declared scale — `n` to 1000, `L` to 11000 — and report the
@@ -94,7 +92,6 @@ A parenthesized number is an issue already filed.
 ## Milestone 2.4 — Experiment Tracking, Ablations & Leaderboard
 
 - Create a ledger of benchmarked and validated runs with Aim (#75)
-- The QA script runner (#150)
 - Reproduce a run from a single manifest, and assert it
 - Budget-matched ablation leaderboard across shared seeds
 - Paired significance test required before a variant is adopted as
@@ -113,6 +110,8 @@ A parenthesized number is an issue already filed.
 
 ## Cross-Cutting Infrastructure
 
+- Fix the root-detection assertion blocking `infra/release.sh`'s full-suite
+  check (#168)
 - Re-key the milestone references in code and `docs/tex/` to the roadmap's
   `N.M` numbering
 - Reconcile the dangling `STATUS.md` references (#34)

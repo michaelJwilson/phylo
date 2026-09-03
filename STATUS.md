@@ -1,7 +1,7 @@
 # STATUS
 
 What has landed against `ROADMAP.md`, how it was established, and the pull
-request that carries it. Read at version `0.2.0`.
+request that carries it. Read at version `0.3.0`.
 
 This file is a ledger against the roadmap, not a project board. Open work lives
 in GitHub issues, and its titles are collected in `TICKETS.md`. A milestone is
@@ -14,7 +14,7 @@ started**, on the terms §0.4 sets.
 | Roadmap item | Status | Evidence | Key PRs |
 | --- | --- | --- | --- |
 | §0 Development loop | Landed | Eight required checks; committed PDF byte-compared on every PR | [#49](https://github.com/michaelJwilson/phylo/pull/49), [#57](https://github.com/michaelJwilson/phylo/pull/57), [#72](https://github.com/michaelJwilson/phylo/pull/72), [#92](https://github.com/michaelJwilson/phylo/pull/92), [#102](https://github.com/michaelJwilson/phylo/pull/102), [#151](https://github.com/michaelJwilson/phylo/pull/151) |
-| 1.1 Simulation & ground truth | Trees landed; Potts 1-D only; HMM as an optimizer fixture | Simulated substitution frequencies against the closed-form JC probabilities; GTR reproduces JC to machine precision | [#58](https://github.com/michaelJwilson/phylo/pull/58), [#64](https://github.com/michaelJwilson/phylo/pull/64), [#115](https://github.com/michaelJwilson/phylo/pull/115), [#120](https://github.com/michaelJwilson/phylo/pull/120) |
+| 1.1 Simulation & ground truth | Trees and the HMM landed as first-class simulators; Potts 1-D only | Simulated substitution frequencies against the closed-form JC probabilities; GTR reproduces JC to machine precision; HMM state and emission marginals against brute-force path enumeration | [#58](https://github.com/michaelJwilson/phylo/pull/58), [#64](https://github.com/michaelJwilson/phylo/pull/64), [#115](https://github.com/michaelJwilson/phylo/pull/115), [#120](https://github.com/michaelJwilson/phylo/pull/120), [#182](https://github.com/michaelJwilson/phylo/pull/182) |
 | 1.2 Likelihood & energy engine | CPU landed (NumPy, PyTorch, Rust); GPU dispatch not started; belief propagation not started | Worst relative deviation 4.0e-14 against brute-force marginalization across three backends and four site counts spanning a factor of 30 | [#66](https://github.com/michaelJwilson/phylo/pull/66), [#74](https://github.com/michaelJwilson/phylo/pull/74), [#81](https://github.com/michaelJwilson/phylo/pull/81), [#112](https://github.com/michaelJwilson/phylo/pull/112), [#148](https://github.com/michaelJwilson/phylo/pull/148) |
 | 1.3 Continuous optimization | Landed for trees, the 1-D Potts chain and the HMM; Potts lattice not started | Gradients against central differences; 95% intervals cover truth at the nominal rate over 60 replicates | [#115](https://github.com/michaelJwilson/phylo/pull/115), [#116](https://github.com/michaelJwilson/phylo/pull/116), [#119](https://github.com/michaelJwilson/phylo/pull/119), [#120](https://github.com/michaelJwilson/phylo/pull/120) |
 | 1.4 Move sets & classical baselines | Trees landed; cluster updates and Viterbi not started | NNI and SPR neighbour counts exhaustively verified at `n = 5..8`; hill climbing reaches the enumerated optimum from 12 of 12 starts | [#82](https://github.com/michaelJwilson/phylo/pull/82), [#127](https://github.com/michaelJwilson/phylo/pull/127), [#128](https://github.com/michaelJwilson/phylo/pull/128) |
@@ -38,14 +38,16 @@ from `.github/labels.yml` by a workflow, so the taxonomy cannot drift from the
 documents that describe it.
 
 Eight required checks gate a merge, and two of them do work no reviewer can
-do by inspection: the technical-document job regenerates every QA figure and
-fails a pull request whose rebuilt `docs/draft.pdf` differs from the committed
-one ([#72](https://github.com/michaelJwilson/phylo/pull/72)), and the coverage
-floor cannot be lowered to pass a change. Cost is managed rather than absorbed:
+do by inspection: the technical-document job rebuilds only the QA figures
+`docs/tex/main.tex` cites, comparing the rest at the release gate instead
+([#157](https://github.com/michaelJwilson/phylo/pull/157)), and fails a pull
+request whose rebuilt `docs/draft.pdf` differs from the committed one
+([#72](https://github.com/michaelJwilson/phylo/pull/72)); the coverage floor
+cannot be lowered to pass a change. Cost is managed rather than absorbed:
 benchmarks run only when the diff touches code they measure, and the
-release-gated suite is excluded per pull request — measured at 131 s over 140
-tests against 954 s for the full suite
-([#113](https://github.com/michaelJwilson/phylo/pull/113)).
+release-gated suite is excluded per pull request — measured at 138 s over 540
+tests against 989 s for the full suite
+([#159](https://github.com/michaelJwilson/phylo/pull/159)).
 
 Two releases have been cut under the procedure, each from a Release ticket
 gated on `infra/release.sh`: `0.1.0`
@@ -55,6 +57,29 @@ consolidation audit the template drives, and `0.2.0`'s found real defects — a
 categorical sampler duplicated three times, two copies missing the clamp the
 third had, so a probability row summing to `1 - 4e-16` could return a category
 past the end of the alphabet.
+
+**Between `0.2.0` and `0.3.0`, six pull requests refined the loop and its
+record; no roadmap milestone moved.** `ROADMAP.md` was restructured around the
+development loop and the three problem classes, and `STATUS.md` and
+`TICKETS.md` were introduced as the ledger and backlog this section and
+`TICKETS.md` now are
+([#152](https://github.com/michaelJwilson/phylo/pull/152),
+[#153](https://github.com/michaelJwilson/phylo/pull/153)). The thirteen QA
+scripts were routed through one `phylo.qa.runner` rather than each carrying
+its own argument parsing and figure-closing boilerplate
+([#156](https://github.com/michaelJwilson/phylo/pull/156)), and
+`phylo.qa.manifest` now states which figure renders each output so a build can
+select a subset rather than regenerate all thirteen
+([#157](https://github.com/michaelJwilson/phylo/pull/157)). The regression
+suite was split by submodule and its documented budget corrected after being
+found stale
+([#159](https://github.com/michaelJwilson/phylo/pull/159)). Every module
+`CLAUDE.md` now points at the Writing Style section instead of restating it
+([#158](https://github.com/michaelJwilson/phylo/pull/158)), and a generated
+plan's required shape — 2–5 validated steps ending in an Open Questions
+section — is stated in `ROADMAP.md` §0.2, `DEV.md`, and `infra/CLAUDE.md`
+alike, alongside the rule that decides which documents may repeat detail
+([#164](https://github.com/michaelJwilson/phylo/pull/164)).
 
 ## Milestone 1.1 — Simulation & Ground Truth Engine
 
@@ -81,11 +106,19 @@ reference instance with an exact transfer-matrix oracle
 as a `learn` environment. The N-D lattice and general MRFs the milestone
 specifies are not built (issue #170).
 
-**HMMs: as a fixture.** A discrete HMM generates state paths and emissions, and
-is validated against brute-force path enumeration
-([#115](https://github.com/michaelJwilson/phylo/pull/115)). It exists to test
-the optimization interface against something that is not a tree, not yet as a
-first-class simulator on the terms trees have (issue #171).
+**HMMs: a first-class simulator.** `phylo.sim.hmm` draws a hidden state path
+and an observation sequence jointly from a declared `(pi, A, B)`, retaining
+the path alongside the data on the footing the tree simulator already has
+([#182](https://github.com/michaelJwilson/phylo/pull/182), closing
+[#171](https://github.com/michaelJwilson/phylo/issues/171)). The generator
+embedded in `phylo.opt.hmm` — which validated only against brute-force path
+enumeration for the fitting objective's own use
+([#115](https://github.com/michaelJwilson/phylo/pull/115)) — is deleted; `opt`
+now imports the truth type from `sim` and draws no data itself. Validated
+against brute-force enumeration for the per-position state and emission
+marginals, self-normalized importance sampling against the exact path
+posterior for one realized observation, and the transition matrix's own
+stationary distribution for long-run occupancy.
 
 ## Milestone 1.2 — Differentiable Likelihood & Energy Engine
 
