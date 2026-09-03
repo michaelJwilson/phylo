@@ -12,6 +12,9 @@ utilities; each submodule is autodocumented on its own rather than through the
 flat top-level namespace. Entries below cover every submodule that exists,
 whether or not it has members yet.
 
+.. automodule:: phylo.numerics
+   :members:
+
 .. automodule:: phylo.sim
    :members:
 

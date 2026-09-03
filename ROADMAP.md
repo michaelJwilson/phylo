@@ -10,7 +10,7 @@ approximate or bounded likelihood more effectively than classical approaches.
 Engineering Requirements:
 
 - **Scale:** n ∈ [10,1000] taxa; L ∈ [100,11000] sites; k-state alphabets, e.g. 4 nucleotide.
-- **Accuracy:** normalized Robinson–Foulds distance ≤0.05 against simulated truth; ΔlnL competitive with IQ-TREE 2 / RAxML-NG under equal time and system constraints.
+- **Accuracy:** normalized Robinson–Foulds distance ≤0.05 against simulated truth; ΔlnL competitive with IQ-TREE 2 / RAxML-NG under equal time and system constraints. The first half is measured (issue #144): on the 6-taxon fixture the bound is met from 125 sites upward, with 8 of 8 replicates recovering the topology exactly at 2000 sites. The second half is not: no comparison against either package has been run.
 - **Performance:** sub-second gradient updates at n=100.
 - **Hardware & Memory:** O(n×L×k) memory footprint bounded to 16 GB (Apple Silicon) or 24 GB (NVIDIA). Native dispatch required for CUDA, Metal/MPS, and CPU (for CI/CD).
 - **Numerics:** cross-device agreement is checked against a declared tolerance, never bitwise — `float32` and `float64` differ across CPU, CUDA and Metal, and a bitwise test does not survive the crossing.

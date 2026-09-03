@@ -31,6 +31,7 @@ import numpy as np
 import torch
 import yaml
 
+from phylo.numerics import sample_rows
 from phylo.opt.constrain import free_from_log_simplex, log_simplex
 
 _REQUIRED_FIELDS = frozenset(
@@ -182,7 +183,7 @@ def simulate_chains(params: PottsParams) -> np.ndarray:
     chains[:, 0] = rng.choice(params.n_states, size=params.n_chains, p=first)
     for i in range(1, params.chain_length):
         conditional = _softmax(log_transfer + backward[i][np.newaxis, :], axis=1)
-        chains[:, i] = _sample_rows(rng, conditional, chains[:, i - 1])
+        chains[:, i] = sample_rows(rng, conditional, chains[:, i - 1])
     return chains
 
 
@@ -272,14 +273,4 @@ def _softmax(values: np.ndarray, axis: int = -1) -> np.ndarray:
     shifted = values - values.max(axis=axis, keepdims=True)
     weights = np.exp(shifted)
     result: np.ndarray = weights / weights.sum(axis=axis, keepdims=True)
-    return result
-
-
-def _sample_rows(
-    rng: np.random.Generator, conditional: np.ndarray, previous: np.ndarray
-) -> np.ndarray:
-    """Draw one state per chain from the row of ``conditional`` it selects."""
-    cumulative = conditional[previous].cumsum(axis=1)
-    draws = rng.random((previous.shape[0], 1))
-    result: np.ndarray = (draws > cumulative).sum(axis=1)
     return result

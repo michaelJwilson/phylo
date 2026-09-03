@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from phylo.numerics import sample_rows
 from phylo.sim.gtr import reversible_transition_probabilities
 from phylo.sim.jc import jc_transition_probabilities
 from phylo.sim.newick import to_newick
@@ -115,7 +116,7 @@ def simulate_alignment(
                     rate_matrix, pi, node.branch_length
                 )
             )
-            states = _sample_rows(rng, transition, parent_states)
+            states = sample_rows(rng, transition, parent_states)
         node_states[node.name] = states
         for child in node.children:
             _walk(child, states)
@@ -136,31 +137,3 @@ def simulate_alignment(
         seed=seed,
         n_sites=n_sites,
     )
-
-
-def _sample_rows(
-    rng: np.random.Generator,
-    transition: np.ndarray,
-    parent_states: np.ndarray,
-) -> np.ndarray:
-    """Draw one categorical sample per site from ``transition``'s parent-state row.
-
-    Parameters
-    ----------
-    rng : np.random.Generator
-        Seeded generator to draw from.
-    transition : np.ndarray
-        Transition-probability matrix, shape (k, k).
-    parent_states : np.ndarray
-        Parent state per site, shape (n_sites,), entries in ``[0, k)``.
-
-    Returns
-    -------
-    np.ndarray
-        Sampled child state per site, shape (n_sites,).
-    """
-    cumulative = np.cumsum(transition, axis=1)
-    cumulative[:, -1] = 1.0  # absorb floating-point drift so every draw lands
-    row_cumulative = cumulative[parent_states]
-    draw = rng.random(size=(int(parent_states.shape[0]),))
-    return np.argmax(draw[:, np.newaxis] < row_cumulative, axis=1)
