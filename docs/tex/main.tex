@@ -724,6 +724,20 @@ compared rather than assumed interchangeable. This is the same fact
 Section~\ref{sec:opt-interface} states about discrete moves, seen from the
 other side: a move changes what the parameter vector means.
 
+Measuring that comparison turned up something about the fitted surface worth
+recording on its own. It does not totally order topologies: many candidates
+share a maximized log-likelihood to within the optimizer's own convergence,
+because the branch that would distinguish them is fitted to zero and the tree
+collapses to the same polytomy --- the effect
+Section~\ref{sec:hill-climbing}'s rejected topology shows one instance of.
+Their relative order is therefore not a property of the model, and a rank
+correlation, which depends on it, is not a measurement: perturbing the fitted
+scores by one part in $10^{9}$ moves Spearman's $\rho$ by up to $0.04$. The
+comparison is reported as a linear correlation, which moves by the size of
+the perturbation instead. The cheap surface has no such degeneracy, since
+fixing the branch lengths at a positive value is exactly what forbids the
+collapse.
+
 \emph{Not claimed here:} that a learned policy beats hill climbing on trees.
 The 6-taxon fixture cannot support that claim in either direction --- greedy
 already reaches the enumerated optimum from every start, as

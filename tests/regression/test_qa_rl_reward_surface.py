@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from phylo.qa import rl_reward_surface
-from phylo.qa.figure import spearman_correlation
+from phylo.qa.figure import pearson_correlation
 from phylo.qa.rl_reward_surface import (
     BRANCH_LENGTHS,
     build_figure,
@@ -47,28 +47,35 @@ def five_taxon() -> Surfaces:
 # --- the statistic --------------------------------------------------------
 
 
-def test_spearman_is_one_under_any_monotone_rescaling() -> None:
+def test_the_correlation_is_invariant_to_affine_rescaling() -> None:
     # The property that makes it the right statistic here: the two surfaces
-    # are not on the same scale, and only their ordering is being compared.
-    values = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
-    assert_allclose(spearman_correlation(values, np.exp(values)), 1.0, atol=1e-12)
-    assert_allclose(spearman_correlation(values, -values), -1.0, atol=1e-12)
+    # are log-likelihoods in the same units, separated by a shift and a
+    # scale, and that separation is not what is being measured.
+    values = np.array([1.0, 2.0, 3.5, 4.0, 5.0])
+    assert_allclose(pearson_correlation(values, 7.0 * values - 3.0), 1.0, atol=1e-12)
+    assert_allclose(pearson_correlation(values, -2.0 * values), -1.0, atol=1e-12)
 
 
-def test_spearman_matches_the_closed_form_on_a_worked_case() -> None:
-    # rho = 1 - 6 * sum(d^2) / (n * (n^2 - 1)) when there are no ties.
-    # Here d^2 sums to 4 over n = 5, giving 1 - 24/120 = 0.8.
+def test_the_correlation_matches_its_closed_form_on_a_worked_case() -> None:
+    # Centred: a = (-2, -1, 0, 1, 2), b = (-1, -2, 1, 0, 2). a.b = 2+2+0+0+4 = 8,
+    # |a| = |b| = sqrt(10), so r = 8/10 = 0.8.
     first = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
     second = np.array([2.0, 1.0, 4.0, 3.0, 5.0])
-    assert_allclose(spearman_correlation(first, second), 0.8, atol=1e-12)
+    assert_allclose(pearson_correlation(first, second), 0.8, atol=1e-12)
 
 
-def test_spearman_averages_tied_ranks() -> None:
-    # Ties get their mean rank, which is the standard definition; breaking
-    # them arbitrarily would make the statistic depend on input order.
-    first = np.array([1.0, 2.0, 2.0, 3.0])
-    second = np.array([1.0, 2.0, 3.0, 4.0])
-    assert_allclose(spearman_correlation(first, second), 0.9486832980505138, atol=1e-12)
+def test_the_correlation_is_continuous_where_a_rank_statistic_is_not() -> None:
+    # The reason this statistic replaced Spearman's rho, pinned rather than
+    # argued. Near-tied values are exactly what the fitted surface produces --
+    # several optima agree to within the optimizer's convergence -- and a rank
+    # statistic reorders them on any perturbation. This one moves by the size
+    # of the perturbation, which is what lets a caption quote it and CI
+    # rebuild the same document.
+    first = np.arange(50.0)
+    second = np.repeat(np.arange(25.0), 2)
+    baseline = pearson_correlation(first, second)
+    jittered = second + 1e-9 * np.random.default_rng(0).standard_normal(50)
+    assert abs(pearson_correlation(first, jittered) - baseline) < 1e-9
 
 
 @pytest.mark.parametrize(
@@ -80,11 +87,11 @@ def test_spearman_averages_tied_ranks() -> None:
         (np.ones(4), np.arange(4.0), "constant sample"),
     ],
 )
-def test_spearman_rejects_a_sample_it_cannot_rank(
+def test_the_correlation_rejects_a_sample_it_cannot_use(
     first: np.ndarray, second: np.ndarray, message: str
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        spearman_correlation(first, second)
+        pearson_correlation(first, second)
 
 
 # --- the comparison -------------------------------------------------------
@@ -109,8 +116,8 @@ def test_the_two_surfaces_are_correlated_but_not_identical(
     # why a policy trained on one still has to be judged on the other.
     # Realized: 0.8607 at 5 taxa, 0.9045 at 6.
     known, fitted, _, _, _, _ = five_taxon
-    correlation = spearman_correlation(known, fitted)
-    assert 0.5 < correlation < 1.0
+    correlation = pearson_correlation(known, fitted)
+    assert 0.9 < correlation < 1.0
 
 
 def test_the_answer_survives_the_choice_of_fixed_branch_length(
@@ -142,7 +149,7 @@ def test_the_caption_reports_the_correlation_it_measured(five_taxon: Surfaces) -
         known, fitted, truth, default, correlations, agreements, params
     )
     try:
-        assert f"{spearman_correlation(known, fitted):.4f}" in caption
+        assert f"{pearson_correlation(known, fitted):.4f}" in caption
         assert f"{min(correlations.values()):.4f}" in caption
         assert f"{len(agreements)} of {len(agreements)}" in caption
         assert str(params.seed) in caption
@@ -162,7 +169,7 @@ def test_main_writes_a_figure_and_caption(tmp_path: Path) -> None:
     assert written.figure_path.is_file()
     assert written.caption_path.is_file()
     assert written.caption == written.caption_path.read_text()
-    assert "rank correlation" in written.caption
+    assert "correlation" in written.caption
 
 
 @pytest.mark.release
@@ -174,5 +181,5 @@ def test_the_comparison_holds_at_six_taxa() -> None:
     )
     assert known.size == 105
     assert int(np.argmax(known)) == truth == int(np.argmax(fitted))
-    assert spearman_correlation(known, fitted) > 0.85
+    assert pearson_correlation(known, fitted) > 0.9
     assert all(agreements.values())

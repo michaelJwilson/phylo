@@ -11,8 +11,14 @@ expensive one is being trained on a different problem.
 Panel (a) is every unrooted topology on the leaf set, scored both ways, with
 the generating topology marked. Panel (b) asks whether the answer depends on
 the one free parameter the cheap surface has --- the fixed branch length ---
-by sweeping it across a range and reporting the rank correlation at each,
+by sweeping it across a range and reporting the correlation at each,
 together with whether the two surfaces still agree on the best topology.
+
+The correlation reported is linear rather than rank-based, for the reason
+:func:`phylo.qa.figure.pearson_correlation` documents: the fitted surface does
+not totally order topologies. Several of its optima agree to within the
+optimizer's own convergence, so their relative order is not a property of the
+science, and a rank statistic that depends on it is not a measurement.
 
 Renders what `phylo.search` computed; it reimplements no scorer
 (`qa/CLAUDE.md`).
@@ -30,7 +36,7 @@ from matplotlib.figure import Figure
 from phylo.qa.figure import (
     QAFigure,
     latex_integer,
-    spearman_correlation,
+    pearson_correlation,
     write_qa_figure,
 )
 from phylo.qa.style import INK_MUTED, ONE_COLUMN_WIDE, letter_style, series_style
@@ -76,8 +82,8 @@ def reward_surfaces(
     tuple
         The known-parameter scores at the default branch length, the fitted
         scores, the index of the generating topology, that default branch
-        length, the rank correlation per swept branch length, and whether the
-        two surfaces agree on the best topology at each.
+        length, the correlation per swept branch length, and whether the two
+        surfaces agree on the best topology at each.
     """
     dataset = simulate_alignment(
         tau=params.tau,
@@ -103,7 +109,7 @@ def reward_surfaces(
     correlations, agreements = {}, {}
     for branch_length in BRANCH_LENGTHS:
         swept = surface(RewardModel.KNOWN, branch_length)
-        correlations[branch_length] = spearman_correlation(swept, fitted)
+        correlations[branch_length] = pearson_correlation(swept, fitted)
         agreements[branch_length] = int(np.argmax(swept)) == best
 
     keys = [leaf_bipartitions(t) for t in topologies]
@@ -127,7 +133,7 @@ def build_figure(
     tuple[matplotlib.figure.Figure, str]
         The figure and its caption text.
     """
-    rho = spearman_correlation(known, fitted)
+    rho = pearson_correlation(known, fitted)
     with letter_style():
         fig, axes = plt.subplots(1, 2, figsize=ONE_COLUMN_WIDE)
 
@@ -179,7 +185,7 @@ def build_figure(
         )
         axes[1].set_xscale("log")
         axes[1].set_xlabel("fixed branch length")
-        axes[1].set_ylabel("rank correlation")
+        axes[1].set_ylabel("correlation")
         axes[1].set_title("(b) does the choice matter", loc="left")
         fig.tight_layout()
 
@@ -193,13 +199,17 @@ def build_figure(
         f"Markov instances use. Fixture: {len(params.pi)}-state Jukes-Cantor, "
         f"{latex_integer(params.n_sites)} sites, seed {params.seed}; the "
         f"fixed branch length is the generating tree's mean, "
-        f"{default:.4f}. (a) The two surfaces, rank correlation "
-        f"{rho:.4f}; both rank the generating topology first, so the "
+        f"{default:.4f}. (a) The two surfaces, correlation "
+        f"{rho:.4f}; both score the generating topology highest, so the "
         f"cheap reward and the expensive one agree on the answer while "
-        f"disagreeing in detail. (b) The cheap surface has one free "
+        f"disagreeing in detail. The correlation is linear rather than "
+        f"rank-based because the fitted surface does not totally order "
+        f"topologies: several of its optima agree to within the optimizer's "
+        f"own convergence, so their relative order is not a property of the "
+        f"model. (b) The cheap surface has one free "
         f"parameter, and the conclusion does not rest on it: across a "
         f"50-fold range of fixed branch length the two surfaces pick the same "
-        f"best topology in {agreed} of {len(agreements)} cases, with the rank "
+        f"best topology in {agreed} of {len(agreements)} cases, with the "
         f"correlation never falling below {worst:.4f}. The substitution is "
         f"what makes training affordable at all: the fitted reward runs a "
         f"full optimization per candidate, the known one a single pruning "
