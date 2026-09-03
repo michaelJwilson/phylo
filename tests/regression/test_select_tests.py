@@ -56,9 +56,15 @@ def test_a_change_selects_the_modules_that_import_it() -> None:
 
 
 def test_a_leaf_module_selects_only_itself() -> None:
-    # Nothing imports `phylo.learn`, so nothing else need run. This is the
-    # case the whole mechanism is worth building for.
-    assert _modules_of(select(["python/phylo/learn/reinforce.py"])) == {"learn"}
+    # A module nothing imports needs nothing else run, which is the case the
+    # whole mechanism is worth building for. The leaf is derived rather than
+    # named: `phylo.learn` was one until `phylo.qa.rl_tree_policy` imported it
+    # (issue #178), and a test naming a module goes stale the moment an import
+    # is added, which is the failure `select_tests` itself is built to avoid.
+    leaves = [module for module in MODULES if dependents({module}) == {module}]
+    assert leaves, "no submodule is a leaf; the selection can save nothing"
+    for leaf in leaves:
+        assert _modules_of(select([f"python/phylo/{leaf}/__init__.py"])) == {leaf}
 
 
 def test_the_dependency_expansion_is_transitive() -> None:
