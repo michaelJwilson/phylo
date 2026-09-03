@@ -19,6 +19,18 @@ one optimizer is expected to serve both.
 ``h``, so ``h`` is fixed to ``logsumexp(h) == 0`` via
 :func:`phylo.opt.constrain.log_simplex`. Without that the model is
 unidentifiable and a fitted field has no value to compare against truth.
+
+**Relationship to** :mod:`phylo.sim.potts`. That module generalizes
+``simulate_chains`` below to an arbitrary graph (N-D lattices included) and
+its own exact open-chain sampler is the general-per-edge-coupling form of the
+one here. The two are not consolidated into one: ``opt/CLAUDE.md``'s "no
+application imports" rule (enforced by
+``tests/regression/opt/test_opt_objective.py``) forbids this module
+importing anything under ``phylo.sim``, so ``simulate_chains`` keeps its own
+copy rather than delegating to it. Issue #186 tracks resolving the
+duplication, by moving ``PottsParams``/``load_potts_params`` out
+of ``phylo.opt`` the way issue #171 moved ``phylo.opt.hmm``'s truth type into
+``phylo.sim.hmm``.
 """
 
 from __future__ import annotations
