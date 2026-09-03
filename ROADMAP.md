@@ -1,59 +1,240 @@
-# ROADMAP
+# ROADMAP: Mixed Discrete-Continuous Optimization for Graph-Structured Models
 
-### Stage 0: Goal & Specifications
+## 0. The Development Loop
 
-Implement modern solvers for mixed discrete/continuous optimization, e.g. in the context of the large parsimony problem — search over optimized phylogenetic tree topologies —
-with autodiff, reinforcement learning (learning a proposal policy that scores candidate trees) by exact, approximate or bounded likelihoods more effectively than classical approaches.
+Development is agent-assisted. The claim the loop supports is not that an agent
+wrote the code; it is that the process establishes whether the code is right.
+Each stage below is a gate, and the ordering is deliberate: an approach is
+rejected before it is written, a claim is pinned before it is published.
+`CLAUDE.md` is the contract every stage is read against, and it is
+authoritative — where it and any other document disagree, it wins.
 
-Requirements:
+### 0.1 The Ticket
 
-- **Accuracy:** validation of simulation and results against truth, e.g. normalized Robinson–Foulds distance ≤0.05 for defined problems; ΔlnL competitive with simple oracles on    
-  small problems, with known truth for large problems and in the future, external standard tools, e.g.,IQ-TREE 2 / RAxML-NG under equal time and system constraints.
-- **Scaling & Hardware:** O(n×L×k) memory footprint bounded to 16 GB (Apple Silicon) or 24 GB (NVIDIA). Native dispatch supported for CUDA, Metal/MPS, and CPU (for CI/CD).  Cross-  
-  device agreement is checked against a declared tolerance, `float32` and `float64` where possible, otherwise `float32` (metal), not bitwise.
+- **Deliverable:** a unit of work filed through
+  `.github/ISSUE_TEMPLATE/task.yml`, naming the desired outcome stated so it
+  can be checked, what it unblocks, the non-goals, the submodule it lands in,
+  and — the field that does the work — how it will be validated. Blank issues
+  are disabled.
+- **Gate:** a ticket whose validation field names only output shapes, or only
+  that execution did not raise, is rejected at filing rather than at review.
+  Priority (`high`, `medium`, `low`) and submodule labels come from
+  `.github/labels.yml` and are applied by a workflow, so the taxonomy cannot
+  drift from the documentation that describes it.
 
-## 1. Development Stages & Milestones to standup a minimal implementation
+### 0.2 The Plan
 
-Anticipated milestones include the specification, the status, the evidence and the issue.
+- **Deliverable:** a plan posted to the ticket thread before any code exists,
+  at which point the issue is labelled `planned`. Review of an approach costs
+  a comment; review of an implementation costs the implementation.
+- **Gate:** a maintainer applies `approved`, and only then may a pull request
+  open. The pull request must implement the plan already in the thread. A plan
+  that turns out to be flawed gets a revised plan posted to the same thread,
+  not a silent correction in the diff. Disjoint tickets run as parallel
+  worktrees and parallel pull requests; coupled changes run as a single
+  sequential chain.
 
-### Stage 1: The Foundation
+### 0.3 The Pull Request
 
-The simulation and infrastructure needed to train and validate computationally efficient models, i.e. Benchmark problems:
-wrt the discrete/continuous optimization abstraction, we will benchmark three sets of problems, phylogenetic trees, 2D/N-D
-Potts models in an external field and HMMs.  Problems sizes cover both realizations, and sites, e.g. n ∈ [10,1000] taxa;
-L ∈ [100,11000] sites; 4 nucleotides.  These will be used for validation against known truth, benchmarking and ablation studies.
+- **Deliverable:** a change answering the fixed checklist in
+  `.github/pull_request_template.md`: the Definition of Done, baseline and new
+  benchmark numbers for every hot path it touches, the *realized* value of
+  every tolerance-based test beside the tolerance it was checked against, the
+  documents the change made untrue, and anything deferred with the tracking
+  issue that carries it.
+- **Gate:** eight required checks — `ruff`, `mypy --strict`, `clippy`,
+  `cargo fmt`, the Rust suite, the Python suite under its coverage floor, the
+  Sphinx build with warnings as errors, the technical-document build, and the
+  dependency audits. Documentation Sync is part of the diff, not a follow-up:
+  a change that makes `README.md`, `DEV.md`, `INSTALL.md`, a `CLAUDE.md`,
+  `STATUS.md`, `ROADMAP.md` or `docs/tex/` untrue corrects it in the same pull
+  request, and adds a `changelog.d/` fragment if it is user-visible.
 
-We maintain an academic paper that showcases results and provides appendices with the necessary background (at the level of PhD notes),
-for the methods and results achieved.
+### 0.4 Validation
 
-- **Milestone 1: Simulation Engine.** Implement fixtures for the anticipated problems, e.g. k-state alphabet models for a given evolutionary model (first,
-  Jukes-Cantor, 2D Potts, ...).  Validate the simulations by known properties, e.g. analytic closed-form transition probabilities.
+- **Deliverable:** for every claim, an oracle that does not share code with
+  the thing it checks — an analytic result, a brute-force marginalization, an
+  exhaustive enumeration, or an independently implemented algorithm — and a
+  regression test pinning the claim to it within a stated tolerance.
+- **Gate:** three rules constrain what the suite may contain. Coverage
+  theatre is forbidden: a test asserting only shapes, or only that nothing
+  raised, does not count, and a gap is left unwritten and tracked as an issue
+  instead. Every accelerated path keeps its vectorized NumPy implementation as
+  the oracle the Rust, PyTorch and GPU backends are pinned against — deleting
+  the slow path removes the only thing that says the fast path is right.
+  Correctness comes from an independent source rather than from a second
+  backend, and agreement across devices and precisions is a declared relative
+  tolerance keyed on the lowest precision in the comparison, never bitwise
+  equality.
 
-- **Milestone 2: Likelihood Engine.** Implement Likelihoods, e.g. Felsenstein pruning, via PyTorch/Triton/JAX (GPU) and Rust (CPU). Validate against brute-force
-  marginalization on small fixtures to the required tolerance.  Maintain an application-agnostic fitting interface that maintains the required API.
+### 0.5 The Record
 
-- **Milestone 3: Continuous Optimization.** Implement solvers for the continuous half, e.g. fit branch lengths, rate matrix (Q), and root distribution (π) with modern autodiff engines.  Validate gradients against finite differences, recover simulated parameters within confidence intervals, etc.
+- **Deliverable:** the technical document (`docs/tex/`, contents specified in
+  §1.3) is the record a validated claim is written into. Every figure and
+  table in it is rendered by `phylo.qa` from the code it reports on, carries a
+  caption naming the seed, the sizes and the model that produced it, and is
+  committed so a changed plot is visible in review rather than after a build.
+  `CHANGELOG.md` is assembled by `towncrier` from per-pull-request fragments;
+  `STATUS.md` states what has landed against each milestone below, with the
+  pull request that carries it; `TICKETS.md` states, as titles, what has not.
+- **Gate:** continuous integration regenerates the figures and rebuilds the
+  document, and fails a pull request whose rebuilt PDF differs from the
+  committed one, so a figure cannot drift from the code that produced it. A
+  generated caption may report only quantities continuous in their inputs — a
+  discontinuous statistic breaks that build and was never a measurement. A
+  release is itself a ticket, gated on `infra/release.sh` passing before a
+  version is tagged.
 
-- **Milestone 5: Discrete move sets & classical baseline for supported application ** Implement e.g, strict NNI and SPR topological neighbourhoods, together with ICM, Wolff algorithm, etc.
+## 1. Project Objectives & Specifications
 
-### Stage 2: Reinforcement Learning
+### 1.1 Core Objective
 
-Replacing standard heuristics with learned policies and variational models.
+Develop and deploy modern solvers for mixed discrete-continuous optimization
+across three primary classes of graphical models: phylogenetic trees (the large
+parsimony problem), N-dimensional Potts models in an external field, and hidden
+Markov models (HMMs). The framework integrates automatic differentiation for
+continuous parameters with reinforcement learning (RL) to learn proposal
+policies that score discrete structural candidates using exact, approximate, or
+bounded likelihoods/energies.
 
-- **Milestone 1: RL Agent Deployment.** Frame the MDPs (e.g., state: topology/parameters/alignment, action: NNI/SPR, reward: ΔlnL).
-- establish RL environments for the required applications;
-- update the technical discussion with detailed breakdowns of suitable algorithms and a discussion of their relative pros/cons, to each other and to classical. 
-- Train a policy that strictly beats classical baselines on held-out simulated datasets per an evaluation budget.
+### 1.2 Technical Requirements
 
-- **Milestone 2: Empirical Validation.** Validate the RL agent against standard approaches on small problem sizes and benchmark against known truth and external tools for large problems.
+- **Accuracy & Validation:**
+  - *Phylogenetics:* normalized Robinson–Foulds (RF) distance ≤0.05 against
+    simulated ground-truth topologies.
+  - *Potts/HMMs:* recovery of true coupling/transition parameters within 95%
+    confidence intervals; precise state-sequence decoding.
+  - *Performance parity:* convergence metrics (ΔlnL or ΔE) must match or exceed
+    exact oracles on small `n`, and state-of-the-art classical frameworks
+    (e.g. IQ-TREE 2 for trees) on large `n` under equivalent wall-clock time.
+- **Computational Scaling & Hardware:**
+  - *Memory footprint:* bounded to `O(n×L×k)` — `n` nodes/taxa, `L`
+    sequence/chain length, `k` alphabet/state size — strictly fitting within
+    16 GB unified memory (Apple Silicon) or 24 GB VRAM (NVIDIA).
+  - *Hardware dispatch:* native support for CUDA, Metal/MPS, and CPU (for
+    CI/CD).
+  - *Numerical precision:* cross-device tensor operations evaluated against a
+    declared float tolerance rather than bitwise equality. Use `float64` where
+    required for recursive stability (e.g. partition functions, pruning),
+    falling back to `float32` for Metal compatibility.
 
-  - **Milestone 3: Alation studies, Experiment Tracking & Leaderboard ** Stand up a localized manifest system (e.g. Aim) logging configurations, e.g. commit, likelihood traces, compute budgets, and QA figures, so a run reproduces from a single manifest. Deploy a leaderboard evaluating algorithms for ablation studies on budget-matched log-likelihood metrics across shared seeds. Require paired comparisons to reach significance before claiming a new state-of-the-art variant.
+### 1.3 The Technical Document
 
-## 3. Blue Sky
+The `docs/tex/` directory serves as the authoritative, version-controlled
+mathematical record of the project. The application logic is strictly bound to
+this LaTeX documentation. It must contain:
 
-Research extensions aimed at reducing the number of likelihood evaluations a search spends, slated for post-vanilla implementation.
+- Complete mathematical formulations of all substitution models, energy
+  landscapes, and transition probabilities across the three problem classes.
+- Rigorous derivations of the exact inference algorithms (Felsenstein's
+  pruning, belief propagation, forward-backward).
+- Formal definitions of the Markov decision process (MDP) formulations for the
+  RL agents.
+- Proofs for any proposed upper/lower bounds used for branch-and-bound pruning.
+- Dynamically generated QA figures and tables (parameter recovery, convergence
+  curves) sourced directly from tracked CI runs to guarantee empirical
+  reproducibility.
 
-- **Learned Compound Moves:** Replacing single NNI/SPR actions with temporally extended macro-actions sampled from a Dirichlet process.
-- **Stochastic Escape:** Metropolis-style accepted-worsening steps, or ratchet-style site reweighting, to leave a likelihood valley.
-- **Transformer Policy over Canonical Newick:** Tokenizing the canonical Newick DAG and training an LLM-style policy-gradient network on the tree structure.
-- ...
+## Stage 1: Mathematical Foundations & Baseline Infrastructure
+
+Establish the simulation, exact inference, and optimization backends for the
+three distinct problem classes. Target scales span `n ∈ [10, 1000]`
+nodes/taxa/states, with sequence/lattice lengths `L ∈ [100, 11000]`.
+
+- **Milestone 1.1: Simulation & Ground Truth Engine**
+  - *Deliverable:* data generators for all problem classes.
+    - *Phylogenetics:* `k`-state evolutionary models (Jukes-Cantor, GTR) on
+      simulated topologies.
+    - *Potts models:* N-D lattices and Markov random fields (MRFs) with
+      specified coupling constants and external fields.
+    - *HMMs:* hidden state paths and emitted observation sequences.
+  - *Validation:* verify generated sequence/spin distributions against
+    analytic, closed-form transition probabilities and partition functions.
+- **Milestone 1.2: Differentiable Likelihood & Energy Engine**
+  - *Deliverable:* high-performance evaluators implemented in
+    PyTorch/Triton/JAX (GPU) and Rust (CPU).
+    - *Phylogenetics:* Felsenstein's pruning algorithm.
+    - *Potts models:* belief propagation and transfer matrix methods.
+    - *HMMs:* the forward-backward algorithm.
+  - *Validation:* match brute-force marginalization on small (`n ≤ 10`) graphs
+    within the specified floating-point tolerance. Ensure the API remains
+    application-agnostic.
+- **Milestone 1.3: Continuous Optimization via Autodiff**
+  - *Deliverable:* gradient-based solvers to fit continuous parameters.
+    - *Phylogenetics:* branch lengths `t`, rate matrices `Q`, root
+      distributions `π`.
+    - *Potts models:* coupling strengths `J`, external fields `h`.
+    - *HMMs:* transition matrices `A`, emission matrices `B`.
+  - *Validation:* validate autodiff gradients against central finite
+    differences.
+- **Milestone 1.4: Discrete Move Sets & Classical Baselines**
+  - *Deliverable:* implement strict structural neighborhoods for classical
+    sampling.
+    - *Phylogenetics:* nearest-neighbor interchange (NNI) and subtree
+      prune-and-regraft (SPR).
+    - *Potts models:* Swendsen-Wang and Wolff cluster update algorithms.
+    - *HMMs:* Viterbi decoding and structural state-space updates (e.g.
+      iterated conditional modes).
+
+## Stage 2: Reinforcement Learning & Variational Search
+
+Replace fixed, hand-designed search heuristics with learned proposal policies
+parameterized by neural networks.
+
+- **Milestone 2.1: RL Agent Formulation & Deployment**
+  - *Deliverable:* define the MDPs across all three problem classes.
+    - *State:* the current discrete structure (topology, lattice
+      configuration, or state path), its fitted continuous parameters, and
+      observation summaries.
+    - *Action:* valid structural transformations from the classical
+      neighborhoods (e.g. NNI/SPR, cluster flips, path mutations).
+    - *Reward:* improvement in the objective function (ΔlnL for
+      phylogenetics/HMMs, ΔE for Potts models).
+  - *Validation:* train a policy that strictly outperforms classical baselines
+    on held-out simulated validation sets under a fixed evaluation budget.
+- **Milestone 2.2: Curriculum Learning**
+  - *Deliverable:* implement a progressive training regimen. RL policies
+    frequently collapse when exposed to massive combinatorial spaces
+    zero-shot. The agent must train on `n = 10` nodes/taxa, transferring
+    weights and progressively scaling to fine-tune on `n = 50`, `n = 200`, and
+    `n = 1000` environments.
+- **Milestone 2.3: Empirical Validation & Benchmarking**
+  - *Deliverable:* benchmark the RL agents on high-dimensional, empirical
+    datasets.
+  - *Validation:* compare convergence speed and final objectives against
+    state-of-the-art domain heuristics.
+- **Milestone 2.4: Experiment Tracking, Ablations & Leaderboard**
+  - *Deliverable:* deploy a localized tracking manifest (e.g. Aim) logging git
+    commits, objective traces, compute budgets, and QA figures.
+  - *Validation:* maintain an ablation leaderboard ranking algorithmic variants
+    using budget-matched metrics across shared random seeds. Require
+    statistical significance via paired tests before adopting a new
+    state-of-the-art.
+
+## Stage 3: Research Extensions (Blue Sky)
+
+Advanced architectural extensions aimed at aggressively amortizing the cost of
+discrete structural search and minimizing expensive exact evaluations.
+
+- **Differentiable Topology Search:** formulate continuous relaxations of the
+  discrete graph spaces. Utilize representations like the tropical Grassmannian
+  (for phylogenetic trees) or Gumbel-softmax relaxations (for Potts/HMM
+  discrete states) to enable end-to-end, gradient-based optimization of the
+  discrete structure alongside continuous parameters, bypassing discrete RL
+  moves entirely.
+- **Neural Surrogate Modeling:** train lightweight graph neural networks (GNNs)
+  or transformers to directly approximate the Felsenstein likelihood, Potts
+  energy, or HMM likelihood. The RL agent queries the surrogate 10,000× faster
+  to filter massive proposal batches, calculating the exact, expensive
+  evaluation only on the top-`K` highest-probability candidates.
+- **Learned Compound Moves:** replace single atomic actions (e.g. one SPR move,
+  one cluster flip) with temporally extended macro-actions, sampled dynamically
+  via a Dirichlet process, to efficiently tunnel through local optima.
+- **Transformer Policy over Canonical Encodings:** serialize discrete graphs
+  (e.g. canonical Newick strings for trees, canonical adjacency sequences for
+  lattices) into tokenized sequences. Train an autoregressive or policy-gradient
+  transformer model directly on the structural sequence.
+- **Stochastic Escape Mechanisms:** implement Metropolis-Hastings
+  accepted-worsening steps or ratchet-style site reweighting (e.g. simulated
+  annealing) to force the RL agent out of suboptimal valleys in heavily ridged
+  landscapes.

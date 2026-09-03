@@ -20,7 +20,9 @@ This file is authoritative. The remainder exist so there is not replication, and
 | `README.md` | What the project is, and where everything else lives |
 | `INSTALL.md` | Installing, building, running the tests locally |
 | `DEV.md` | Layout, the CI jobs, repository settings, the CI budget, how a change is reviewed |
-| `ROADMAP.md` | The scientific goal, requirements, and milestones |
+| `ROADMAP.md` | The development loop, the scientific goal, requirements, and milestones |
+| `STATUS.md` | What has landed against each roadmap milestone, the evidence, and the PR carrying it |
+| `TICKETS.md` | The titles of the tickets that remain between `STATUS.md` and `ROADMAP.md` |
 | `CHANGELOG.md` | What has landed, per dated release section; built from `changelog.d/` fragments by `towncrier` |
 | `docs/tex/` | The technical document: background, equations, algorithms |
 | `docs/CLAUDE.md` | How that document is built and kept true: what is committed, what is generated, and what a caption may report |
@@ -37,7 +39,7 @@ This file is authoritative. The remainder exist so there is not replication, and
 *   **Docs:** Build with `sphinx-build -W` in `docs/source/`.
 
 ## Conventions
-*   **Documentation Sync:** Any change affecting behavior, CI, dev setup, or math models must update, in the same PR, whichever of these it makes untrue: `README.md`, `CLAUDE.md` (including a module's), `DEV.md`, `INSTALL.md`, `ROADMAP.md`, `docs/tex/`. If the change is user-visible, add a fragment under `changelog.d/` (see `changelog.d/README.md`) rather than editing `CHANGELOG.md` directly — `towncrier` merges fragments into `CHANGELOG.md` at release time, and CI's `towncrier check` enforces one exists.
+*   **Documentation Sync:** Any change affecting behavior, CI, dev setup, or math models must update, in the same PR, whichever of these it makes untrue: `README.md`, `CLAUDE.md` (including a module's), `DEV.md`, `INSTALL.md`, `ROADMAP.md`, `STATUS.md`, `TICKETS.md`, `docs/tex/`. If the change is user-visible, add a fragment under `changelog.d/` (see `changelog.d/README.md`) rather than editing `CHANGELOG.md` directly — `towncrier` merges fragments into `CHANGELOG.md` at release time, and CI's `towncrier check` enforces one exists.
 *   **Single Version Source:** The package version lives exclusively in `Cargo.toml`'s `[package].version`.
 *   **Package Surface:** `python/phylo/__init__.py` re-exports nothing beyond the package's own top-level utilities (currently `double`); import submodule contents explicitly (`from phylo.likelihood import ...`), not through the top-level namespace.
 *   **Code Standards:** Use type hints on all Python functions. Do not introduce silent behavior changes (e.g., default parameters). Keep dependencies minimal and justify additions.

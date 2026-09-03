@@ -51,6 +51,7 @@ untrue. Check the ones this PR updates, or check "None applicable".
 - [ ] `DEV.md`
 - [ ] `INSTALL.md`
 - [ ] `ROADMAP.md`
+- [ ] `STATUS.md` / `TICKETS.md`
 - [ ] `docs/tex/`
 - [ ] `changelog.d/` (add a fragment; see `changelog.d/README.md`, if user-visible)
 - [ ] None applicable
