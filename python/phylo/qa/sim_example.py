@@ -9,20 +9,18 @@ shown nucleotide-coded (A/C/G/T) for ``k == 4``.
 
 from __future__ import annotations
 
-import argparse
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from matplotlib.transforms import Bbox
 
 from phylo.qa.figure import (
     QAFigure,
     latex_integer,
     state_label,
-    write_qa_figure,
 )
-from phylo.sim.params import SimulationParams, load_simulation_params
+from phylo.qa.runner import SIMULATION_PARAMS, Option, figure_main
+from phylo.sim.params import SimulationParams
 from phylo.sim.simulate import SimulatedDataset, simulate_alignment
 from phylo.sim.tree import Node, preorder
 
@@ -169,26 +167,23 @@ def build_caption(params: SimulationParams, n_sites_shown: int) -> str:
     )
 
 
-def render_sim_example_figure(
-    params_path: Path, output_dir: Path, n_sites_shown: int = 10
-) -> QAFigure:
-    """Render the worked-example QA figure and caption from a params yaml.
+def build_figure(
+    params: SimulationParams, n_sites_shown: int = 10
+) -> tuple[Figure, str]:
+    """Render the worked-example figure and its caption from loaded params.
 
     Parameters
     ----------
-    params_path : Path
-        Path to a ``simulation_params.yaml``-format file.
-    output_dir : Path
-        Directory the figure and caption are written into.
+    params : SimulationParams
+        The fixture the alignment is drawn from.
     n_sites_shown : int
         Number of leading alignment columns to tabulate.
 
     Returns
     -------
-    QAFigure
-        Paths to the written figure and caption, and the caption text.
+    tuple[Figure, str]
+        The figure and its caption.
     """
-    params = load_simulation_params(params_path)
     dataset = simulate_alignment(
         tau=params.tau,
         k=params.k,
@@ -198,23 +193,30 @@ def render_sim_example_figure(
     )
     fig, ax = plt.subplots(figsize=(6, 4))
     n_shown = render_sim_example(dataset, n_sites_shown, ax)
-    caption = build_caption(params, n_shown)
-    qa_figure = write_qa_figure(output_dir, "sim_example", fig, caption)
-    plt.close(fig)
-    return qa_figure
+    return fig, build_caption(params, n_shown)
 
 
-def main() -> None:
-    """CLI entry point: ``python -m phylo.qa.sim_example --params ... --output-dir ...``."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--params", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--n-sites-shown", type=int, default=10)
-    args = parser.parse_args()
-    qa_figure = render_sim_example_figure(
-        args.params, args.output_dir, args.n_sites_shown
+def main(argv: list[str] | None = None) -> QAFigure:
+    """Render the figure from the command line.
+
+    Parameters
+    ----------
+    argv : list[str] | None
+        Argument vector; ``None`` reads ``sys.argv``.
+
+    Returns
+    -------
+    QAFigure
+        Paths written, and the caption.
+    """
+    return figure_main(
+        stem="sim_example",
+        description=__doc__,
+        params=[SIMULATION_PARAMS],
+        build=build_figure,
+        options=[Option("n-sites-shown", int, 10)],
+        argv=argv,
     )
-    print(f"Wrote {qa_figure.figure_path} and {qa_figure.caption_path}")
 
 
 if __name__ == "__main__":

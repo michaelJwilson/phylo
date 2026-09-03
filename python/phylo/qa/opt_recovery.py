@@ -18,9 +18,6 @@ Renders what `phylo.opt` computed; it reimplements no model and no optimizer
 
 from __future__ import annotations
 
-import argparse
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -32,16 +29,15 @@ from phylo.opt.hmm import (
     HmmObjective,
     HmmParams,
     align_states,
-    load_hmm_params,
     simulate_sequences,
 )
 from phylo.opt.potts import (
     PottsObjective,
     PottsParams,
-    load_potts_params,
     simulate_chains,
 )
-from phylo.qa.figure import QAFigure, write_qa_figure
+from phylo.qa.figure import QAFigure
+from phylo.qa.runner import HMM_PARAMS, POTTS_PARAMS, figure_main
 from phylo.qa.style import INK_MUTED, ONE_COLUMN_WIDE, letter_style, series_style
 
 # Two-sided normal quantile for the 95% bars drawn here, matching
@@ -263,25 +259,18 @@ def main(argv: list[str] | None = None) -> QAFigure:
     QAFigure
         Paths written, and the caption.
     """
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--potts-params", type=Path, required=True)
-    parser.add_argument("--hmm-params", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    args = parser.parse_args(argv)
-
-    potts_params = load_potts_params(args.potts_params)
-    hmm_params = load_hmm_params(args.hmm_params)
-
-    fig, caption = build_figure(
-        potts_recovery(potts_params),
-        hmm_recovery(hmm_params),
-        potts_params,
-        hmm_params,
+    return figure_main(
+        stem="opt_recovery",
+        description=__doc__,
+        params=[POTTS_PARAMS, HMM_PARAMS],
+        build=lambda potts_params, hmm_params: build_figure(
+            potts_recovery(potts_params),
+            hmm_recovery(hmm_params),
+            potts_params,
+            hmm_params,
+        ),
+        argv=argv,
     )
-    try:
-        return write_qa_figure(args.output_dir, "opt_recovery", fig, caption)
-    finally:
-        plt.close(fig)
 
 
 if __name__ == "__main__":

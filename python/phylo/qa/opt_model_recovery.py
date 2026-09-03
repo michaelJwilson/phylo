@@ -18,9 +18,6 @@ model and no optimizer (`qa/CLAUDE.md`).
 
 from __future__ import annotations
 
-import argparse
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -29,10 +26,11 @@ from matplotlib.figure import Figure
 
 from phylo.likelihood.objective import SubstitutionModelObjective
 from phylo.opt.fit import constrained_standard_errors, covers, fit
-from phylo.qa.figure import QAFigure, write_qa_figure
+from phylo.qa.figure import QAFigure
+from phylo.qa.runner import SIMULATION_PARAMS, figure_main
 from phylo.qa.style import INK_MUTED, ONE_COLUMN_WIDE, letter_style, series_style
 from phylo.sim.gtr import gtr_rate_matrix
-from phylo.sim.params import SimulationParams, load_simulation_params
+from phylo.sim.params import SimulationParams
 from phylo.sim.simulate import simulate_alignment
 
 # The generating truth, matching tests/regression/test_gtr.py: no two
@@ -187,6 +185,21 @@ def build_figure(
     return fig, caption
 
 
+def _fit_and_build(params: SimulationParams) -> tuple[Figure, str]:
+    """Fit both models the figure compares, then render them.
+
+    Returns
+    -------
+    tuple[Figure, str]
+        The figure and its caption.
+    """
+    general = fit_model(
+        params, gtr_rate_matrix(TRUE_EXCHANGEABILITIES, TRUE_PI), TRUE_PI
+    )
+    jukes_cantor = fit_model(params, None, np.full(params.k, 1.0 / params.k))
+    return build_figure(params, general, jukes_cantor)
+
+
 def main(argv: list[str] | None = None) -> QAFigure:
     """Render the figure from the command line.
 
@@ -200,22 +213,13 @@ def main(argv: list[str] | None = None) -> QAFigure:
     QAFigure
         Paths written, and the caption.
     """
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--params", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    args = parser.parse_args(argv)
-
-    params = load_simulation_params(args.params)
-    general = fit_model(
-        params, gtr_rate_matrix(TRUE_EXCHANGEABILITIES, TRUE_PI), TRUE_PI
+    return figure_main(
+        stem="opt_model_recovery",
+        description=__doc__,
+        params=[SIMULATION_PARAMS],
+        build=_fit_and_build,
+        argv=argv,
     )
-    jukes_cantor = fit_model(params, None, np.full(params.k, 1.0 / params.k))
-
-    fig, caption = build_figure(params, general, jukes_cantor)
-    try:
-        return write_qa_figure(args.output_dir, "opt_model_recovery", fig, caption)
-    finally:
-        plt.close(fig)
 
 
 if __name__ == "__main__":

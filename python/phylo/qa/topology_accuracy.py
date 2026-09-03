@@ -17,18 +17,16 @@ Renders what `phylo.search` computed; it reimplements no search
 
 from __future__ import annotations
 
-import argparse
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
-from phylo.qa.figure import QAFigure, latex_integer, write_qa_figure
+from phylo.qa.figure import QAFigure, latex_integer
+from phylo.qa.runner import SIMULATION_PARAMS, figure_main
 from phylo.qa.style import INK_MUTED, ONE_COLUMN, letter_style, series_style
 from phylo.search.infer import infer
 from phylo.search.topology import normalized_robinson_foulds
-from phylo.sim.params import SimulationParams, load_simulation_params
+from phylo.sim.params import SimulationParams
 from phylo.sim.simulate import simulate_alignment
 
 # Spanning the point where the signal runs out. The low end is deliberately
@@ -159,22 +157,23 @@ def build_figure(
 def main(argv: list[str] | None = None) -> QAFigure:
     """Render the figure from the command line.
 
+    Parameters
+    ----------
+    argv : list[str] | None
+        Argument vector; ``None`` reads ``sys.argv``.
+
     Returns
     -------
     QAFigure
         Paths written, and the caption.
     """
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--params", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    args = parser.parse_args(argv)
-
-    params = load_simulation_params(args.params)
-    fig, caption = build_figure(accuracy(params), params)
-    try:
-        return write_qa_figure(args.output_dir, "topology_accuracy", fig, caption)
-    finally:
-        plt.close(fig)
+    return figure_main(
+        stem="topology_accuracy",
+        description=__doc__,
+        params=[SIMULATION_PARAMS],
+        build=lambda params: build_figure(accuracy(params), params),
+        argv=argv,
+    )
 
 
 if __name__ == "__main__":

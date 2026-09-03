@@ -17,9 +17,7 @@ Renders what `phylo.opt` computed; it reimplements no model and no optimizer
 
 from __future__ import annotations
 
-import argparse
 from dataclasses import replace
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -31,16 +29,15 @@ from phylo.opt.hmm import (
     HmmObjective,
     HmmParams,
     align_states,
-    load_hmm_params,
     simulate_sequences,
 )
 from phylo.opt.potts import (
     PottsObjective,
     PottsParams,
-    load_potts_params,
     simulate_chains,
 )
-from phylo.qa.figure import QAFigure, write_qa_figure
+from phylo.qa.figure import QAFigure
+from phylo.qa.runner import HMM_PARAMS, POTTS_PARAMS, figure_main
 from phylo.qa.style import INK_MUTED, ONE_COLUMN, letter_style, series_style
 
 NOMINAL = 0.95
@@ -287,6 +284,27 @@ def build_figure(
     return fig, caption
 
 
+def _sweep_and_build(
+    potts_params: PottsParams, hmm_params: HmmParams
+) -> tuple[Figure, str]:
+    """Sweep both models over their problem sizes, then render them.
+
+    Returns
+    -------
+    tuple[Figure, str]
+        The figure and its caption.
+    """
+    potts = [
+        (size, *potts_coverage(potts_params, size, replicates))
+        for size, replicates in POTTS_SIZES
+    ]
+    hmm = [
+        (size, *hmm_coverage(hmm_params, size, replicates))
+        for size, replicates in HMM_SIZES
+    ]
+    return build_figure(potts, hmm)
+
+
 def main(argv: list[str] | None = None) -> QAFigure:
     """Render the figure from the command line.
 
@@ -300,29 +318,13 @@ def main(argv: list[str] | None = None) -> QAFigure:
     QAFigure
         Paths written, and the caption.
     """
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--potts-params", type=Path, required=True)
-    parser.add_argument("--hmm-params", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    args = parser.parse_args(argv)
-
-    potts_params = load_potts_params(args.potts_params)
-    hmm_params = load_hmm_params(args.hmm_params)
-
-    potts = [
-        (size, *potts_coverage(potts_params, size, replicates))
-        for size, replicates in POTTS_SIZES
-    ]
-    hmm = [
-        (size, *hmm_coverage(hmm_params, size, replicates))
-        for size, replicates in HMM_SIZES
-    ]
-
-    fig, caption = build_figure(potts, hmm)
-    try:
-        return write_qa_figure(args.output_dir, "opt_coverage", fig, caption)
-    finally:
-        plt.close(fig)
+    return figure_main(
+        stem="opt_coverage",
+        description=__doc__,
+        params=[POTTS_PARAMS, HMM_PARAMS],
+        build=_sweep_and_build,
+        argv=argv,
+    )
 
 
 if __name__ == "__main__":

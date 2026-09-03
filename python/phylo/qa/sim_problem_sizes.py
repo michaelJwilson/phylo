@@ -8,10 +8,10 @@ what the regression suite actually runs (``tests/regression/test_jc_simulate.py`
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 
-from phylo.qa.figure import QATable, latex_integer, write_qa_table
+from phylo.qa.figure import QATable, latex_integer
+from phylo.qa.runner import ParamsArgument, table_main
 from phylo.sim.params import SimulationParams, load_simulation_params
 from phylo.sim.tree import preorder
 
@@ -96,41 +96,64 @@ def build_caption(fixture_names: list[str]) -> str:
     )
 
 
-def render_problem_sizes_table(fixture_paths: list[Path], output_dir: Path) -> QATable:
-    """Render the problem-sizes QA table and caption from a set of params yamls.
+def _load_named(path: Path) -> tuple[str, SimulationParams]:
+    """Load one fixture, keeping the filename the caption reports.
+
+    The caption names every fixture it tabulates, so the filename is part of
+    what this table reports and cannot be recovered from the loaded params.
+
+    Returns
+    -------
+    tuple[str, SimulationParams]
+        The fixture's filename and its loaded contents.
+    """
+    return path.name, load_simulation_params(path)
+
+
+# Repeated, because the table is one row per fixture and the row order is the
+# order the flags are given in.
+NAMED_PARAMS = ParamsArgument("params", _load_named, repeated=True)
+
+
+def build_table(named: list[tuple[str, SimulationParams]]) -> tuple[str, str]:
+    """Build the problem-sizes ``tabular`` body and its caption.
 
     Parameters
     ----------
-    fixture_paths : list[Path]
-        Paths to ``simulation_params.yaml``-format files, in the row order
-        to display.
-    output_dir : Path
-        Directory the table fragment and caption are written into.
+    named : list[tuple[str, SimulationParams]]
+        Each fixture's filename and loaded contents, in row order.
+
+    Returns
+    -------
+    tuple[str, str]
+        The ``tabular`` body and its caption.
+    """
+    fixture_names = [name for name, _ in named]
+    params_by_fixture = dict(named)
+    body = render_problem_sizes(fixture_names, params_by_fixture)
+    return body, build_caption(fixture_names)
+
+
+def main(argv: list[str] | None = None) -> QATable:
+    """Render the table from the command line.
+
+    Parameters
+    ----------
+    argv : list[str] | None
+        Argument vector; ``None`` reads ``sys.argv``.
 
     Returns
     -------
     QATable
-        Paths to the written table and caption, and the caption text.
+        Paths written, and the caption.
     """
-    fixture_names = [path.name for path in fixture_paths]
-    params_by_fixture = {
-        path.name: load_simulation_params(path) for path in fixture_paths
-    }
-    body = render_problem_sizes(fixture_names, params_by_fixture)
-    caption = build_caption(fixture_names)
-    return write_qa_table(output_dir, "sim_problem_sizes", body, caption)
-
-
-def main() -> None:
-    """CLI entry point: ``python -m phylo.qa.sim_problem_sizes --params ... --params ... --output-dir ...``."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--params", type=Path, required=True, action="append", dest="params"
+    return table_main(
+        stem="sim_problem_sizes",
+        description=__doc__,
+        params=[NAMED_PARAMS],
+        build=build_table,
+        argv=argv,
     )
-    parser.add_argument("--output-dir", type=Path, required=True)
-    args = parser.parse_args()
-    qa_table = render_problem_sizes_table(args.params, args.output_dir)
-    print(f"Wrote {qa_table.table_path} and {qa_table.caption_path}")
 
 
 if __name__ == "__main__":

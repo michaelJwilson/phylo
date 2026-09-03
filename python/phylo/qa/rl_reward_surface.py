@@ -26,9 +26,6 @@ Renders what `phylo.search` computed; it reimplements no scorer
 
 from __future__ import annotations
 
-import argparse
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
@@ -37,12 +34,12 @@ from phylo.qa.figure import (
     QAFigure,
     latex_integer,
     pearson_correlation,
-    write_qa_figure,
 )
+from phylo.qa.runner import SIMULATION_PARAMS, figure_main
 from phylo.qa.style import INK_MUTED, ONE_COLUMN_WIDE, letter_style, series_style
 from phylo.search.rl import RewardModel, TopologyEnvironment
 from phylo.search.topology import enumerate_topologies, leaf_bipartitions
-from phylo.sim.params import SimulationParams, load_simulation_params
+from phylo.sim.params import SimulationParams
 from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import preorder
 
@@ -221,26 +218,23 @@ def build_figure(
 def main(argv: list[str] | None = None) -> QAFigure:
     """Render the figure from the command line.
 
+    Parameters
+    ----------
+    argv : list[str] | None
+        Argument vector; ``None`` reads ``sys.argv``.
+
     Returns
     -------
     QAFigure
         Paths written, and the caption.
     """
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--params", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    args = parser.parse_args(argv)
-
-    params = load_simulation_params(args.params)
-    known, fitted, truth, default, correlations, agreements = reward_surfaces(params)
-
-    fig, caption = build_figure(
-        known, fitted, truth, default, correlations, agreements, params
+    return figure_main(
+        stem="rl_reward_surface",
+        description=__doc__,
+        params=[SIMULATION_PARAMS],
+        build=lambda params: build_figure(*reward_surfaces(params), params),
+        argv=argv,
     )
-    try:
-        return write_qa_figure(args.output_dir, "rl_reward_surface", fig, caption)
-    finally:
-        plt.close(fig)
 
 
 if __name__ == "__main__":
