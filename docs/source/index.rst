@@ -107,3 +107,60 @@ whether or not it has members yet.
 
 .. automodule:: phylo.search.rl
    :members:
+
+.. automodule:: phylo.qa
+   :members:
+
+.. automodule:: phylo.qa.figure
+   :members:
+
+.. automodule:: phylo.qa.style
+   :members:
+
+.. automodule:: phylo.qa.runner
+   :members:
+
+.. automodule:: phylo.qa.manifest
+   :members:
+
+.. automodule:: phylo.qa.build
+   :members:
+
+.. automodule:: phylo.qa.sim_tree
+   :members:
+
+.. automodule:: phylo.qa.sim_example
+   :members:
+
+.. automodule:: phylo.qa.sim_problem_sizes
+   :members:
+
+.. automodule:: phylo.qa.jc_transition
+   :members:
+
+.. automodule:: phylo.qa.backend_agreement
+   :members:
+
+.. automodule:: phylo.qa.opt_recovery
+   :members:
+
+.. automodule:: phylo.qa.opt_coverage
+   :members:
+
+.. automodule:: phylo.qa.opt_branch_recovery
+   :members:
+
+.. automodule:: phylo.qa.opt_model_recovery
+   :members:
+
+.. automodule:: phylo.qa.search_trajectory
+   :members:
+
+.. automodule:: phylo.qa.search_topologies
+   :members:
+
+.. automodule:: phylo.qa.rl_reward_surface
+   :members:
+
+.. automodule:: phylo.qa.topology_accuracy
+   :members:

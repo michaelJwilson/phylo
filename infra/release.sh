@@ -38,6 +38,14 @@ run_check "cargo test" cargo test --locked
 run_check "pytest (full suite)" uv run pytest --cov=phylo --cov-report=term-missing --cov-fail-under=90
 run_check "sphinx-build -W" uv run sphinx-build -b html docs/source docs/_build/html -W
 run_check "technical doc" infra/build_technical_doc.sh
+# The per-PR build regenerates only what the document cites (issue #154), so
+# the figures it does not cite are checked here instead -- the check moves to
+# the release gate rather than disappearing. `--check` compares a rebuild
+# without overwriting, so a figure that has rotted is reported rather than
+# silently refreshed. The clock the figures are rendered against is pinned in
+# phylo.qa.build, so this needs no environment of its own.
+run_check "QA figures (all, incl. uncited)" \
+  uv run python -m phylo.qa.build --all --check
 
 echo
 if [ "${#failures[@]}" -eq 0 ]; then
