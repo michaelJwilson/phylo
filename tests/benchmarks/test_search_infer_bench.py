@@ -1,10 +1,11 @@
 """Benchmarks for topology search.
 
 See tests/regression/test_search_infer.py for correctness. The unit that
-matters is one candidate fit, because that is what the budget counts and what
-a search spends essentially all of its time on -- the move generation beside
-it is combinatorics on a handful of nodes. Both are measured, so the ratio
-says whether that assumption still holds.
+matters is one candidate fit, because that is what the budget counts and
+where a search spends its time: generating a neighbourhood is combinatorics
+on a handful of nodes, while fitting one candidate is an optimization. Both
+are measured here, so the ratio between them says whether that assumption
+still holds.
 """
 
 from __future__ import annotations
