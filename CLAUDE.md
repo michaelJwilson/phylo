@@ -23,8 +23,9 @@ This file is authoritative. The remainder exist so there is not replication, and
 | `ROADMAP.md` | The scientific goal, requirements, and milestones |
 | `CHANGELOG.md` | What has landed, per dated release section; built from `changelog.d/` fragments by `towncrier` |
 | `docs/tex/` | The technical document: background, equations, algorithms |
+| `docs/CLAUDE.md` | How that document is built and kept true: what is committed, what is generated, and what a caption may report |
 
-`python/phylo/sim/`, `likelihood/`, `opt/`, `search/`, `qa/`, and `infra/` each carry their own `CLAUDE.md`. Those add what applies only inside one module; they never override this file. A rule that binds the whole repository belongs here, not in one of them.
+`python/phylo/sim/`, `likelihood/`, `opt/`, `learn/`, `search/`, `qa/`, `infra/`, and `docs/` each carry their own `CLAUDE.md`. Those add what applies only inside one module; they never override this file. A rule that binds the whole repository belongs here, not in one of them.
 
 ## Environment & Tooling
 *   **Python (3.12):** Manage via `uv`. Run `uv sync --locked --all-extras`. Regenerate locks with `uv lock` and commit `uv.lock` in the same PR.
