@@ -2,6 +2,15 @@
 
 Guidance for Claude Code when working in this repository.
 
+## Writing Style
+1.  **Time is money and context windows are finite and vital:** Be as concise as possible, use active voice, and lead with (only) the most important facts first.
+2.  **Be precise:** Use exact facts and numbers ("40% faster") instead of vague intensifiers ("much faster").
+3.  **Stay neutral and objective:** Avoid hype, subjective opinions, and weak qualifiers. Use nouns and verbs; avoid adjectives and adverbs.
+4.  **Provide evidence:** Back every claim in PRs/commits with benchmark numbers, test validated outputs, or reproductions.
+5.  **Maintain formatting:** Apply naming, terminology, and syntax consistently.
+
+**Expected Reader:** a well-educated developer with scientific and performance-computing background, but not an application expert, e.g. phylogenetics. Keep tech. doc. streamlined — hyperlinks and citations over inline derivation — and push required application background (e.g. NNI, other standard algorithms) into a dedicated appendix, cited from the point of use rather than re-derived there. Treat the main text as a high-level overview of the current best-known approach (simulation, models, results) in terms of the roadmap, not an exhaustive record; link out to supporting docs, with plots, and results for dedicated studies that informed the technical doc. Adopt the style of an academic paper/letter.
+
 ## Project
 `phylo` is a high-performance scientific repository. Correctness and reproducibility of numerical and scientific results take priority over convenience.
 
@@ -77,15 +86,6 @@ This file is authoritative. The remainder exist so there is not replication, and
 **Application (The Science)**
 *   **Phylogenetics:** Felsenstein (*Inferring Phylogenies*); Durbin et al. (*Biological Sequence Analysis*); Compeau & Pevzner (*Bioinformatics Algorithms*); Pachter & Sturmfels (*Algebraic Statistics for Computational Biology*)
 *   **Information/Quantum:** Blahut (*Algebraic Codes for Data Transmission*); Nielsen & Chuang (*Quantum Computation and Quantum Information* — background only)
-
-## Writing Style
-1.  **Be concise and direct:** Omit needless words, use active voice, and lead with the most important fact.
-2.  **Be concrete and precise:** Use exact facts and numbers ("40% faster") instead of vague intensifiers ("much faster").
-3.  **Stay neutral and objective:** Avoid hype, subjective opinions, and weak qualifiers. Use nouns and verbs; avoid adjectives and adverbs.
-4.  **Provide evidence:** Back every claim in PRs/commits with benchmark numbers, test validated outputs, or reproductions.
-5.  **Maintain formatting:** Apply naming, terminology, and syntax consistently.
-
-**Expected Reader:** a well-educated developer with scientific and performance-computing background, but not an application expert, e.g. phylogenetics. Keep tech. doc. streamlined — hyperlinks and citations over inline derivation — and push required application background (e.g. NNI, other standard algorithms) into a dedicated appendix, cited from the point of use rather than re-derived there. Treat the main text as a high-level overview of the current best-known approach (simulation, models, results) in terms of the roadmap, not an exhaustive record; link out to supporting docs, with plots, and results for dedicated studies that informed the technical doc. Adopt the style of an academic paper/letter.
 
 ## Definition of Done
 1.  **Regression Test:** Asserts scientific validity (not just shape/execution/coverage theatre) and pins expected output.
