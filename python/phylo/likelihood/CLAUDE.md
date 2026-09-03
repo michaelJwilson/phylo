@@ -16,6 +16,10 @@ CPU), a non-differentiable Rust CPU backend (`pruning_rust.py`, wrapping
 Metal/MPS dispatch belong here too but are not yet implemented (ROADMAP.md
 Milestone 3).
 
+`objective.py` adapts the recursion to `phylo.opt`'s fitting interface. It
+lives here, not in `opt/`, because that package may import no application
+module — the dependency runs application to infrastructure, never back.
+
 ## Local rules
 
 - **The NumPy reference is the oracle and it stays.** Every accelerated
@@ -24,6 +28,34 @@ Milestone 3).
 - **Correctness comes from brute force, not from another backend.** Direct
   marginalization over internal states at `n <= 6` is the test. Two backends
   agreeing proves nothing if both are wrong.
+- **The cross-device tolerance lives here, with its evidence.** Backends run
+  on different hardware in different precisions, so agreement is a tolerance,
+  never bitwise equality. Two numbers, stated in `device.py` and used from
+  there rather than retyped: `1e-11` relative where both sides are `float64`,
+  `1e-6` where either side is `float32`. PyTorch's Metal backend rejects
+  `float64`, so every Apple Silicon comparison is a `float32` one, and a
+  single bound loose enough to admit those would let a broken `float64`
+  backend pass — hence keying on the lowest precision taking part.
+
+  Both are **relative**, and that is forced rather than preferred. The total
+  log-likelihood is a sum over sites, so its magnitude and any absolute
+  discrepancy in it grow with the site count. Measuring `float32` against
+  `float64` on the regression fixtures:
+
+  | taxa, sites | \|lnL\| | absolute | relative |
+  | --- | --- | --- | --- |
+  | 4, 20 000 | 8.1e+04 | 4.38e-03 | 5.38e-08 |
+  | 4, 200 000 | 8.2e+05 | 3.61e-02 | 4.41e-08 |
+  | 8, 200 000 | 1.5e+06 | 4.99e-02 | 3.36e-08 |
+
+  The absolute column spans an order of magnitude while the relative column
+  is flat at roughly 0.4 times `float32` epsilon, which is the floor. An
+  absolute bound fixed at one problem size does not transfer to another. And
+  near `|lnL| = 2.4e5` adjacent `float32` values are `0.0156` apart, so no
+  absolute bound tighter than that is achievable in `float32` at all,
+  however good the kernel. Both tolerances sit better than an order of
+  magnitude above the measured agreement, leaving room for a device that
+  reorders reductions differently from the CPU.
 - **The pruning recursion is where the tolerance policy bites.** Root
   `CLAUDE.md` states it; here it means a backend is accepted when it agrees
   with the NumPy reference inside that tolerance, and rejected outside it —
@@ -33,6 +65,14 @@ Milestone 3).
   transformation sits inside the autodiff graph.
 - **Memoize on the canonical form.** A topology has many Newick spellings;
   keying a cache on a raw string silently recomputes trees already scored.
+- **Only the sum of the two root branches is estimable.** Under a reversible
+  model the likelihood does not depend on where the root sits along the
+  branch it subdivides, so on a rooted binary tree those two branches are
+  confounded — measured at 3.6e-12 of log-likelihood across a 9:1 shift,
+  against 14.7 for two non-root siblings. `objective.py` fits the pair as one
+  parameter and reports their sum; halving it back is a drawing convention,
+  never an estimate. A tree in the trifurcating-root convention has no such
+  pair, which is why inference is normally done on unrooted topologies.
 - **Differentiable backends keep branch lengths out of the topology.**
   `pruning_torch.py` takes branch lengths as a `torch.float64` tensor
   ordered by `branch_order(tau)`, separate from the `Node` tree; it never

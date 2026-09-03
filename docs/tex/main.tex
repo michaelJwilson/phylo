@@ -15,10 +15,13 @@
 \newcommand{\Pmat}{\mathbf{P}}
 \newcommand{\SubMat}{\mathbf{S}}
 \newcommand{\bpi}{\boldsymbol{\pi}}
-\newcommand{\tree}{\tau}
-\newcommand{\branch}{\mathbf{t}}
+\newcommand{\tree}{\mathcal{T}}
+\newcommand{\branch}{\boldsymbol{\tau}}
 \newcommand{\data}{\mathbf{D}}
 \newcommand{\states}{\mathcal{A}}
+\newcommand{\rootnode}{\rho}
+\newcommand{\params}{\boldsymbol{\theta}}
+\newcommand{\objective}{\mathcal{L}}
 
 % Reads a QA caption file into a macro, rather than \input-ing it directly
 % inside \caption -- hyperref builds a PDF-string from the caption argument
@@ -27,14 +30,22 @@
 % into a plain macro first, as its own statement, avoids that: by the time
 % \caption sees the macro it is ordinary expandable text.
 \newread\qacaptionfile
-\endlinechar=-1
 \newcommand{\qacaptionread}[2]{%
+  \begingroup
+  % \endlinechar=-1 stops TeX appending a space at the end of the line it
+  % reads, which would otherwise land inside the caption. It is scoped to
+  % this group: set globally, as it was, it suppresses the space at EVERY
+  % source line break in the document, so "the substitution\nmodel" sets as
+  % "substitutionmodel". \global keeps the definition \read makes, which is
+  % otherwise local to the group.
+  \endlinechar=-1
   \openin\qacaptionfile=#1\relax
-  \read\qacaptionfile to #2
+  \global\read\qacaptionfile to #2
   \closein\qacaptionfile
+  \endgroup
 }
 
-\title{\texttt{phylo}: Technical Document}
+\title{\texttt{phylo}}
 \author{M.\ J.\ Wilson}
 \date{\today}
 
@@ -42,14 +53,25 @@
 \maketitle
 
 \begin{abstract}
-This document states the science behind \texttt{phylo}: the substitution
-model, the likelihood and the algorithm that evaluates it, the tree-search
-problem and its move sets, the reinforcement-learning formulation layered on
-top, and the computational structure that makes any of it tractable. It also
-holds the captions for the figures and tables the quality-assurance suite
-emits, so that a plot and its description cannot drift apart. Equations and
-algorithms follow the formulations in the sources cited throughout;
-deviations are stated where they occur.
+\noindent
+\texttt{phylo} searches the space of phylogenetic tree topologies with
+reinforcement learning, scoring candidates by their likelihood under a model
+of character substitution. It is built by an agent working to a fixed
+contract: every claim is pinned by a test against an independent oracle,
+every figure is regenerated from the code it reports on, and the conventions
+that make that reviewable are stated in the repository rather than
+rediscovered per change. The optimization machinery is model-agnostic by
+construction --- an unconstrained parameter vector, a differentiable
+objective, and a map back to named constrained parameters --- so the same
+optimizer fits a Potts chain, a hidden Markov model and a phylogeny, and
+discrete moves sit outside it as an operation that builds a new objective
+rather than a step within one. On the phylogenetic side that currently
+delivers a validated simulator, Felsenstein pruning across four backends, and
+branch lengths, exchangeabilities and stationary frequencies fitted by
+automatic differentiation and recovered within their confidence intervals.
+This document states the theory behind all of it, and holds the captions for
+the figures the quality-assurance suite emits, so that a plot and its
+description cannot drift apart.
 \end{abstract}
 
 \tableofcontents
@@ -66,21 +88,65 @@ e.g. the results of a dedicated study to find the best of a number of approaches
 
 \section{Scope and status}
 
-The project's goal is to search the space of phylogenetic tree topologies
-with reinforcement learning, scoring candidates by their likelihood under a
-model of character substitution. This document develops the theory that
-search requires.
+The goal is Milestone~8 of the project roadmap: a policy that proposes tree
+rearrangements and beats classical hill-climbing on held-out simulated data
+at a matched evaluation budget. Everything below is either what that needs or
+what has been built towards it.
 
-Most of it is not implemented yet. The $k$-state Jukes--Cantor substitution
-model, its simulator, and vectorized NumPy Felsenstein pruning (the Pruning
-subsection, \texttt{phylo.likelihood.pruning}) are; the rest of the
-repository is scaffolding --- build, test, benchmark, lint, documentation,
-and audit pipelines around placeholder functions --- and this document is
-written ahead of that implementation so it has a specification to match.
-Sections marked \emph{not yet implemented} describe intent; everything else
-describes mathematics that does not depend on our code.
+Built and validated: the $k$-state Jukes--Cantor and general time-reversible
+substitution models with their simulators; Felsenstein pruning in vectorized
+NumPy, differentiable PyTorch and Rust, each pinned against brute-force
+marginalization; the model-agnostic optimization interface and its optimizer,
+with confidence intervals from the observed information; branch lengths,
+exchangeabilities and stationary frequencies fitted and recovered against
+known truth; and NNI and SPR neighbourhood generators checked exhaustively
+against closed-form neighbour counts.
+
+Not built: subtree and site compression, a canonical topology key, GPU
+dispatch, the search loop that joins the move sets to the optimizer, the
+benchmark harness, and the reinforcement-learning agent itself. Sections
+covering those describe intent, and say so; everything else describes either
+mathematics that does not depend on this implementation, or behaviour a test
+pins.
 
 \section{Notation}
+
+Two vocabularies are kept apart, because the machinery in this document is
+deliberately indifferent to which application it serves. The first describes
+an optimization problem; the second describes a phylogeny. Nothing in the
+first refers to a tree.
+
+\subsection{The optimization abstraction}
+\label{sec:notation-abstraction}
+
+An objective is a differentiable scalar $\objective(\params)$ over an
+unconstrained vector $\params \in \mathbb{R}^d$, together with a map from
+$\params$ to the constrained parameters a model is actually stated in ---
+positive rates, distributions on a simplex. Minimization is the convention
+throughout, so a likelihood-based objective is a negative log-likelihood.
+
+A \emph{discrete move} changes the structure being fitted, and therefore
+changes both the meaning and the dimension $d$ of $\params$. It is not a step
+within an optimization; it constructs a new objective.
+
+\begin{table}[htbp]
+  \centering
+  \begin{tabular}{ll}
+    \toprule
+    Symbol & Meaning \\
+    \midrule
+    $\params$, $d$ & unconstrained parameter vector and its dimension \\
+    $\objective(\params)$ & scalar objective, minimized \\
+    $\nabla \objective$, $\nabla^2 \objective$ & its gradient and Hessian \\
+    \bottomrule
+  \end{tabular}
+  \caption{Symbols for the optimization abstraction, which is shared by every
+  application.}
+  \label{tab:symbols-abstraction}
+\end{table}
+
+\subsection{The phylogenetic application}
+\label{sec:notation-application}
 
 Let $\states$ be the finite state space of a single character, with
 $k = |\states|$; for nucleotide data $\states = \{A, C, G, T\}$ and $k = 4$.
@@ -88,11 +154,10 @@ The data $\data$ are an alignment of $n$ taxa over $m$ sites, so
 $\data \in \states^{n \times m}$, with $\data_{\cdot s}$ the observed column
 at site $s$.
 
-A phylogeny is a pair $(\tree, \branch)$: a tree topology $\tree$ whose
-$n$ leaves carry the taxa, and a vector $\branch$ of non-negative branch
-lengths, measured in expected substitutions per site. Internal nodes
-represent unobserved ancestors. Table~\ref{tab:symbols} collects the symbols
-used throughout.
+A phylogeny is a pair $(\tree, \branch)$: a topology $\tree$ whose $n$ leaves
+carry the taxa, and a vector $\branch$ of non-negative branch lengths,
+measured in expected substitutions per site. Internal nodes represent
+unobserved ancestors, and $\rootnode$ denotes the root.
 
 \begin{table}[htbp]
   \centering
@@ -104,99 +169,17 @@ used throughout.
     $n$, $m$ & number of taxa, number of sites \\
     $\tree$ & tree topology \\
     $\branch$ & vector of branch lengths \\
+    $\rootnode$ & the root node \\
     $\Q$ & instantaneous rate matrix, $k \times k$ \\
     $\Pmat(t)$ & transition-probability matrix over a branch of length $t$ \\
     $\bpi$ & root (and, under reversibility, stationary) distribution \\
     $L_u(i)$ & partial likelihood at node $u$ given state $i$ \\
     \bottomrule
   \end{tabular}
-  \caption{Symbols used in this document.}
+  \caption{Symbols for the phylogenetic application. The substitution model
+  these describe is developed in Appendix~\ref{app:substitution}.}
   \label{tab:symbols}
 \end{table}
-
-\section{The substitution model}
-
-Character evolution along a branch is a continuous-time Markov chain on
-$\states$ with rate matrix $\Q$, whose off-diagonal entries $q_{ij} \ge 0$
-give the instantaneous rate of substitution from state $i$ to state $j$ and
-whose rows sum to zero,
-%
-\begin{equation}
-  q_{ii} = -\sum_{j \neq i} q_{ij}.
-  \label{eq:generator}
-\end{equation}
-%
-Transition probabilities over a branch of length $t$ follow from the matrix
-exponential,
-%
-\begin{equation}
-  \Pmat(t) = \exp(\Q t), \qquad
-  P_{ij}(t) = \Pr(X_t = j \mid X_0 = i).
-  \label{eq:transition}
-\end{equation}
-%
-$\Pmat(t)$ is a stochastic matrix: $P_{ij}(t) \ge 0$ and each row sums to
-one. Both properties are invariants the implementation is tested against.
-
-\subsection{Reversibility and the root distribution}
-
-The models used here are time-reversible with respect to a distribution
-$\bpi$, meaning they satisfy detailed balance,
-%
-\begin{equation}
-  \pi_i q_{ij} = \pi_j q_{ji} \quad \text{for all } i, j.
-  \label{eq:detailed-balance}
-\end{equation}
-%
-Reversibility has two consequences we rely on. First, $\bpi$ is the
-stationary distribution of the chain, which makes it the natural choice for
-the distribution of states at the root. Second, the likelihood is invariant
-to where the root is placed on the tree --- Felsenstein's \emph{pulley
-principle} \citep{felsenstein2004} --- so an unrooted topology suffices for
-inference, and re-rooting is a test the implementation must pass rather than
-a modelling decision.
-
-A general reversible rate matrix factorizes as
-%
-\begin{equation}
-  q_{ij} = s_{ij} \pi_j \quad (i \neq j), \qquad s_{ij} = s_{ji},
-  \label{eq:gtr}
-\end{equation}
-%
-which is the general time-reversible (GTR) model; the familiar JC69, K80, and
-HKY85 models are constrained special cases \citep{felsenstein2004}. Branch
-lengths measure expected substitutions per site, which fixes the scale of
-$\Q$ through the normalization
-%
-\begin{equation}
-  -\sum_{i} \pi_i q_{ii} = 1 .
-  \label{eq:normalisation}
-\end{equation}
-%
-Without \eqref{eq:normalisation}, $\Q$ and $\branch$ trade off against each
-other and neither is identifiable.
-
-\subsection{The \texorpdfstring{$k$}{k}-state Jukes--Cantor model}
-\label{sec:jc}
-
-The most constrained case is worth stating in closed form, because it gives
-the simulator an oracle that owes nothing to our likelihood code. Take all
-exchange rates equal and $\bpi$ uniform on $k$ states. Under the
-normalization \eqref{eq:normalisation}, the transition probabilities over a
-branch of length $t$ are
-%
-\begin{equation}
-  P_{ii}(t) = \frac{1}{k} + \frac{k-1}{k}\, e^{-kt/(k-1)}, \qquad
-  P_{ij}(t) = \frac{1}{k} - \frac{1}{k}\, e^{-kt/(k-1)} \quad (i \neq j).
-  \label{eq:jc}
-\end{equation}
-%
-At $t = 0$ this gives the identity, and as $t \to \infty$ every entry tends
-to $1/k$, the stationary distribution. For $k = 4$ it is JC69
-\citep{felsenstein2004}. Simulated substitution frequencies are checked
-against \eqref{eq:jc} within Monte Carlo error, which tests the simulator
-independently of the pruning implementation --- if both were validated
-against each other, a shared error would pass unnoticed.
 
 \section{The likelihood}
 
@@ -266,49 +249,6 @@ scaling factors. Rescaling changes the arithmetic but not the result: the
 rescaled and direct computations must agree to within floating-point
 tolerance on small problems where both run.
 
-\subsection{The cross-device tolerance}
-\label{sec:tolerance}
-
-Backends run on different hardware in different precisions, so agreement
-between them is a tolerance and never bitwise equality. Two numbers, because
-one would not do:
-
-\begin{center}
-\begin{tabular}{lll}
-  \toprule
-  Comparison & Relative tolerance & Why \\
-  \midrule
-  \texttt{float64} both sides & $10^{-11}$ & CUDA and CPU support it \\
-  either side \texttt{float32} & $10^{-6}$ & Metal supports nothing wider \\
-  \bottomrule
-\end{tabular}
-\end{center}
-
-PyTorch's Metal backend rejects \texttt{float64}, so every Apple Silicon
-comparison is a \texttt{float32} one; a single tolerance loose enough to
-admit those would let a broken \texttt{float64} backend pass, which is why
-the bound is keyed on the lowest precision taking part.
-
-The tolerances are \emph{relative}, and that is forced rather than chosen.
-The total log-likelihood is a sum over sites, so its magnitude --- and any
-absolute discrepancy in it --- grows with $m$. Measuring \texttt{float32}
-against \texttt{float64} on the regression fixtures, the absolute deviation
-runs from $4.4 \times 10^{-3}$ at $m = 2 \times 10^{4}$ to
-$5.0 \times 10^{-2}$ at $m = 2 \times 10^{5}$, an order of magnitude of
-spread, while the relative deviation stays flat at
-$3.4$--$5.4 \times 10^{-8}$: roughly $0.4$ times \texttt{float32} epsilon,
-which is the floor. An absolute bound fixed at one problem size does not
-transfer to another. At $|\ln L| \sim 2.4 \times 10^{5}$ adjacent
-\texttt{float32} values are $0.0156$ apart, so no absolute bound tighter than
-that is achievable in \texttt{float32} at all, however good the kernel.
-
-Both numbers sit better than an order of magnitude above the measured
-agreement, leaving room for a device that reorders reductions differently
-from the CPU. They live in \texttt{phylo.likelihood.device}, and the
-\texttt{float32} figure is exercised on CPU --- the same arithmetic Metal
-will do --- so it is checked by continuous integration on runners that have
-no accelerator at all.
-
 \subsection{Differentiable backends}
 
 Branch lengths $\branch$ are what gradient-based fitting and tree search
@@ -365,13 +305,11 @@ implies. Generation runs in pre-order, the reverse of pruning.
 \end{algorithm}
 
 Every draw uses an explicitly seeded generator, so a simulated dataset is
-reproducible from its seed. Implemented for the $k$-state Jukes--Cantor case
-in \texttt{phylo.sim} (\texttt{simulate.py}), with topology, branch lengths,
-$k$, $\bpi$, seed, and site count read from a \texttt{simulation\_params.yaml}
-and the generating parameters retained alongside the alignment. Simulated
-substitution frequencies are checked against \eqref{eq:jc} within a
-yaml-declared Monte Carlo tolerance in
-\texttt{tests/regression/test\_jc\_simulate.py}.
+reproducible from its seed. Topology, branch lengths, $k$, $\bpi$, seed and
+site count are declared in a parameters file, and the generating truth is
+retained alongside the alignment, so a dataset always carries what produced
+it. Simulated substitution frequencies are checked against \eqref{eq:jc}
+within a declared Monte Carlo tolerance.
 
 Table~\ref{tab:sim-problem-sizes} in Section~\ref{sec:qa} lists every
 simulation regression fixture at the problem sizes actually run, read
@@ -456,14 +394,13 @@ child order is fixed bottom-up by keys that depend only on the subtree
 below, so the output depends on the topology alone. Hashing the keys keeps
 the cost at $O(n \log n)$ \citep{clrs2022}. Branch lengths are carried
 separately, as a vector in canonical node order, so one topology under two
-length assignments shares a topology key --- which is what makes the key
-usable for memoizing likelihood evaluations across a search.
+length assignments shares a key --- which is what makes the key usable for
+memoizing likelihood evaluations across a search.
 
-Two properties are required of any implementation, and both are tested
-rather than assumed: two trees produce the same string exactly when they are
-the same topology, checked by randomly re-rooting and permuting the children
-of one tree and by comparing against distinct trees; and parsing a canonical
-string reproduces the tree that produced it.
+Both required properties are tested rather than assumed: two trees produce
+the same string exactly when they are the same topology, checked by randomly
+re-rooting and permuting the children of one tree and against distinct trees;
+and parsing a canonical string reproduces the tree that produced it.
 
 \subsection{Extensions to the move set}
 \label{sec:extensions}
@@ -474,18 +411,16 @@ implemented.}
 
 \paragraph{Bounding whole sets of trees.} Scoring every neighbour exactly
 wastes work when most are poor. A cheap \emph{upper} bound on the likelihood
-attainable anywhere within a set of topologies lets the search discard the
-whole set, in the manner of branch and bound \citep{clrs2022}: when the
-bound falls below the best log-likelihood already achieved, no member of the
-set can win. Two sources of bounds are worth trying: relaxations of the
-pruning recursion \eqref{eq:pruning}, which replace the product over
-children by a quantity that is cheaper and provably no smaller; and
-compressed summaries of the alignment, where identical site patterns already
-collapse and coarser encodings trade tightness for speed
-\citep{blahut2003}. Soundness is the whole game --- a bound that can fall
-below an attainable likelihood silently discards the optimum --- so each
-candidate bound needs a proof, and a test that searches small trees
-exhaustively for a counterexample.
+attainable anywhere in a set of topologies discards the whole set once it
+falls below the best log-likelihood already achieved, in the manner of branch
+and bound \citep{clrs2022}. Two sources are worth trying: relaxations of the
+pruning recursion \eqref{eq:pruning} that replace the product over children
+by something cheaper and provably no smaller; and compressed summaries of the
+alignment, where identical site patterns already collapse and coarser
+encodings trade tightness for speed \citep{blahut2003}. Soundness is the
+whole game --- a bound that can fall below an attainable likelihood silently
+discards the optimum --- so each candidate needs a proof, and a test that
+searches small trees exhaustively for a counterexample.
 
 \paragraph{Multi-moves.} Composing several NNI or SPR rearrangements into
 one action reaches topologies no single move reaches, at the cost of a much
@@ -493,9 +428,8 @@ larger action space; in reinforcement-learning terms these are temporally
 extended actions \citep{suttonbarto2018}. Rather than fixing how many
 rearrangements a compound move contains, draw the composition during
 training from a Dirichlet process, so the number of distinct compound moves
-the agent maintains grows with the evidence for them instead of being set in
-advance \citep{mackay2003}. The measure of success is unchanged: fewer
-likelihood evaluations for the same likelihood reached.
+grows with the evidence for them \citep{mackay2003}. The measure of success
+is unchanged: fewer likelihood evaluations for the same likelihood reached.
 
 \paragraph{A transformer policy over Newick strings.} A topology serializes
 to a Newick string, which a transformer can consume directly --- tokenize
@@ -503,12 +437,36 @@ the string, pretrain on simulated trees, then fine-tune the policy with the
 usual policy-gradient machinery
 \citep{raschka2024, lapan2020, suttonbarto2018}. The input is the canonical
 form of Section~\ref{sec:canonical}, which settles the encoding question:
-one topology, one string. The alternative, an architecture invariant to
-child order and root placement, buys the same property at greater cost and
-without supplying the memoization key the search needs anyway. Compression
-then applies on top, replacing recurring subtrees by dictionary symbols ---
-an extended alphabet over the canonical string \citep{blahut2003} --- which
-shortens the token sequence a transformer must attend over.
+one topology, one string. An architecture invariant to child order and root
+placement buys the same property at greater cost, and without supplying the
+memoization key the search needs anyway. Compression applies on top,
+replacing recurring subtrees by dictionary symbols --- an extended alphabet
+over the canonical string \citep{blahut2003} --- shortening the sequence the
+transformer attends over.
+
+\subsection{Hill climbing}
+\label{sec:hill-climbing}
+
+The simplest search that uses the move sets above: score the current
+topology, score every neighbour, move to the best strict improvement, stop
+when none improves. It is the baseline the learned policy of
+Section~\ref{sec:rl} has to beat, so it is worth stating precisely rather
+than assuming.
+
+Two details are not incidental. A candidate is scored by \emph{fitting} it
+--- the continuous parameters are re-estimated for every topology, because a
+topology's likelihood is its maximized likelihood and comparing trees at
+shared branch lengths compares nothing. And the budget is counted in
+candidate fits rather than in time: fitting dominates by four orders of
+magnitude over generating the neighbourhood, and a wall-clock budget would
+make a result depend on the machine that produced it.
+
+The discrete move is what connects this section to
+Section~\ref{sec:opt-interface}. A move changes the structure being fitted,
+so it changes what the parameter vector means and how long it is; it cannot
+be a step inside a fit over a fixed-length vector. It builds a new objective,
+and this loop is what owns that construction. The optimizer needed no
+knowledge of trees to serve it.
 
 \subsection{Parsimony and likelihood}
 
@@ -566,7 +524,7 @@ differences,
 %
 with $h$ chosen to balance truncation against round-off. This check is a
 required test for any differentiable component, and is implemented for every
-objective the optimizer accepts (\texttt{phylo.opt}).
+objective the optimizer accepts.
 
 \subsection{The optimization interface}
 \label{sec:opt-interface}
@@ -576,15 +534,13 @@ unconstrained parameter vector, a differentiable scalar to minimize, and a
 map back to the named constrained parameters; nothing in it refers to a
 tree, and a test asserts that the module imports nothing from the simulation,
 likelihood or search packages. Constraints are imposed by construction rather
-than by projection --- positive scales through a log or softplus map, a
-distribution through a softmax --- so no step can leave the feasible set.
+than by projection --- a positive scale through a log map, a distribution
+through a softmax --- so no step can leave the feasible set.
 
-One detail of that map is load-bearing rather than cosmetic. A softmax over
-$n$ logits is invariant to adding a constant to all of them, so one direction
-of the parameter space is exactly flat; the observed information is then
-singular and the intervals below are undefined. Pinning the first logit
-removes that direction and makes the map a bijection onto the simplex. The
-same issue appears as a physical gauge in the Potts field of
+That map must also be injective. A softmax over $n$ logits is invariant to
+adding a constant to all of them, so one direction of the parameter space is
+exactly flat; pinning the first logit removes it and makes the map a bijection
+onto the simplex. The same gauge appears in the Potts field of
 Section~\ref{sec:qa} and is fixed the same way.
 
 Discrete moves sit outside this interface. A move changes the structure ---
@@ -595,13 +551,20 @@ vector, and the loop that proposes moves owns that construction. This is what
 lets the tree search of Section~\ref{sec:search} and the continuous fit share
 an optimizer without either knowing about the other.
 
-Fitted parameters are reported with intervals derived from the observed
-Fisher information --- the Hessian of the negative log-likelihood at the
-optimum --- pushed through the constraint map by the delta method. Those
-intervals are asymptotic, and Section~\ref{sec:qa} reports how fast they
-converge on their nominal coverage rather than assuming they have.
+Fitted parameters are reported with intervals from the observed Fisher
+information --- the Hessian of the negative log-likelihood at the optimum ---
+pushed through the constraint map by the delta method. A flat direction leaves
+that information singular and the interval undefined rather than merely wide,
+so reporting is gated on the ratio of its smallest to its largest eigenvalue;
+rounding leaves an exactly flat direction tiny, not zero. The gate is not
+hypothetical here: the two branches below a rooted binary tree's root realize
+a ratio of $6.7 \times 10^{-8}$, against $6.1 \times 10^{-2}$ for the same
+tree with that pair fitted as their sum. The intervals are asymptotic, and
+Section~\ref{sec:qa} reports how fast they reach their nominal coverage and
+shows the root invariance directly.
 
 \section{Reinforcement-learning formulation}
+\label{sec:rl}
 
 Classical heuristics propose moves by a fixed, hand-designed rule. We ask
 whether a learned policy proposes better ones, and cast the search as a
@@ -624,7 +587,80 @@ Markov decision process $(\mathcal{S}, \mathcal{A}, P, R, \gamma)$
 The natural performance measure is not the likelihood reached but the
 likelihood reached \emph{per likelihood evaluation}: every method converges
 given unbounded evaluations, so the comparison against a hill-climbing
-baseline has to be made at equal budget. \emph{Not yet implemented.}
+baseline has to be made at equal budget.
+
+\subsection{Why this reward, and what it implies}
+\label{sec:rl-reward}
+
+The reward is a difference of log-likelihoods, which is not an arbitrary
+choice: it makes the undiscounted return telescope. Over a trajectory
+$\tree_0, \dots, \tree_T$,
+%
+\begin{equation}
+  \sum_{t=0}^{T-1} R_t
+    = \sum_{t=0}^{T-1} \bigl[ \log \objective(\tree_{t+1})
+        - \log \objective(\tree_t) \bigr]
+    = \log \objective(\tree_T) - \log \objective(\tree_0),
+  \label{eq:telescope}
+\end{equation}
+%
+so the return of an episode is exactly the total improvement it achieved,
+independent of the path taken to it. A policy maximizing expected return is
+therefore maximizing the quantity the benchmark measures, with no reward
+shaping to justify separately.
+
+This forces $\gamma = 1$. Any $\gamma < 1$ breaks the telescoping and
+prefers improvement found early over the same improvement found late ---
+defensible when a trajectory may not terminate, but here episodes are capped
+by an evaluation budget, so the return is a finite sum and needs no
+discounting to converge.
+
+\subsection{Policy gradient and its baseline}
+\label{sec:rl-gradient}
+
+The action set is the move neighbourhood, whose size varies with $n$ and with
+the move type, so the policy scores candidate moves rather than indexing a
+fixed action space: $\pi_{\params}(a \mid s) \propto \exp f_{\params}(s, a)$ over
+the available $a$. The gradient of expected return is the standard score-function
+estimator \citep{suttonbarto2018},
+%
+\begin{equation}
+  \nabla_{\params} J(\params)
+    = \mathbb{E}_{\pi_{\params}} \Bigl[
+        \sum_{t=0}^{T-1} \nabla_{\params} \log \pi_{\params}(a_t \mid s_t)
+        \bigl( G_t - b(s_t) \bigr) \Bigr],
+  \qquad
+  G_t = \sum_{u=t}^{T-1} R_u,
+  \label{eq:policy-gradient}
+\end{equation}
+%
+with $b(s_t)$ a baseline that leaves the estimator unbiased --- it multiplies
+a term of zero expectation --- while reducing its variance. The variance
+matters more here than the bias-free property: $G_t$ is a sum of
+log-likelihood differences whose scale depends on the alignment, so without a
+baseline the gradient magnitude varies by orders of magnitude between
+problems. A learned state-value estimate $\hat{v}(s_t)$ is the usual choice
+and is the one that makes $G_t - b(s_t)$ an advantage.
+
+\subsection{Credit assignment}
+\label{sec:rl-credit}
+
+Tree search makes the credit-assignment problem sharp. A move that unlocks a
+region of the space may itself lower the likelihood, with the gain arriving
+several moves later; by \eqref{eq:telescope} the return correctly attributes
+that gain to the whole trajectory, but the per-step estimator in
+\eqref{eq:policy-gradient} must still spread it over the actions that earned
+it. Two consequences for an implementation. Episodes cannot be truncated
+arbitrarily, since a truncation that lands between the sacrifice and the
+payoff teaches the opposite of the truth. And a greedy baseline --- hill
+climbing --- is exactly a policy that refuses every negative $R_t$, so
+beating it requires the agent to accept some, which is the behaviour the
+variance-reduced estimator has to be able to learn rather than average away
+\citep{suttonbarto2018, lapan2020}.
+
+\emph{Not yet implemented.} Milestone~8 is where this is built; the search
+loop it will replace, hill climbing over the same move sets, is itself not
+yet built.
 
 \section{Computational structure}
 
@@ -661,11 +697,13 @@ stated above --- stochasticity of $\Pmat(t)$, detailed balance
 marginalization, gradients against finite differences \eqref{eq:finite-difference},
 re-rooting invariance --- are checked directly.
 
-Part of that suite emits scientific-style figures and tables: parameter
-recovery against simulated truth, likelihood surfaces, convergence traces,
-and timing comparisons. \textbf{Their captions belong in this section}, added
-in the same change that adds the figure, so that a plot and its description
-cannot drift apart.
+Part of that suite emits the figures below. Each is regenerated on every
+build of this document, from the fixtures the test suite runs, and its
+caption is read verbatim from the file its generating script writes. So a
+figure cannot drift from its description, nor either from what is tested.
+That holds for all of them; the paragraphs below say only why each is here,
+since its caption already says what it shows. Figure~\ref{fig:sim-tree} opens
+the sequence with the object everything downstream consumes.
 
 \qacaptionread{figures/sim_tree_caption.txt}{\simTreeCaption}
 \begin{figure}[htbp]
@@ -675,34 +713,21 @@ cannot drift apart.
   \label{fig:sim-tree}
 \end{figure}
 
-Figure~\ref{fig:sim-tree} is the first: the topology and branch lengths
-\texttt{phylo.sim.simulate} draws an alignment over, rendered by
-\texttt{phylo.qa.sim\_tree} from the same 8-taxon regression fixture as
-\texttt{tests/regression/test\_jc\_simulate.py}.
-\texttt{infra/build\_technical\_doc.sh} regenerates the figure and the
-caption above --- read verbatim from the file the script writes alongside
-it --- on every build, so the two cannot drift apart.
-
-Table~\ref{tab:sim-problem-sizes} tabulates the taxa count, site count,
-seed, and Monte Carlo tolerance of every simulation regression fixture,
-rendered by \texttt{phylo.qa.sim\_problem\_sizes} directly from the three
-\texttt{simulation\_params.yaml} files rather than restated by hand, so the
-numbers in this document cannot drift from what the regression suite
-actually runs.
+Table~\ref{tab:sim-problem-sizes} records the sizes every simulation
+regression test actually runs at, read from the fixtures rather than restated
+by hand.
 
 \qacaptionread{figures/sim_problem_sizes_caption.txt}{\simProblemSizesCaption}
 \begin{table}[htbp]
   \centering
-  \includegraphics[width=0.8\linewidth]{figures/sim_problem_sizes}
+  \input{figures/sim_problem_sizes}
   \caption{\simProblemSizesCaption}
   \label{tab:sim-problem-sizes}
 \end{table}
 
-Figure~\ref{fig:sim-example} shows a complete generated instance at the
-smallest of those sizes: the Newick string \texttt{phylo.sim.newick.to\_newick}
-produces for the 4-taxon fixture, and the leading simulated sites of the
-alignment, nucleotide-coded for this $k = 4$ model, rendered by
-\texttt{phylo.qa.sim\_example}.
+Figure~\ref{fig:sim-example} is one complete instance at the smallest of
+those sizes, small enough that the alignment and the tree that produced it
+can be read against each other.
 
 \qacaptionread{figures/sim_example_caption.txt}{\simExampleCaption}
 \begin{figure}[htbp]
@@ -712,13 +737,9 @@ alignment, nucleotide-coded for this $k = 4$ model, rendered by
   \label{fig:sim-example}
 \end{figure}
 
-Figure~\ref{fig:jc-transition} closes the simulation section by checking the
-simulator against the model it is supposed to realize. The curves are the
-closed-form transition probabilities of eq.~\eqref{eq:jc}; the markers are
-the substitution frequencies \texttt{phylo.sim.simulate} actually produced,
-one pair per branch. Agreement here is what licenses using simulated data as
-ground truth everywhere else in this document: the simulator is validated
-against the analytic form, never against the pruning code it feeds.
+Figure~\ref{fig:jc-transition} checks the simulator against
+eq.~\eqref{eq:jc}, the model it is supposed to realize. That agreement is
+what licenses simulated data as ground truth everywhere else here.
 
 \qacaptionread{figures/jc_transition_caption.txt}{\jcTransitionCaption}
 \begin{figure}[htbp]
@@ -728,56 +749,11 @@ against the analytic form, never against the pruning code it feeds.
   \label{fig:jc-transition}
 \end{figure}
 
-Figure~\ref{fig:likelihood-backends} turns to the likelihood engine, and to
-the two claims it rests on. Panel~(a) checks every backend against
-brute-force marginalization over internal states, an exhaustive sum that is a
-different algorithm rather than a second opinion from the same recursion;
-panel~(b) checks the accelerated backends against the vectorized NumPy
-reference at the full fixture sizes, where that sum is no longer tractable.
-
-Panel~(b) reports a \emph{relative} deviation, and the reason generalizes.
-The total log-likelihood is a sum over sites, so its magnitude grows with the
-site count and so does any absolute discrepancy in it. The regression suite
-pins absolute tolerances at deliberately small sizes, where they are
-achievable; the same agreement, measured at $2 \times 10^{5}$ sites, reads
-several orders of magnitude larger in absolute terms while sitting at the
-\texttt{float64} floor relatively. An absolute tolerance fixed at one problem
-size does not transfer to another, which is a constraint on how the
-cross-device tolerance of Section~\ref{sec:qa} should eventually be stated.
-
-\qacaptionread{figures/likelihood_backends_caption.txt}{\likelihoodBackendsCaption}
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.9\linewidth]{figures/likelihood_backends}
-  \caption{\likelihoodBackendsCaption}
-  \label{fig:likelihood-backends}
-\end{figure}
-
-Figure~\ref{fig:likelihood-gradient} checks the derivative the continuous
-optimization of Milestone~4 will descend. Autograd differentiates the PyTorch
-pruning recursion analytically; central finite differences of the independent
-NumPy likelihood approximate the same quantity numerically. Panel~(b) sweeps
-the finite-difference step to show why the step must be stated rather than
-assumed: truncation error falls as the step shrinks while floating-point
-cancellation grows, so the disagreement is U-shaped in the step and the check
-means something only near its minimum.
-
-\qacaptionread{figures/likelihood_gradient_caption.txt}{\likelihoodGradientCaption}
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.9\linewidth]{figures/likelihood_gradient}
-  \caption{\likelihoodGradientCaption}
-  \label{fig:likelihood-gradient}
-\end{figure}
-
 Figure~\ref{fig:opt-recovery} is the acceptance test for the optimizer of
-Section~\ref{sec:opt-interface}, run on two models that share nothing but a
-factorized structure: a one-dimensional Potts chain in an external field, and
-a discrete hidden Markov model. Neither is phylogenetic, which is the point
---- an interface demonstrated on a single model is shaped by that model. Each
-fitted parameter is plotted against the value that generated the data, with
-the interval the observed information implies; markers are open where the
-interval misses, so the figure states its own coverage.
+Section~\ref{sec:opt-interface}, on two models sharing nothing but a
+factorized structure: a Potts chain in an external field and a discrete
+hidden Markov model. Neither is phylogenetic, which is the point. An
+interface demonstrated on one model is shaped by that model.
 
 \qacaptionread{figures/opt_recovery_caption.txt}{\optRecoveryCaption}
 \begin{figure}[htbp]
@@ -787,16 +763,11 @@ interval misses, so the figure states its own coverage.
   \label{fig:opt-recovery}
 \end{figure}
 
-Coverage on one dataset is a draw, not a rate. Figure~\ref{fig:opt-coverage}
-refits both models over independent datasets at a range of sizes and plots
-the fraction of intervals containing the truth. Both converge on the nominal
-rate from opposite sides, which is the behaviour of an asymptotic
-approximation; a wrong variance formula would not improve with sample size.
-The hidden Markov model approaches from below for two identifiable reasons
-absent from the Potts chain: emission probabilities fitted near zero, where a
-Wald interval on the log scale is a poor approximation, and the
-post-selection cost of aligning the hidden-state permutation the likelihood
-is invariant to.
+Coverage on one dataset is a draw, not a rate, so
+Figure~\ref{fig:opt-coverage} measures it over independent datasets across a
+range of sizes. Both models converge on the nominal rate from opposite sides.
+That is what an asymptotic approximation does; a wrong variance formula would
+not improve with sample size.
 
 \qacaptionread{figures/opt_coverage_caption.txt}{\optCoverageCaption}
 \begin{figure}[htbp]
@@ -806,8 +777,68 @@ is invariant to.
   \label{fig:opt-coverage}
 \end{figure}
 
-Search-trajectory QA figures are not built yet; this section is where their
-captions go once they are.
+Figure~\ref{fig:opt-branch-recovery} applies that optimizer to the
+phylogenetic case of Milestone~4. Panel~(b) is why the fit has one fewer
+parameter than the tree has branches: moving length between the two branches
+below a rooted root, at fixed sum, leaves the log-likelihood unchanged to
+floating-point precision, while the same move between non-root siblings costs
+tens of log units. That is the pulley principle of
+Section~\ref{sec:reversibility} as a statement about estimability. The pair
+contributes one parameter, not two, and fitting both leaves the observed
+information singular and every interval in panel~(a) undefined.
+
+\qacaptionread{figures/opt_branch_recovery_caption.txt}{\optBranchRecoveryCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/opt_branch_recovery}
+  \caption{\optBranchRecoveryCaption}
+  \label{fig:opt-branch-recovery}
+\end{figure}
+
+Figure~\ref{fig:opt-model-recovery} fits the substitution model itself ---
+the nine free parameters of Section~\ref{sec:gtr} alongside the branch
+lengths, through the same interface. Panel~(b) is the half that is easy to
+omit, and the caption says why.
+
+\qacaptionread{figures/opt_model_recovery_caption.txt}{\optModelRecoveryCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/opt_model_recovery}
+  \caption{\optModelRecoveryCaption}
+  \label{fig:opt-model-recovery}
+\end{figure}
+
+Figure~\ref{fig:search-trajectory} needs both its panels. A trajectory alone
+shows a search improving without saying whether it stopped anywhere good; the
+landscape alone shows the problem without saying whether the search solved
+it. Below eight taxa the enumeration in panel~(b) is affordable, and it is
+what turns ``the search found the best tree'' from an assertion into a
+checkable claim --- the only independent oracle this project has for the
+discrete half of the problem.
+
+\qacaptionread{figures/search_trajectory_caption.txt}{\searchTrajectoryCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/search_trajectory}
+  \caption{\searchTrajectoryCaption}
+  \label{fig:search-trajectory}
+\end{figure}
+
+Figure~\ref{fig:search-topologies} shows what that discrimination amounts
+to. The search recovers the generating topology here, so inferred against
+true would draw the same tree twice; the informative comparison is the
+runner-up it ruled out. They differ by one split, and the rejected tree fits
+the internal branch that would create the wrong grouping at essentially zero
+length --- which is what rejecting a topology looks like from inside the
+continuous fit.
+
+\qacaptionread{figures/search_topologies_caption.txt}{\searchTopologiesCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/search_topologies}
+  \caption{\searchTopologiesCaption}
+  \label{fig:search-topologies}
+\end{figure}
 
 \section{Sources}
 
@@ -901,5 +932,120 @@ Section~\ref{sec:extensions} and throughout \citep{felsenstein2004}:
     another edge. The neighbourhood is quadratic in $n$, so each step costs
     more, but the larger reach escapes local optima that trap NNI.
 \end{description}
+
+\section{The substitution model}
+\label{app:substitution}
+
+Character evolution along a branch is a continuous-time Markov chain on
+$\states$ with rate matrix $\Q$, whose off-diagonal entries $q_{ij} \ge 0$
+give the instantaneous rate of substitution from state $i$ to state $j$ and
+whose rows sum to zero,
+%
+\begin{equation}
+  q_{ii} = -\sum_{j \neq i} q_{ij}.
+  \label{eq:generator}
+\end{equation}
+%
+Transition probabilities over a branch of length $t$ follow from the matrix
+exponential,
+%
+\begin{equation}
+  \Pmat(t) = \exp(\Q t), \qquad
+  P_{ij}(t) = \Pr(X_t = j \mid X_0 = i).
+  \label{eq:transition}
+\end{equation}
+%
+$\Pmat(t)$ is a stochastic matrix: $P_{ij}(t) \ge 0$ and each row sums to
+one. Both properties are invariants the implementation is tested against.
+
+\subsection{Reversibility and the root distribution}
+\label{sec:reversibility}
+
+The models used here are time-reversible with respect to a distribution
+$\bpi$, meaning they satisfy detailed balance,
+%
+\begin{equation}
+  \pi_i q_{ij} = \pi_j q_{ji} \quad \text{for all } i, j.
+  \label{eq:detailed-balance}
+\end{equation}
+%
+Reversibility has two consequences we rely on. First, $\bpi$ is the
+stationary distribution of the chain, which makes it the natural choice for
+the distribution of states at the root. Second, the likelihood is invariant
+to where the root is placed on the tree --- Felsenstein's \emph{pulley
+principle} \citep{felsenstein2004} --- so an unrooted topology suffices for
+inference, and re-rooting is a test the implementation must pass rather than
+a modelling decision.
+
+Every reversible rate matrix factorizes in the same way, which is the general
+time-reversible (GTR) model of Section~\ref{sec:gtr}, eq.~\eqref{eq:gtr}; the
+familiar JC69, K80 and HKY85 models are constrained special cases
+\citep{felsenstein2004}. Branch lengths measure expected substitutions per
+site, which fixes the scale of $\Q$ through the normalization
+%
+\begin{equation}
+  -\sum_{i} \pi_i q_{ii} = 1 .
+  \label{eq:normalisation}
+\end{equation}
+%
+Without \eqref{eq:normalisation}, $\Q$ and $\branch$ trade off against each
+other and neither is identifiable.
+
+\subsection{The general time-reversible model}
+\label{sec:gtr}
+
+Jukes--Cantor has no free rate parameters, so there is nothing in $\Q$ or
+$\bpi$ to estimate under it. The general reversible model supplies some:
+%
+\begin{equation}
+  \Q_{ij} = s_{ij} \, \pi_j \quad (i \neq j), \qquad
+  \Q_{ii} = -\sum_{j \neq i} \Q_{ij},
+  \label{eq:gtr}
+\end{equation}
+%
+with $s$ symmetric --- the \emph{exchangeabilities} --- and $\bpi$ the
+stationary distribution. Detailed balance, $\pi_i \Q_{ij} = \pi_j \Q_{ji}$,
+follows immediately from the symmetry of $s$, so \eqref{eq:gtr} is reversible
+by construction rather than by assumption, and the eigendecomposition
+\eqref{eq:eigen} applies exactly.
+
+Two normalizations are gauges rather than conventions, and a third appears
+once $\bpi$ is fitted. Each removes a direction along which the likelihood is
+exactly flat; a flat direction makes the observed information singular, so
+without them no parameter of the model has a confidence interval at all.
+First, $\Q$ and $c\Q$ describe the same process at branch lengths $t$ and
+$t/c$, so $\Q$ is scaled to one expected substitution per unit time,
+$-\sum_i \pi_i \Q_{ii} = 1$; this is what makes a branch length mean
+``expected substitutions per site''. Second, the same freedom reappears in
+$s$, since scaling every entry is undone by that normalization, so one entry
+is held at $1$. Third, $\bpi$ is optimized through a softmax whose first
+logit is pinned, since adding a constant to all of them changes nothing.
+
+Setting every $s_{ij}$ equal and $\bpi$ uniform must reproduce the
+Jukes--Cantor rate matrix exactly, which is how the implementation is
+validated --- against a model this document has already pinned against its
+own closed form, rather than against a restatement of \eqref{eq:gtr}.
+
+\subsection{The \texorpdfstring{$k$}{k}-state Jukes--Cantor model}
+\label{sec:jc}
+
+The most constrained case is worth stating in closed form, because it gives
+the simulator an oracle that owes nothing to our likelihood code. Take all
+exchange rates equal and $\bpi$ uniform on $k$ states. Under the
+normalization \eqref{eq:normalisation}, the transition probabilities over a
+branch of length $t$ are
+%
+\begin{equation}
+  P_{ii}(t) = \frac{1}{k} + \frac{k-1}{k}\, e^{-kt/(k-1)}, \qquad
+  P_{ij}(t) = \frac{1}{k} - \frac{1}{k}\, e^{-kt/(k-1)} \quad (i \neq j).
+  \label{eq:jc}
+\end{equation}
+%
+At $t = 0$ this gives the identity, and as $t \to \infty$ every entry tends
+to $1/k$, the stationary distribution. For $k = 4$ it is JC69
+\citep{felsenstein2004}. Simulated substitution frequencies are checked
+against \eqref{eq:jc} within Monte Carlo error, which tests the simulator
+independently of the pruning implementation --- if both were validated
+against each other, a shared error would pass unnoticed.
 
 \end{document}

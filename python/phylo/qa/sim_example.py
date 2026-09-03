@@ -16,35 +16,81 @@ import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.transforms import Bbox
 
-from phylo.qa.figure import QAFigure, write_qa_figure
+from phylo.qa.figure import (
+    QAFigure,
+    latex_integer,
+    state_label,
+    write_qa_figure,
+)
 from phylo.sim.params import SimulationParams, load_simulation_params
 from phylo.sim.simulate import SimulatedDataset, simulate_alignment
-from phylo.sim.tree import preorder
+from phylo.sim.tree import Node, preorder
 
 _MODEL_NAME = "Jukes-Cantor"
-_NUCLEOTIDES = "ACGT"
 
 
-def state_label(state: int, k: int) -> str:
-    """Render a simulated state as a nucleotide letter when ``k == 4``.
+# Greek letters for internal ancestors, in preorder. Names like
+# "ancestor_CD" carry an underscore that mathtext must escape and a meaning
+# ("the ancestor of C and D") already visible from the tree, so a symbol
+# reads better and takes less width.
+_ANCESTOR_SYMBOLS = (
+    r"\alpha",
+    r"\beta",
+    r"\gamma",
+    r"\delta",
+    r"\epsilon",
+    r"\zeta",
+    r"\eta",
+    r"\theta",
+)
+
+
+def display_newick(tau: Node) -> str:
+    r"""The topology as a mathtext string, for display rather than for parsing.
+
+    ``phylo.sim.newick.to_newick`` is the package's serialization and stays
+    the authority on what a Newick string is; this renders the same topology
+    with symbols a reader can take in: ``\rho`` for the root, Greek letters
+    for internal ancestors, and ``name\_length`` for leaves, since a raw
+    colon and an unescaped underscore are both mathtext syntax.
 
     Parameters
     ----------
-    state : int
-        Simulated state, in ``[0, k)``.
-    k : int
-        Number of states in the model.
+    tau : Node
+        Root of the topology to display.
 
     Returns
     -------
     str
-        The nucleotide letter for ``state`` when ``k == 4``; otherwise the
-        state's decimal digit, since the nucleotide labelling only applies
-        to the 4-state alphabet.
+        A mathtext string, without the enclosing dollar signs.
+
+    Raises
+    ------
+    ValueError
+        If the tree has more internal ancestors than there are symbols for.
     """
-    if k == len(_NUCLEOTIDES):
-        return _NUCLEOTIDES[state]
-    return str(state)
+    ancestors: dict[str, str] = {}
+    for node in preorder(tau):
+        if node.is_leaf or node is tau:
+            continue
+        if len(ancestors) >= len(_ANCESTOR_SYMBOLS):
+            msg = (
+                f"tree has more than {len(_ANCESTOR_SYMBOLS)} internal "
+                f"ancestors; add symbols to _ANCESTOR_SYMBOLS"
+            )
+            raise ValueError(msg)
+        ancestors[node.name] = _ANCESTOR_SYMBOLS[len(ancestors)]
+
+    def _render(node: Node) -> str:
+        label = node.name if node.is_leaf else ancestors.get(node.name, r"\rho")
+        if not node.is_leaf:
+            inner = ",".join(_render(child) for child in node.children)
+            label = f"({inner}){label}"
+        if node.branch_length is None:
+            return label
+        return f"{label}\\_{node.branch_length:g}"
+
+    return _render(tau)
 
 
 def render_sim_example(dataset: SimulatedDataset, n_sites_shown: int, ax: Axes) -> int:
@@ -79,12 +125,10 @@ def render_sim_example(dataset: SimulatedDataset, n_sites_shown: int, ax: Axes) 
     ax.text(
         0.0,
         1.0,
-        dataset.newick,
+        f"${display_newick(dataset.tau)}$",
         transform=ax.transAxes,
-        fontsize=7,
-        family="monospace",
+        fontsize=9,
         va="top",
-        wrap=True,
     )
     table = ax.table(
         cellText=rows,
@@ -117,9 +161,11 @@ def build_caption(params: SimulationParams, n_sites_shown: int) -> str:
     n_shown = min(n_sites_shown, params.n_sites)
     return (
         f"Worked example: {n_taxa}-taxon alignment simulated under the "
-        f"{_MODEL_NAME} model (seed {params.seed}, {params.n_sites} sites "
-        f"total), showing the generated Newick topology and the first "
-        f"{n_shown} of {params.n_sites} simulated sites."
+        f"{_MODEL_NAME} model (seed {params.seed}, "
+        f"{latex_integer(params.n_sites)} sites total), showing the topology "
+        f"with branch lengths -- rho the root, Greek letters its internal "
+        f"ancestors -- and the first {n_shown} of "
+        f"{latex_integer(params.n_sites)} simulated sites."
     )
 
 

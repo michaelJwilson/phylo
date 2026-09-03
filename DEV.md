@@ -13,9 +13,9 @@ carries the domain; `CLAUDE.md` states why keeping it liftable matters.
 | `docs/source/` | Sphinx API documentation. |
 | `python/phylo/` | Python package: re-exports, typed extension stubs, stub CLI. |
 | `python/phylo/sim/` | Data generation and ground-truth retention. |
-| `python/phylo/likelihood/` | Felsenstein pruning; CPU dispatch landed (NumPy, PyTorch, Rust), CUDA and Metal dispatch not yet implemented. |
+| `python/phylo/likelihood/` | Felsenstein pruning; CPU dispatch landed (NumPy, PyTorch, Rust), CUDA and Metal dispatch not yet implemented. Also the phylogenetic `Objective` (`objective.py`), which adapts the recursion to `opt/`'s fitting interface — it is here because `opt/` may import no application module. |
 | `python/phylo/opt/` | Model-agnostic continuous parameter fitting via autodiff (PyTorch): the `Objective` interface, shared constraint maps, and the Potts and HMM reference instances. Imports nothing from `sim/`, `likelihood/` or `search/`, asserted by test. |
-| `python/phylo/search/` | Move sets, RL agents, temperature schedules. |
+| `python/phylo/search/` | Move sets, RL agents, temperature schedules, and the hill-climbing search (`infer.py`) that joins them to `opt/`. |
 | `python/phylo/qa/` | QA figures/tables for the technical document; renders, doesn't recompute. |
 | `src/lib.rs` | Rust extension (`oxiphylo`), exposed through PyO3. |
 | `docs/tex/` | LaTeX source for the technical document. |

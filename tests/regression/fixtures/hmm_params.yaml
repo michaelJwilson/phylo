@@ -6,13 +6,18 @@
 # makes the hidden states nearly exchangeable, and a recovery test on an
 # almost-unidentifiable model measures the fixture rather than the optimizer.
 #
-# sequence_length=15 with n_sequences=300 gives 4200 transitions and 4500
-# emissions, enough to pin every row without the fit being slow.
+# sequence_length=15 with n_sequences=600 gives 8400 transitions and 9000
+# emissions. 600 rather than 300 because at 300 the maximum-likelihood
+# estimate lands on the boundary -- an emission probability fitted at zero --
+# for some seeds, where the observed information is singular and a Wald
+# interval is undefined. Measured eigenvalue ratio of the information at the
+# optimum: 9.7e-15 at 300 sequences on one seed, versus a stable ~1e-3 from
+# 600 upward.
 seed: 20260903
 n_states: 3
 n_symbols: 4
 sequence_length: 15
-n_sequences: 300
+n_sequences: 600
 initial: [0.5, 0.3, 0.2]
 transition:
   - [0.70, 0.20, 0.10]
