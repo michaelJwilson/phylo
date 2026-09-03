@@ -1,8 +1,8 @@
 # qa/
 
 High-level oversight scripts: the plots and tables that give scientific
-figures for `docs/tex/` and validate the application frameworks (`sim/`, `likelihood/`
-and `opt/` now, `search/` later) beyond what a unit test checks.
+figures for `docs/tex/`, and that validate `sim/`, `likelihood/`, `opt/`,
+`search/` and `learn/` beyond what a unit test checks.
 
 Root `CLAUDE.md` holds the repository-wide rules. These are local.
 

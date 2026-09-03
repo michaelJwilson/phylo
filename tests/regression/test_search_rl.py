@@ -1,12 +1,12 @@
 """The phylogenetic environment: its rewards, its caching, and its boundaries.
 
 Two things are worth asserting here that neither `phylo.learn` nor
-`phylo.search.infer` can assert for itself. That the environment's reward
-really is a difference of the log-likelihood it names -- both reward models,
-each against the scorer it claims to call -- and that the cheap model is
-cheap for the stated reason rather than by accident: it memoizes on a key
-that recognizes the same topology however it is spelled, and it evaluates a
-closed form rather than an optimization.
+`phylo.search.infer` can assert for itself. That the environment's reward is
+a difference of the log-likelihood it names -- both reward models, each
+against the scorer it claims to call -- and that the cheap model is cheap for
+the stated reason rather than by accident: it memoizes on a key that
+recognizes the same topology however it is spelled, and it evaluates a closed
+form rather than an optimization.
 """
 
 from __future__ import annotations

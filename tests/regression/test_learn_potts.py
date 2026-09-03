@@ -1,7 +1,7 @@
 """The Potts landscape: its physics, its oracle, and the two gauges in it.
 
-The environment is only usable as a reference instance if its reward really
-is the energy difference it claims. So the ``O(1)`` local update is pinned
+The environment is only usable as a reference instance if its reward is the
+energy difference it claims. So the ``O(1)`` local update is pinned
 against a full re-evaluation of ``E``, the terminal condition against an
 exhaustive scan of the neighbourhood, and the optimum against enumeration of
 every configuration -- brute force in all three cases, which is what root

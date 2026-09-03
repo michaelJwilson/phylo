@@ -1,8 +1,8 @@
 # Installing and running locally
 
-Everything needed to get a working checkout: the environment, the build, the
-test suites, and the checks pre-commit will run against your branch. For how the
-project is community developed, see [DEV.md](DEV.md).
+Everything needed for a working checkout: the environment, the build, the test
+suites, and the checks pre-commit runs against your branch. For the repository
+layout, the CI jobs, and how a change is reviewed, see [DEV.md](DEV.md).
 
 ## Prerequisites
 
@@ -22,8 +22,8 @@ uv sync --locked --all-extras
 source .venv/bin/activate
 ```
 
-After changing a dependency, run `uv lock` and commit the updated lockfile in the
-same PR.
+After changing a dependency, run `uv lock` and commit the updated lockfile in
+the same PR.
 
 The extras are `dev` (ruff, mypy, pre-commit, pip-audit), `test` (pytest and
 plugins, NumPy), and `docs` (Sphinx). `--all-extras` installs all three; sync
@@ -38,10 +38,10 @@ extension:
 pip install .
 ```
 
-This makes `phylo.oxiphylo` (currently `double`, an example binding, and
-`pruning_log_likelihood`, the Rust CPU Felsenstein pruning backend behind
-`phylo.likelihood.pruning_rust`) importable from Python. Reinstall after
-editing anything under `src/` — the compiled module does not rebuild itself.
+This makes `phylo.oxiphylo` importable from Python: `double`, an example
+binding, and `pruning_log_likelihood`, the Rust CPU Felsenstein pruning backend
+behind `phylo.likelihood.pruning_rust`. Reinstall after editing anything under
+`src/`; the compiled module does not rebuild itself.
 
 ## Running the tests
 
@@ -77,8 +77,8 @@ Add a fragment under `changelog.d/` for the change as well, if it is
 user-visible (see `changelog.d/README.md`); `towncrier` merges fragments into
 `CHANGELOG.md` at release time.
 
-`pre-commit install` runs these same checks on every `git commit`. It does
-not run the dependency audits below:  CI runs them when a lockfile changes.
+`pre-commit install` runs these same checks on every `git commit`. It does not
+run the dependency audits below; CI runs those when a lockfile changes.
 
 ## Dependency audits
 
@@ -89,8 +89,8 @@ cargo audit  # Rust; install once with `cargo install cargo-audit --locked`
 
 Both run in CI's `audit` job when `uv.lock` or `Cargo.lock` changed, and
 weekly on `main` regardless, so a newly disclosed advisory against a pinned
-dependency fails the build without every run paying for an audit of an
-unchanged graph. [DEV.md](DEV.md) describes the caching.
+dependency fails the build without every run auditing an unchanged graph.
+[DEV.md](DEV.md) describes the caching.
 
 ## Building the documentation
 
@@ -105,9 +105,9 @@ matching CI, so a broken docstring or cross-reference fails locally rather
 than in review.
 
 The technical document — the scientific background, equations, and algorithms
-— is LaTeX under `docs/tex/`. It includes QA figures `phylo.qa` scripts
-render (currently: the assumed simulation tree, `phylo.qa.sim_tree`), so
-building it means regenerating those first, not just running `latexmk`:
+— is LaTeX under `docs/tex/`. Eleven `phylo.qa` scripts render the figures and
+tables it includes, so building it regenerates those first rather than only
+running `latexmk`:
 
 ```
 sudo apt-get install -y --no-install-recommends latexmk texlive-latex-base \
@@ -116,14 +116,15 @@ uv sync --locked --extra test
 infra/build_technical_doc.sh
 ```
 
-Open `docs/draft.pdf`. CI runs the same script on every PR and fails on
-undefined references or citations.
+Open `docs/draft.pdf`. CI runs the same script on every PR, and fails on an
+undefined or multiply-defined reference, an undefined citation, or a committed
+`docs/draft.pdf` that differs from the rebuild.
 
 ## Benchmarking locally
 
 CI runs the benchmarks but asserts nothing against their timings, because
-GitHub-hosted runner hardware varies between runs. Compare against a baseline
-locally instead:
+GitHub-hosted runner hardware varies between runs. Compare against a local
+baseline instead:
 
 ```
 pytest tests/benchmarks --benchmark-autosave            # establish a baseline
