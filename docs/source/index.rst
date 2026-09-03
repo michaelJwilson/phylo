@@ -101,3 +101,6 @@ whether or not it has members yet.
 
 .. automodule:: phylo.search.infer
    :members:
+
+.. automodule:: phylo.search.rl
+   :members:

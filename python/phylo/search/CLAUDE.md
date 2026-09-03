@@ -18,6 +18,10 @@ may import `phylo.likelihood` and `phylo.opt` while neither may import it —
 the dependency runs application to infrastructure, and `phylo.opt` needed no
 change to serve a topology search.
 
+`rl.py` is the phylogenetic instance of `phylo.learn`'s `Environment`, here
+for the same reason: `learn/` may import no application module, so the tree
+environment cannot live beside the estimator that consumes it.
+
 ## Local rules
 
 - **Topological tests run at `n <= 10`**, because at that size exhaustive
@@ -47,3 +51,13 @@ change to serve a topology search.
   predecessor heavily, and refitting is the dominant avoidable cost.
 - **Every proposed move set states whether it is complete**, in which of the
   two senses, and what it costs per step.
+- **A cheap reward is a different surface, not a noisy estimate of the
+  expensive one.** Scoring a candidate at fixed known parameters is what
+  makes RL affordable — measured at roughly 300x a fitted score — but "the
+  known parameters" do not transfer across topologies, because a branch
+  length belongs to an edge and a different topology has different edges.
+  Only a scalar carries over. So the two surfaces are *compared*
+  (`phylo.qa.rl_reward_surface`) rather than assumed interchangeable, and the
+  comparison is rerun when the fixture changes: agreeing on the argmax is the
+  property that licenses training on the cheap one, and it is not guaranteed
+  by the correlation being high.
