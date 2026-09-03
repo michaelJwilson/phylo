@@ -13,7 +13,6 @@ import pytest
 from phylo.qa.sim_problem_sizes import (
     build_caption,
     main,
-    render_problem_sizes_table,
 )
 from phylo.sim.params import load_simulation_params
 from phylo.sim.tree import preorder
@@ -28,10 +27,24 @@ FIXTURE_NAMES = (
 FIXTURE_PATHS = [FIXTURES_DIR / name for name in FIXTURE_NAMES]
 
 
-def test_render_problem_sizes_table_writes_caption_naming_every_fixture(
+def _argv(output_dir: Path) -> list[str]:
+    """Build the argument vector naming every fixture, in row order.
+
+    Returns
+    -------
+    list[str]
+        The ``--params``/``--output-dir`` arguments for :func:`main`.
+    """
+    argv: list[str] = []
+    for path in FIXTURE_PATHS:
+        argv += ["--params", str(path)]
+    return [*argv, "--output-dir", str(output_dir)]
+
+
+def test_main_writes_a_table_and_caption_naming_every_fixture(
     tmp_path: Path,
 ) -> None:
-    qa_table = render_problem_sizes_table(FIXTURE_PATHS, tmp_path)
+    qa_table = main(_argv(tmp_path))
 
     assert qa_table.table_path.is_file()
     assert qa_table.table_path.suffix == ".tex"
@@ -42,7 +55,7 @@ def test_render_problem_sizes_table_writes_caption_naming_every_fixture(
 def test_the_table_is_a_latex_tabular_not_an_image(tmp_path: Path) -> None:
     # The point of the change: main.tex \input's a typeset table instead of
     # \includegraphics-ing a matplotlib rendering of one.
-    body = render_problem_sizes_table(FIXTURE_PATHS, tmp_path).table_path.read_text()
+    body = main(_argv(tmp_path)).table_path.read_text()
 
     assert body.startswith(r"\begin{tabular}")
     assert body.rstrip().endswith(r"\end{tabular}")
@@ -56,7 +69,7 @@ def test_site_counts_are_separated_and_seeds_are_not(tmp_path: Path) -> None:
     # Sites are a magnitude and read better separated; a seed is an
     # identifier, and separating 20260902 would disguise a date as a
     # quantity.
-    body = render_problem_sizes_table(FIXTURE_PATHS, tmp_path).table_path.read_text()
+    body = main(_argv(tmp_path)).table_path.read_text()
 
     assert r"200\_000" in body
     assert r"20\_000" in body
@@ -67,7 +80,7 @@ def test_site_counts_are_separated_and_seeds_are_not(tmp_path: Path) -> None:
 def test_underscores_in_fixture_names_are_escaped(tmp_path: Path) -> None:
     # An unescaped underscore in a filename is a LaTeX error, and these
     # filenames all contain them.
-    body = render_problem_sizes_table(FIXTURE_PATHS, tmp_path).table_path.read_text()
+    body = main(_argv(tmp_path)).table_path.read_text()
 
     assert r"simulation\_params\_8taxa.yaml" in body
     for line in body.splitlines():
@@ -105,7 +118,7 @@ def test_problem_sizes_values_match_each_fixture_independently() -> None:
             )
 
 
-def test_main_cli_writes_the_same_table_as_the_library_call(
+def test_main_reads_sys_argv_when_no_argv_is_given(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],

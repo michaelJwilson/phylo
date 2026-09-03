@@ -14,17 +14,15 @@ Renders what `phylo.sim` computed; it does not reimplement the model
 
 from __future__ import annotations
 
-import argparse
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
-from phylo.qa.figure import QAFigure, write_qa_figure
+from phylo.qa.figure import QAFigure
+from phylo.qa.runner import SIMULATION_PARAMS, figure_main
 from phylo.qa.style import INK_MUTED, ONE_COLUMN, letter_style, series_style
 from phylo.sim.jc import jc_transition_probabilities
-from phylo.sim.params import SimulationParams, load_simulation_params
+from phylo.sim.params import SimulationParams
 from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import edges
 
@@ -208,17 +206,13 @@ def main(argv: list[str] | None = None) -> QAFigure:
     QAFigure
         Paths written, and the caption.
     """
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--params", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    args = parser.parse_args(argv)
-
-    params = load_simulation_params(args.params)
-    fig, caption = build_figure(params)
-    try:
-        return write_qa_figure(args.output_dir, "jc_transition", fig, caption)
-    finally:
-        plt.close(fig)
+    return figure_main(
+        stem="jc_transition",
+        description=__doc__,
+        params=[SIMULATION_PARAMS],
+        build=build_figure,
+        argv=argv,
+    )
 
 
 if __name__ == "__main__":

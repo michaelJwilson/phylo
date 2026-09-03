@@ -12,21 +12,19 @@ no move set, no optimizer and no recursion (`qa/CLAUDE.md`).
 
 from __future__ import annotations
 
-import argparse
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
 from phylo.likelihood.objective import BranchLengthObjective
 from phylo.opt.fit import fit
-from phylo.qa.figure import QAFigure, latex_integer, write_qa_figure
+from phylo.qa.figure import QAFigure, latex_integer
+from phylo.qa.runner import SIMULATION_PARAMS, figure_main
 from phylo.qa.sim_tree import render_sim_tree
 from phylo.qa.style import ONE_COLUMN_WIDE, letter_style
 from phylo.search.infer import MoveSet, infer
 from phylo.search.topology import Topology, enumerate_topologies, leaf_bipartitions
-from phylo.sim.params import SimulationParams, load_simulation_params
+from phylo.sim.params import SimulationParams
 from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import Node, preorder
 
@@ -180,17 +178,13 @@ def main(argv: list[str] | None = None) -> QAFigure:
     QAFigure
         Paths written, and the caption.
     """
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--params", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    args = parser.parse_args(argv)
-
-    params = load_simulation_params(args.params)
-    fig, caption = build_figure(*found_and_runner_up(params), params)
-    try:
-        return write_qa_figure(args.output_dir, "search_topologies", fig, caption)
-    finally:
-        plt.close(fig)
+    return figure_main(
+        stem="search_topologies",
+        description=__doc__,
+        params=[SIMULATION_PARAMS],
+        build=lambda params: build_figure(*found_and_runner_up(params), params),
+        argv=argv,
+    )
 
 
 if __name__ == "__main__":

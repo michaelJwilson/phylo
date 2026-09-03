@@ -9,16 +9,16 @@ actually used, not a schematic redrawn by hand.
 
 from __future__ import annotations
 
-import argparse
 from collections.abc import Mapping
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
-from phylo.qa.figure import QAFigure, state_label, write_qa_figure
-from phylo.sim.params import SimulationParams, load_simulation_params
+from phylo.qa.figure import QAFigure, state_label
+from phylo.qa.runner import SIMULATION_PARAMS, figure_main
+from phylo.sim.params import SimulationParams
 from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import Node, edges, preorder
 
@@ -185,22 +185,19 @@ def build_caption(params: SimulationParams) -> str:
     )
 
 
-def render_sim_tree_figure(params_path: Path, output_dir: Path) -> QAFigure:
-    """Render the simulation-tree QA figure and caption from a params yaml.
+def build_figure(params: SimulationParams) -> tuple[Figure, str]:
+    """Render the simulation-tree figure and its caption from loaded params.
 
     Parameters
     ----------
-    params_path : Path
-        Path to a ``simulation_params.yaml``-format file.
-    output_dir : Path
-        Directory the figure and caption are written into.
+    params : SimulationParams
+        The fixture the tree and its alignment are drawn from.
 
     Returns
     -------
-    QAFigure
-        Paths to the written figure and caption, and the caption text.
+    tuple[Figure, str]
+        The figure and its caption.
     """
-    params = load_simulation_params(params_path)
     # Simulated here rather than passed in: the figure's whole claim is that
     # these sequences came from this tree, so they are drawn from the same
     # params the topology is.
@@ -214,20 +211,29 @@ def render_sim_tree_figure(params_path: Path, output_dir: Path) -> QAFigure:
     fig, ax = plt.subplots(figsize=(6.5, 4))
     render_sim_tree(params.tau, ax, alignment=dataset.alignment, k=params.k)
     fig.subplots_adjust(right=_TREE_WIDTH)
-    caption = build_caption(params)
-    qa_figure = write_qa_figure(output_dir, "sim_tree", fig, caption)
-    plt.close(fig)
-    return qa_figure
+    return fig, build_caption(params)
 
 
-def main() -> None:
-    """CLI entry point: ``python -m phylo.qa.sim_tree --params ... --output-dir ...``."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--params", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    args = parser.parse_args()
-    qa_figure = render_sim_tree_figure(args.params, args.output_dir)
-    print(f"Wrote {qa_figure.figure_path} and {qa_figure.caption_path}")
+def main(argv: list[str] | None = None) -> QAFigure:
+    """Render the figure from the command line.
+
+    Parameters
+    ----------
+    argv : list[str] | None
+        Argument vector; ``None`` reads ``sys.argv``.
+
+    Returns
+    -------
+    QAFigure
+        Paths written, and the caption.
+    """
+    return figure_main(
+        stem="sim_tree",
+        description=__doc__,
+        params=[SIMULATION_PARAMS],
+        build=build_figure,
+        argv=argv,
+    )
 
 
 if __name__ == "__main__":

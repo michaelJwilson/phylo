@@ -18,7 +18,6 @@ from phylo.qa.sim_tree import (
     build_caption,
     main,
     render_sim_tree,
-    render_sim_tree_figure,
     tree_layout,
 )
 from phylo.sim.params import load_simulation_params
@@ -61,13 +60,13 @@ def test_tree_layout_gives_every_leaf_a_distinct_ordered_y() -> None:
     assert leaf_ys == list(range(len(leaves)))
 
 
-def test_render_sim_tree_figure_writes_caption_with_generating_truth(
+def test_main_writes_a_figure_and_caption_with_generating_truth(
     tmp_path: Path,
 ) -> None:
     params_path = FIXTURES_DIR / "simulation_params_8taxa.yaml"
     params = load_simulation_params(params_path)
 
-    qa_figure = render_sim_tree_figure(params_path, tmp_path)
+    qa_figure = main(["--params", str(params_path), "--output-dir", str(tmp_path)])
 
     assert qa_figure.figure_path.is_file()
     assert qa_figure.figure_path.stat().st_size > 0
@@ -77,7 +76,7 @@ def test_render_sim_tree_figure_writes_caption_with_generating_truth(
     assert "Jukes-Cantor" in qa_figure.caption
 
 
-def test_main_cli_writes_the_same_figure_as_the_library_call(
+def test_main_reads_sys_argv_when_no_argv_is_given(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],

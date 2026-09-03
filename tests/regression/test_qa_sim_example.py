@@ -15,7 +15,6 @@ from phylo.qa.sim_example import (
     build_caption,
     display_newick,
     main,
-    render_sim_example_figure,
 )
 from phylo.sim.params import load_simulation_params
 from phylo.sim.simulate import simulate_alignment
@@ -34,12 +33,21 @@ def test_state_label_falls_back_to_digit_for_other_k() -> None:
     assert state_label(2, k=3) == "2"
 
 
-def test_render_sim_example_figure_writes_caption_with_generating_truth(
+def test_main_writes_a_figure_and_caption_with_generating_truth(
     tmp_path: Path,
 ) -> None:
     params = load_simulation_params(PARAMS_PATH)
 
-    qa_figure = render_sim_example_figure(PARAMS_PATH, tmp_path, n_sites_shown=10)
+    qa_figure = main(
+        [
+            "--params",
+            str(PARAMS_PATH),
+            "--output-dir",
+            str(tmp_path),
+            "--n-sites-shown",
+            "10",
+        ]
+    )
 
     assert qa_figure.figure_path.is_file()
     assert qa_figure.figure_path.stat().st_size > 0
@@ -72,7 +80,7 @@ def test_n_sites_shown_is_capped_at_the_fixture_site_count() -> None:
     assert str(params.n_sites) in caption
 
 
-def test_main_cli_writes_the_same_figure_as_the_library_call(
+def test_main_reads_sys_argv_when_no_argv_is_given(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],

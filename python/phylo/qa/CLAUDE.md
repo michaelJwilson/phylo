@@ -18,12 +18,26 @@ not about one file layout. `figure.py` holds the shared
 figure/caption-writing helper every script uses, so output is named and
 formatted consistently rather than per script.
 
+`runner.py` holds the command line every script shares: `figure_main` and
+`table_main` parse the arguments, load the parameters files, write the output,
+report what they wrote, and close the figure. A script declares its stem, the
+parameters files it takes, and the builder that turns them into a figure or a
+`tabular` body — nothing else.
+
 `infra/build_technical_doc.sh` runs these scripts and feeds their output into
 the LaTeX build; this package does not itself invoke `latexmk` or know where
 `docs/tex/` figures ultimately land beyond the output directory it is given.
 
 ## Local rules
 
+- **A script owns its builder, not its command line.** `main` declares and
+  calls `runner.figure_main` or `runner.table_main`; it does not build an
+  `ArgumentParser`, write a file, or close a figure. Thirteen copies of that
+  block meant a fix to one reached only that one, and three of the thirteen
+  reported what they had written while ten stayed silent.
+- **A builder returns what to render and writes nothing.** Writing is the
+  runner's, so a caption passes `figure.check_latex_safe` exactly once and a
+  figure is closed even when the write refuses it.
 - **Render what the application already computed, never recompute it.**
   A QA script calls into `sim`/`likelihood`/`opt`/`search` for topology,
   probabilities, or trajectories; it does not reimplement the science it is

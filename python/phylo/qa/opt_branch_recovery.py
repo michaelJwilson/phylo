@@ -21,9 +21,6 @@ recursion and no optimizer (`qa/CLAUDE.md`).
 
 from __future__ import annotations
 
-import argparse
-from pathlib import Path
-
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -32,7 +29,8 @@ from matplotlib.figure import Figure
 from phylo.likelihood import pruning_torch
 from phylo.likelihood.objective import BranchLengthObjective
 from phylo.opt.fit import constrained_standard_errors, covers, fit
-from phylo.qa.figure import QAFigure, write_qa_figure
+from phylo.qa.figure import QAFigure
+from phylo.qa.runner import ParamsArgument, figure_main
 from phylo.qa.style import INK_MUTED, ONE_COLUMN_WIDE, letter_style, series_style
 from phylo.sim.params import SimulationParams, load_simulation_params
 from phylo.sim.simulate import simulate_alignment
@@ -246,6 +244,33 @@ def build_figure(
     return fig, caption
 
 
+# Two alignments through the same loader, so the flags are declared here
+# rather than shared: the figure's claim is about the rooted and unrooted
+# fixtures specifically.
+UNROOTED_PARAMS = ParamsArgument("unrooted-params", load_simulation_params)
+ROOTED_PARAMS = ParamsArgument("rooted-params", load_simulation_params)
+
+
+def _build_from_params(
+    unrooted_params: SimulationParams, rooted_params: SimulationParams
+) -> tuple[Figure, str]:
+    """Recover both fixtures and profile the rooted split, then render them.
+
+    Returns
+    -------
+    tuple[Figure, str]
+        The figure and its caption.
+    """
+    return build_figure(
+        recovery(unrooted_params),
+        recovery(rooted_params),
+        split_profile(rooted_params, use_root_pair=True),
+        split_profile(rooted_params, use_root_pair=False),
+        unrooted_params,
+        rooted_params,
+    )
+
+
 def main(argv: list[str] | None = None) -> QAFigure:
     """Render the figure from the command line.
 
@@ -259,27 +284,13 @@ def main(argv: list[str] | None = None) -> QAFigure:
     QAFigure
         Paths written, and the caption.
     """
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--unrooted-params", type=Path, required=True)
-    parser.add_argument("--rooted-params", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    args = parser.parse_args(argv)
-
-    unrooted_params = load_simulation_params(args.unrooted_params)
-    rooted_params = load_simulation_params(args.rooted_params)
-
-    fig, caption = build_figure(
-        recovery(unrooted_params),
-        recovery(rooted_params),
-        split_profile(rooted_params, use_root_pair=True),
-        split_profile(rooted_params, use_root_pair=False),
-        unrooted_params,
-        rooted_params,
+    return figure_main(
+        stem="opt_branch_recovery",
+        description=__doc__,
+        params=[UNROOTED_PARAMS, ROOTED_PARAMS],
+        build=_build_from_params,
+        argv=argv,
     )
-    try:
-        return write_qa_figure(args.output_dir, "opt_branch_recovery", fig, caption)
-    finally:
-        plt.close(fig)
 
 
 if __name__ == "__main__":
