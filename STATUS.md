@@ -299,11 +299,14 @@ than drawn with invented data.
 
 ## What Is Not Claimed
 
-- That a learned policy beats hill climbing on trees. The 6-taxon fixture
-  cannot support the claim in either direction, because greedy already reaches
-  the enumerated optimum from every start. Separating a policy from greedy
-  needs a problem harder than exhaustive enumeration can referee, so the oracle
-  that validates the search cannot validate the agent replacing it.
+- That a learned policy beats hill climbing on trees. A fixture that could
+  settle it now exists — 7 taxa, internal branches an order of magnitude
+  shorter than the pendant ones, where NNI hill climbing reaches the
+  enumerated maximum from 24 of 50 seeded starts and stops at a genuine local
+  optimum on the other 26 — but no policy has been trained on it and no
+  budget-matched comparison has been run (issue #178). The 6-taxon fixture
+  cannot support the claim in either direction, because greedy reaches the
+  enumerated optimum from every start there.
 - Any comparison against established software. IQ-TREE 2 and RAxML-NG are not
   installed, and no statement anywhere in the repository compares against them.
 - Runtime scaling. Benchmarks are not ranked on CI hardware, so timings live in
