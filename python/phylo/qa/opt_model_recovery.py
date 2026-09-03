@@ -33,7 +33,7 @@ from phylo.sim.gtr import gtr_rate_matrix
 from phylo.sim.params import SimulationParams
 from phylo.sim.simulate import simulate_alignment
 
-# The generating truth, matching tests/regression/test_gtr.py: no two
+# The generating truth, matching python/phylo/sim/tests/test_gtr.py: no two
 # exchangeabilities equal and no two frequencies equal, so a fit that
 # collapsed either would be visible rather than flattering.
 TRUE_EXCHANGEABILITIES = np.array([1.6, 0.4, 0.9, 0.7, 2.1, 1.0])

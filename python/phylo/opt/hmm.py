@@ -245,7 +245,7 @@ class HmmObjective:
         states identical, the gradient with respect to the initial and
         transition parameters is exactly zero, and an optimizer started there
         stays there forever while the emission rows converge to the pooled
-        symbol frequency. `tests/regression/test_opt_hmm.py` pins that.
+        symbol frequency. `python/phylo/opt/tests/test_opt_hmm.py` pins that.
 
         So the emission rows are tilted apart by a fixed amount, each state
         favouring a different symbol. Deterministic rather than random: a

@@ -18,7 +18,7 @@ otherwise a distinguished point of the tree.
 
 **Completeness.** NNI is a strict subset of SPR (``nni_neighbours(t)`` is
 contained in ``spr_neighbours(t)`` as sets of topologies, checked by
-``tests/regression/test_search_topology.py``): every NNI move is realizable
+``python/phylo/search/tests/test_search_topology.py``): every NNI move is realizable
 as an SPR prune-regraft of one of the two subtrees adjacent to the shared
 internal edge. Neither is complete in a single step; both are complete in
 the sense that their transitive closure (repeated application) reaches

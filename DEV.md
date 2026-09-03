@@ -28,20 +28,20 @@ New issues are filed through `.github/ISSUE_TEMPLATE/task.yml`; blank issues are
 
 ## Test Layout
 
-`tests/` is organized by **kind** at the top level and by subject within it. Where a new test goes follows from what kind of check it is, not from what it covers.
+A test lives beside the module it covers. Where a new test goes follows from **what it covers**, not from what kind of check it is — `python/phylo/opt/tests/` holds both the regression tests for `phylo.opt` and the benchmarks that pair with them. Only tests belonging to no single module stay under `tests/`.
 
 | Path | Holds |
 | --- | --- |
-| `tests/regression/` | Correctness. Asserts scientific validity against an independent oracle. |
-| `tests/regression/{sim,likelihood,opt,learn,search,qa}/` | Split by submodule, the outgrown-flat-directory case below. |
+| `python/phylo/<module>/tests/` | Everything testing that module: regression tests and the `pytest-benchmark` timings that pair with them. |
 | `tests/regression/` (top level) | Regression tests belonging to no submodule — `test_numerics.py`, `test_claude_md_pointers.py`, `test_pairwise_distance.py` (scaffolding). |
-| `tests/benchmarks/` | `pytest-benchmark` timings. Asserts shape only; correctness is pinned by the regression counterpart. |
+| `tests/benchmarks/` | Benchmarks belonging to no submodule — `test_pairwise_distance_bench.py`. |
 | `tests/regression/fixtures/` | Declarative test data (e.g. `simulation_params.yaml`). Data, not Python. |
-| `tests/` (top level) | Whole-package and binding smoke tests, which belong to no single kind or submodule — `test_run_phylo.py`, `test_oxiphylo_bindings.py`. |
+| `tests/` (top level) | Whole-package and binding smoke tests, plus the shared helpers (`_fixtures.py`, `_objective_checks.py`, `_example_hotpath.py`). |
 
-* **Every benchmark pairs with a regression module.** `benchmarks/test_<name>_bench.py` accompanies `regression/test_<name>.py`. A benchmark without a counterpart asserts nothing about correctness, which `CLAUDE.md`'s "No Coverage Theatre" rule forbids.
-* **Split by submodule only when a kind outgrows one flat directory** — `tests/regression/likelihood/`, not a top-level `tests/likelihood/`. Kind stays the outer axis; a subject-first split would fight the two directories already there. `tests/regression/` reached 39 flat modules and was split under issue #154; `tests/benchmarks/` is 15 and stays flat.
-* **Selecting tests by the files a pull request changed is not available, and the reason is the coverage gate.** `python-tests` runs `--cov-fail-under=90` on the same invocation, so a subset fails it: `tests/regression/sim` alone measures 12%. Scoping would therefore mean weakening the gate, which `CLAUDE.md` forbids. The submodule split above is still the precondition should that ever change, and it is what makes a targeted local run — `pytest tests/regression/opt` — expressible as a path. The conditional-benchmark rule below is not an exception: benchmarks add no coverage the regression modules they pair with do not already provide.
+* **Subject is the outer axis, kind the inner one.** A module's tests sit under `python/phylo/<module>/tests/`, so one path prefix identifies the source, its tests, and its coverage target. This reverses the rule that stood between issues #154 and #163 — kind first, `tests/regression/<module>/` — because that split the three across two trees and made continuous integration keep a source-to-test mapping by hand (issue #161).
+* **A benchmark sits beside the regression module it pairs with**, in the same directory, and is named `test_<name>_bench.py`. A benchmark without a counterpart asserts nothing about correctness, which `CLAUDE.md`'s "No Coverage Theatre" rule forbids. The filename suffix is what deselects them, since they are no longer one directory.
+* **Tests are excluded from the wheel** (`[tool.maturin] exclude`). They live inside the package tree but are not part of the package: a consumer installing `phylo` has neither the fixtures nor pytest.
+* **Selecting tests by the files a pull request changed is not available, and the reason is the coverage gate.** `python-tests` runs `--cov-fail-under=90` on the same invocation, so a subset fails it: one module's tests alone measure 12% of the package. Scoping therefore waits on issue #161, which changes what coverage is measured against rather than weakening the gate. The layout above is its precondition, and is what makes a targeted local run — `pytest python/phylo/opt` — expressible as one path. The conditional-benchmark rule below is not an exception: benchmarks add no coverage the regression modules they pair with do not already provide.
 * **Fixtures follow their blast radius.** Used by one module: keep it in that module, or in a local `conftest.py`. Shared across modules: a top-level underscore-prefixed module such as `tests/_example_hotpath.py`, which is imported rather than collected.
 
 ---

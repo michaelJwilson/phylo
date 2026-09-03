@@ -37,7 +37,7 @@ Apple Silicon path the memory requirement in `ROADMAP.md` assumes.
 
 - **No application imports.** Nothing here may import from `phylo.sim`,
   `phylo.likelihood` or `phylo.search`. This is asserted by
-  `tests/regression/test_opt_objective.py`, not left to review: a single
+  `python/phylo/opt/tests/test_opt_objective.py`, not left to review: a single
   convenience import turns the abstraction back into a phylogenetics-specific
   optimizer, and neither `ruff` nor `mypy` would notice.
 - **Constraints by construction, not by projection.** Branch lengths through

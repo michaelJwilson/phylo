@@ -25,10 +25,10 @@ leaving it rendered with blank cells.
 Required whenever this PR touches a regression test that pins output against
 a reference within a stated tolerance (CLAUDE.md, "Pin to Independent
 Sources" / "Cross-Device Agreement Is a Tolerance") — e.g.
-`tests/regression/test_jc_simulate.py::test_simulated_substitution_frequencies_match_analytic_jc`,
+`python/phylo/sim/tests/test_jc_simulate.py::test_simulated_substitution_frequencies_match_analytic_jc`,
 which checks `assert_allclose(..., atol=params.tolerance)` against the
 closed-form JC probabilities, or
-`tests/benchmarks/test_pruning_rust_bench.py::test_numpy_vs_rust_forward_pass`,
+`python/phylo/likelihood/tests/test_pruning_rust_bench.py::test_numpy_vs_rust_forward_pass`,
 which pins the Rust oracle against NumPy with `abs_tol=1e-9`. Report the
 realized value even when it passes, not just the tolerance it was checked
 against, using the table below. If this PR has no such test, write "N/A" as

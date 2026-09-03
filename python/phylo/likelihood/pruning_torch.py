@@ -14,7 +14,7 @@ JC transition probabilities default to the closed form of eq. (jc) in
 in the graph. Passing ``rate_matrix`` switches to the general
 ``torch.linalg.matrix_exp(Q * t)`` path -- the same path a fitted, non-JC
 rate matrix would use -- and must agree with the closed form when ``Q`` is
-the JC generator (tests/regression/test_pruning_torch.py).
+the JC generator (python/phylo/likelihood/tests/test_pruning_torch.py).
 
 Rescaling (``likelihood/CLAUDE.md``, "Rescaling must stay differentiable")
 accumulates ``log_scale`` by tensor addition, never in place, so it composes

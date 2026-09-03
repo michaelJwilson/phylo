@@ -47,7 +47,7 @@ behind `phylo.likelihood.pruning_rust`. Reinstall after editing anything under
 
 ```
 pytest      # Python: regression tests (tests/regression), a pytest-benchmark
-            # suite (tests/benchmarks), and an integration test that the
+            # suite (the *_bench.py modules), and an integration test that the
             # Rust extension imports correctly
             # (tests/test_oxiphylo_bindings.py)
 cargo test  # Rust: unit tests for the PyO3 bindings (src/lib.rs)
@@ -127,8 +127,8 @@ GitHub-hosted runner hardware varies between runs. Compare against a local
 baseline instead:
 
 ```
-pytest tests/benchmarks --benchmark-autosave            # establish a baseline
-pytest tests/benchmarks --benchmark-compare=0001 \
+pytest -k "_bench" --benchmark-autosave                # establish a baseline
+pytest -k "_bench" --benchmark-compare=0001 \
                         --benchmark-compare-fail=mean:5%
 
 cargo bench -- --save-baseline main                      # Criterion equivalent

@@ -35,7 +35,7 @@ rather than asserted.
 
 - **No application imports.** Nothing here may import from `phylo.sim`,
   `phylo.likelihood` or `phylo.search`, asserted by
-  `tests/regression/test_learn_environment.py`. An agent developed against a
+  `python/phylo/learn/tests/test_learn_environment.py`. An agent developed against a
   tree is an agent shaped by trees, and the phylogenetic environment
   therefore lives in `phylo.search`, which may import both halves.
   `phylo.opt` is not forbidden: it is infrastructure too, and reusing its

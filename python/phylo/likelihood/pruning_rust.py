@@ -17,7 +17,7 @@ Nodes cross the boundary in post-order (children before parents, root
 last): ``phylo.sim.tree`` has no ``postorder`` helper, so this module builds
 one locally rather than adding one there for a single caller. Validated to
 machine precision against the NumPy oracle
-(``tests/regression/test_pruning_rust.py``), per ``docs/tex/main.tex``'s
+(``python/phylo/likelihood/tests/test_pruning_rust.py``), per ``docs/tex/main.tex``'s
 statement of the Rust-backend tolerance.
 """
 

@@ -166,11 +166,14 @@ jobs:
             cargo-${{ runner.os }}-
       - run: pip install "uv==${UV_VERSION}"
       - run: uv sync --locked --extra test
-      # Benchmarks are half the suite's wall clock (36 s of 71 s) and measure
-      # code that a docs or QA change cannot have altered, so they are skipped
-      # unless something they measure moved. The job still runs and still
-      # reports, because it is a required check: skipping the *step* would
-      # leave the check pending and block the merge (issue #109).
+      # Benchmarks measure code that a docs or QA change cannot have altered,
+      # so they are skipped unless something they measure moved. The job still
+      # runs and still reports, because it is a required check: skipping the
+      # *step* would leave the check pending and block the merge (issue #109).
+      #
+      # They are deselected by filename rather than by directory: since issue
+      # #163 each benchmark sits beside the regression module it pairs with,
+      # under python/phylo/<module>/tests/, so there is no one path to ignore.
       #
       # Coverage is unaffected: every line the benchmarks reach is also
       # reached by the regression module DEV.md's Test Layout requires each of
@@ -182,7 +185,7 @@ jobs:
           git fetch --no-tags --depth=1 origin "${{ github.base_ref || 'main' }}" || true
           changed="$(git diff --name-only "$base"...HEAD || git ls-files)"
           echo "changed files:"; echo "$changed" | sed 's/^/  /'
-          if echo "$changed" | grep -qE '^(src/|python/phylo/(sim|likelihood|opt|learn|search)/|tests/benchmarks/|Cargo\.(toml|lock)|pyproject\.toml|uv\.lock)'; then
+          if echo "$changed" | grep -qE '^(src/|python/phylo/(sim|likelihood|opt|learn|search)/|tests/|Cargo\.(toml|lock)|pyproject\.toml|uv\.lock)'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "::notice::computational code changed -- running benchmarks"
           else
@@ -195,7 +198,7 @@ jobs:
             uv run pytest -m "not release" \
               --cov=phylo --cov-report=term-missing --cov-fail-under=90
           else
-            uv run pytest -m "not release" --ignore=tests/benchmarks \
+            uv run pytest -m "not release" --ignore-glob="*_bench.py" \
               --cov=phylo --cov-report=term-missing --cov-fail-under=90
           fi
 

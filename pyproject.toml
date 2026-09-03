@@ -56,6 +56,9 @@ run_phylo = "phylo.scripts.run_phylo:main"
 [tool.maturin]
 python-source = "python"
 module-name = "phylo.oxiphylo"
+# Tests sit inside the package (issue #163) and are not part of it. Without
+# this they ship to consumers, who have neither the fixtures nor pytest.
+exclude = ["phylo/*/tests/**"]
 
 [tool.ruff]
 target-version = "py312"
@@ -110,6 +113,10 @@ unfixable = [
   "S101",    # asserts are the point of a test
   "PLR2004", # literal expected values are the point of a regression test
 ]
+"python/phylo/*/tests/**" = [
+  "S101",    # asserts are the point of a test
+  "PLR2004", # literal expected values are the point of a regression test
+]
 
 [tool.mypy]
 strict = true
@@ -154,13 +161,25 @@ name = "Security"
 showcontent = true
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+# Tests live beside the module they cover (issue #163); `tests/` keeps the
+# package-wide ones and the fixtures.
+testpaths = ["python/phylo", "tests"]
+# The co-located tests import `tests._fixtures`, which lives in the other tree
+# and is not part of the shipped package. Imported as `phylo.<module>.tests.*`
+# they get `python/` on the path, not the repository root, so it is added
+# explicitly rather than left to collection order. Issue #132 moves the
+# fixture loader into the package, after which this can go.
+pythonpath = ["."]
 markers = [
     "release: long-running scientific validity test, run on release rather than per PR (DEV.md CI & Performance Budget)",
 ]
 
 [tool.coverage.run]
 source = ["phylo"]
+# The tests live inside the package tree (issue #163) but are not the package.
+# Without this they are measured as source: the statement count trebles, and
+# a release-gated test body that is collected but not run reads as uncovered.
+omit = ["*/tests/*"]
 
 [tool.coverage.report]
 exclude_lines = [

@@ -4,7 +4,7 @@ Draws the closed-form transition probabilities of eq. (jc) as curves, and
 overlays the substitution frequencies `phylo.sim.simulate` actually produced
 along each branch of a fixture's tree. The two must agree within the
 fixture's declared Monte Carlo tolerance -- the same check
-`tests/regression/test_jc_simulate.py` makes numerically, shown here so a
+`python/phylo/sim/tests/test_jc_simulate.py` makes numerically, shown here so a
 reader can see the simulator sitting on its oracle rather than take the
 assertion on trust.
 
