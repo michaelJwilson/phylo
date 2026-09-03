@@ -4,6 +4,13 @@ CI/CD, the agentic workflow, and experiment tracking. No scientific application
 references live here; everything that efficiently developed the science and supports
 proof that it is valid does.
 
+`select_tests.py` decides which tests a pull request needs and what to measure
+coverage over, from the files it changed. It reads the import graph rather than
+a list of dependents, and answers "everything" for any change it cannot
+attribute to one module — a lockfile, a shared fixture, this directory. A
+selection that guesses narrowly is a test that silently did not run, so the
+unsafe answer is the one that looks like a saving.
+
 Root `CLAUDE.md` holds the repository-wide rules, and its **Writing Style**
 section binds this file too — and every docstring, comment and commit message
 in this module. It is referenced here, never restated. What follows is local. `DEV.md` holds the CI
