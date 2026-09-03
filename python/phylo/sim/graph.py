@@ -9,7 +9,22 @@ the ``shape``/``boundary`` metadata a lattice happens to carry.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from itertools import product
+
+
+class BoundaryCondition(StrEnum):
+    """How a lattice's outermost sites connect.
+
+    A ``StrEnum`` rather than a bare string so ``mypy --strict`` rejects an
+    unrecognized boundary at the call site rather than the constructor
+    raising at run time, and so the yaml loader has one place to parse it.
+    The same choice ``phylo.search.infer.MoveSet`` and
+    ``phylo.search.rl.RewardModel`` make.
+    """
+
+    OPEN = "open"
+    PERIODIC = "periodic"
 
 
 @dataclass(frozen=True)
@@ -31,16 +46,38 @@ class PottsGraph:
     shape : tuple[int, ...] | None
         The lattice extent along each dimension, if this graph was built by
         :func:`lattice_graph`; ``None`` for a graph built directly.
-    boundary : str | None
-        ``"open"`` or ``"periodic"``, if this graph was built by
+    boundary : BoundaryCondition | None
+        The boundary condition, if this graph was built by
         :func:`lattice_graph`; ``None`` for a graph built directly.
+
+    Raises
+    ------
+    ValueError
+        If ``coupling`` does not carry one entry per edge, or an edge names a
+        node outside ``[0, n_nodes)``. Both are invariants every consumer
+        assumes -- :func:`phylo.sim.potts.simulate_potts` indexes the spin
+        array by node and the coupling array by edge position -- so they are
+        checked where the graph is built rather than where it is used.
     """
 
     n_nodes: int
     edges: tuple[tuple[int, int], ...]
     coupling: tuple[float, ...]
     shape: tuple[int, ...] | None = None
-    boundary: str | None = None
+    boundary: BoundaryCondition | None = None
+
+    def __post_init__(self) -> None:
+        if len(self.coupling) != len(self.edges):
+            msg = (
+                f"coupling has {len(self.coupling)} entries for "
+                f"{len(self.edges)} edges -- one per edge is required"
+            )
+            raise ValueError(msg)
+        for edge in self.edges:
+            first, second = edge
+            if not (0 <= first < self.n_nodes and 0 <= second < self.n_nodes):
+                msg = f"edge {edge} names a node outside [0, {self.n_nodes})"
+                raise ValueError(msg)
 
     def is_open_chain(self) -> bool:
         """Whether this graph is a 1-D lattice with an open boundary.
@@ -52,11 +89,15 @@ class PottsGraph:
         here rather than approximated by the open-chain code.
         """
         return (
-            self.shape is not None and len(self.shape) == 1 and self.boundary == "open"
+            self.shape is not None
+            and len(self.shape) == 1
+            and self.boundary is BoundaryCondition.OPEN
         )
 
 
-def lattice_graph(shape: tuple[int, ...], boundary: str, coupling: float) -> PottsGraph:
+def lattice_graph(
+    shape: tuple[int, ...], boundary: BoundaryCondition, coupling: float
+) -> PottsGraph:
     """Build an N-D lattice as a :class:`PottsGraph`, with a uniform coupling.
 
     A 1-D chain is ``lattice_graph((length,), boundary, coupling)``, not a
@@ -66,9 +107,9 @@ def lattice_graph(shape: tuple[int, ...], boundary: str, coupling: float) -> Pot
     ----------
     shape : tuple[int, ...]
         Extent along each of ``N`` dimensions, each ``>= 2``.
-    boundary : {"open", "periodic"}
-        ``"open"``: no wraparound edges, so a boundary node has fewer
-        neighbours. ``"periodic"``: every dimension wraps.
+    boundary : BoundaryCondition
+        ``OPEN``: no wraparound edges, so a boundary node has fewer
+        neighbours. ``PERIODIC``: every dimension wraps.
     coupling : float
         Uniform ``J`` applied to every edge.
 
@@ -82,8 +123,9 @@ def lattice_graph(shape: tuple[int, ...], boundary: str, coupling: float) -> Pot
     Raises
     ------
     ValueError
-        If ``shape`` is empty, any extent is below 2, or ``boundary`` is not
-        one of the two recognized values.
+        If ``shape`` is empty or any extent is below 2. The boundary is a
+        :class:`BoundaryCondition`, so an unrecognized one is a type error
+        rather than a run-time check.
     """
     if not shape:
         msg = "shape must have at least one dimension"
@@ -91,10 +133,6 @@ def lattice_graph(shape: tuple[int, ...], boundary: str, coupling: float) -> Pot
     if any(extent < 2 for extent in shape):
         msg = f"every extent in shape must be >= 2, got {shape}"
         raise ValueError(msg)
-    if boundary not in ("open", "periodic"):
-        msg = f"boundary must be 'open' or 'periodic', got {boundary!r}"
-        raise ValueError(msg)
-
     strides = [1] * len(shape)
     for dim in range(len(shape) - 2, -1, -1):
         strides[dim] = strides[dim + 1] * shape[dim + 1]
@@ -106,7 +144,7 @@ def lattice_graph(shape: tuple[int, ...], boundary: str, coupling: float) -> Pot
     for coordinate in product(*(range(extent) for extent in shape)):
         node = index(coordinate)
         for dim, extent in enumerate(shape):
-            if boundary == "periodic":
+            if boundary is BoundaryCondition.PERIODIC:
                 neighbor = list(coordinate)
                 neighbor[dim] = (coordinate[dim] + 1) % extent
                 edges.append((node, index(tuple(neighbor))))

@@ -19,7 +19,7 @@ import numpy as np
 import yaml
 
 from phylo.numerics import sample_rows
-from phylo.sim.graph import PottsGraph
+from phylo.sim.graph import BoundaryCondition, PottsGraph
 
 _REQUIRED_FIELDS = frozenset(
     {
@@ -45,8 +45,8 @@ class PottsLatticeParams:
     shape : tuple[int, ...]
         Lattice extent along each dimension; length 1 is a chain, length 2
         a grid, and so on.
-    boundary : str
-        ``"open"`` or ``"periodic"``.
+    boundary : BoundaryCondition
+        Applied uniformly across every dimension.
     n_states : int
         Number of states per site, ``k``, >= 2.
     coupling : float
@@ -67,7 +67,7 @@ class PottsLatticeParams:
     """
 
     shape: tuple[int, ...]
-    boundary: str
+    boundary: BoundaryCondition
     n_states: int
     coupling: float
     field: np.ndarray
@@ -75,6 +75,36 @@ class PottsLatticeParams:
     n_samples: int
     burn_in: int
     tolerance: float
+
+
+def _boundary(path: Path, raw: object) -> BoundaryCondition:
+    """Parse a yaml boundary field, naming the file when it is unrecognized.
+
+    Parameters
+    ----------
+    path : Path
+        The file being loaded, for the error message.
+    raw : object
+        The yaml value.
+
+    Returns
+    -------
+    BoundaryCondition
+        The parsed boundary.
+
+    Raises
+    ------
+    ValueError
+        If ``raw`` is not one of the recognized boundary conditions. Caught
+        here rather than in :func:`phylo.sim.graph.lattice_graph`, which
+        takes the enum and so cannot be handed a bad string at all.
+    """
+    try:
+        return BoundaryCondition(str(raw))
+    except ValueError:
+        recognized = sorted(condition.value for condition in BoundaryCondition)
+        msg = f"{path}: boundary must be one of {recognized}, got {raw!r}"
+        raise ValueError(msg) from None
 
 
 def load_potts_lattice_params(path: Path) -> PottsLatticeParams:
@@ -116,7 +146,7 @@ def load_potts_lattice_params(path: Path) -> PottsLatticeParams:
 
     return PottsLatticeParams(
         shape=shape,
-        boundary=str(raw["boundary"]),
+        boundary=_boundary(path, raw["boundary"]),
         n_states=n_states,
         coupling=float(raw["coupling"]),
         field=field,

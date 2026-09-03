@@ -20,7 +20,7 @@ import pytest
 import torch
 from numpy.testing import assert_allclose
 from phylo.opt.potts import log_partition
-from phylo.sim.graph import lattice_graph
+from phylo.sim.graph import BoundaryCondition, lattice_graph
 from phylo.sim.potts import load_potts_lattice_params, simulate_potts
 
 from tests._fixtures import FIXTURES_DIR
@@ -112,7 +112,7 @@ def test_gibbs_sampling_matches_brute_force_enumeration_at_a_second_size() -> No
     # An independent confirmation at a different (n_states, shape) than the
     # fixture, per the issue's own two named sizes: 2-state 4x4 is 65,536
     # configurations.
-    graph = lattice_graph((4, 4), boundary="open", coupling=0.5)
+    graph = lattice_graph((4, 4), boundary=BoundaryCondition.OPEN, coupling=0.5)
     field = np.array([0.4, -0.4])
     _, expected_single, expected_pairs = _enumerate_lattice(
         graph.n_nodes, graph.edges, graph.coupling, field
@@ -142,7 +142,7 @@ def test_the_open_chain_path_reproduces_the_transfer_matrix_log_z() -> None:
     # by the backward-message sampler this module generalizes it from.
     coupling, length, n_states = 0.75, 10, 3
     field = np.array([0.4, -0.1, -0.3])
-    graph = lattice_graph((length,), boundary="open", coupling=coupling)
+    graph = lattice_graph((length,), boundary=BoundaryCondition.OPEN, coupling=coupling)
     assert graph.is_open_chain()
 
     dataset = simulate_potts(graph, field, seed=1, n_samples=4000)
@@ -212,6 +212,9 @@ def test_simulation_is_reproducible_from_the_seed() -> None:
     [
         ("n_states: 3", "n_states: 1", "n_states must be >= 2"),
         ("field: [0.30, -0.10, -0.20]", "field: [0.3, -0.1]", "field has shape"),
+        # The yaml is the one place a boundary is still a string, since
+        # `lattice_graph` takes the enum and cannot be handed a bad one.
+        ("boundary: open", "boundary: diagonal", "boundary must be one of"),
     ],
 )
 def test_a_malformed_fixture_is_refused(

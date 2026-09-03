@@ -39,7 +39,14 @@ reference instance.
 `graph.py` holds `PottsGraph`, a general undirected graph carrying a
 per-edge coupling, and `lattice_graph`, which builds an N-D lattice as a
 constructed case of it — a 1-D chain is `lattice_graph((L,), ...)`, not a
-separate type. `potts.py` draws spin configurations on a `PottsGraph`: a
+separate type. The boundary is a `BoundaryCondition` rather than a string,
+so an unrecognized one is a type error at the call site instead of a
+constructor raising at run time; the yaml loader is the single place a
+string becomes one. `PottsGraph` checks its own invariants on construction
+— one coupling per edge, every edge naming a node that exists — because
+every consumer indexes the spin array by node and the coupling array by
+edge position, so a mismatch is a silently wrong energy rather than an
+`IndexError`. `potts.py` draws spin configurations on a `PottsGraph`: a
 graph recognized as a 1-D open chain is sampled exactly, by the same
 backward-message recursion `phylo.opt.potts.log_partition` sums via
 transfer matrix; every other graph is sampled by single-site Gibbs
