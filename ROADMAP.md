@@ -2,9 +2,9 @@
 
 ## 1. Goal & Specifications
 
-Objective: Solve the large parsimony problem (search over phylogenetic tree topologies) using reinforcement learning,
-optimizing a learned proposal policy to score (sub-tree compressed across sites) candidate trees by their (approximate/bounded)
-likelihood more effectively than classical approaches.
+Objective: Solve the large parsimony problem (search over optimized phylogenetic tree topologies) using modern methods, e.g. 
+reinforcement learning and autodiff, learned a proposal policy to score candidate trees by an (exact/approximate/bounded) likelihood
+more effectively than classical approaches.
 
 Engineering Requirements:
 
