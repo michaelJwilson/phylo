@@ -5,7 +5,9 @@ model-agnostic by construction: the same machinery serves phylogenetic
 trees, HMMs and the Potts model (issue #63), and the phylogenetic case is
 one instance of it rather than its author.
 
-Root `CLAUDE.md` holds the repository-wide rules. These are local.
+Root `CLAUDE.md` holds the repository-wide rules, and its **Writing Style**
+section binds this file too — and every docstring, comment and commit message
+in this module. It is referenced here, never restated. What follows is local.
 
 ## What lives here
 

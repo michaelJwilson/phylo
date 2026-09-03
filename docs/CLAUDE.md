@@ -5,7 +5,9 @@ are generated artifacts whose output is committed, and that is what these
 rules are about: a committed artifact that CI regenerates has to come out the
 same everywhere, which constrains what the document may say.
 
-Root `CLAUDE.md` holds the repository-wide rules. These are local.
+Root `CLAUDE.md` holds the repository-wide rules, and its **Writing Style**
+section binds this file too — and every docstring, comment and commit message
+in this module. It is referenced here, never restated. What follows is local.
 
 ## What lives here
 

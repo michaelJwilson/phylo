@@ -4,7 +4,9 @@ CI/CD, the agentic workflow, and experiment tracking. No scientific application
 references live here; everything that efficiently developed the science and supports
 proof that it is valid does.
 
-Root `CLAUDE.md` holds the repository-wide rules. `DEV.md` holds the CI
+Root `CLAUDE.md` holds the repository-wide rules, and its **Writing Style**
+section binds this file too — and every docstring, comment and commit message
+in this module. It is referenced here, never restated. What follows is local. `DEV.md` holds the CI
 budget, the repository settings, and the eight CI jobs — including the two
 that bind hardest here: discrete problem sizes, e.g. trees, are capped at `n <= 10`,
 so tests complete.
