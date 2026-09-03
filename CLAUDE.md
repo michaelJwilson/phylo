@@ -36,7 +36,6 @@ This file is authoritative. The remainder exist so there is not replication, and
 *   **Docs:** Build with `sphinx-build -W` in `docs/source/`.
 
 ## Conventions
-*   **Hot Paths:** Prefer vectorized implementations over pure Python (see Performance).
 *   **Documentation Sync:** Any change affecting behavior, CI, dev setup, or math models must update, in the same PR, whichever of these it makes untrue: `README.md`, `CLAUDE.md` (including a module's), `DEV.md`, `INSTALL.md`, `ROADMAP.md`, `docs/tex/`. If the change is user-visible, add a fragment under `changelog.d/` (see `changelog.d/README.md`) rather than editing `CHANGELOG.md` directly — `towncrier` merges fragments into `CHANGELOG.md` at release time, and CI's `towncrier check` enforces one exists.
 *   **Single Version Source:** The package version lives exclusively in `Cargo.toml`'s `[package].version`.
 *   **Package Surface:** `python/phylo/__init__.py` re-exports nothing beyond the package's own top-level utilities (currently `double`); import submodule contents explicitly (`from phylo.likelihood import ...`), not through the top-level namespace.
@@ -50,11 +49,11 @@ This file is authoritative. The remainder exist so there is not replication, and
 *   **The Oracle:** Every accelerated kernel keeps its pure Python/NumPy implementation as an oracle. Regression tests must pin the accelerated output against it within an explicit tolerance.
 
 ## Testing & Quality Assurance
-*   **Simulate Component-Wise:** Build fixtures by simulating from a known generative model with an explicitly seeded generator (`np.random.default_rng(seed)`). Test components individually.
+*   **Simulate Component-Wise:** Build fixtures by simulating from a known generative model. Test components individually and in combination.
 *   **Pin to Independent Sources:** Validate expected values against analytic results, brute-force computations, or secondary implementations with stated tolerances.
-*   **Check Math Invariants:** Ensure rows of transition matrices sum to 1, models satisfy detailed balance, gradients match finite differences, and likelihood increases monotonically.
+*   **Check known math properties/Invariants:**
 *   **Cross-Device Agreement Is a Tolerance:** `float32` and `float64` behave differently across CPU, CUDA, and Metal, and deep recursions accumulate that. Agreement is checked against the tolerance stated in `likelihood/CLAUDE.md`, with the measurements it is derived from, and implemented in `phylo.likelihood.device`, never bitwise. A discrepancy inside it is not a bug and must not be "fixed". Two rules that fall out of it: the tolerance is **relative**, because the log-likelihood is a sum over sites and an absolute bound fixed at one problem size does not transfer to another; and it is keyed on the **lowest precision** in the comparison, because Metal cannot do `float64` and one bound loose enough for `float32` would let a broken `float64` backend pass.
-*   **No Coverage Theatre:** Tests asserting only output shapes or successful execution without exceptions are forbidden. Leave gaps unwritten and track them as GitHub issues (`infra/TICKETING.md`) rather than writing meaningless tests.
+*   **No Coverage Theatre:** Tests asserting only output shapes or successful execution without exceptions are forbidden. Leave gaps unwritten and track them as GitHub issues rather than writing meaningless tests.
 *   **Scientific Outputs:** The suite must emit plots and tables for the LaTeX technical document. Update the LaTeX captions concurrently. Every figure is rendered from the code it reports on, ships with a caption naming the seed, sizes and model that produced it, and is committed under `docs/tex/figures/` so a changed plot is visible in review rather than only after a document build.
 
 ## Technical Document & Reference Sources
@@ -76,19 +75,17 @@ This file is authoritative. The remainder exist so there is not replication, and
 *   **Phylogenetics:** Felsenstein (*Inferring Phylogenies*); Durbin et al. (*Biological Sequence Analysis*); Compeau & Pevzner (*Bioinformatics Algorithms*); Pachter & Sturmfels (*Algebraic Statistics for Computational Biology*)
 *   **Information/Quantum:** Blahut (*Algebraic Codes for Data Transmission*); Nielsen & Chuang (*Quantum Computation and Quantum Information* — background only)
 
-**Expected Reader:** a well-educated developer with scientific and performance-computing background, but not an application expert, e.g. phylogenetics. This sets the formatting contract for `docs/tex/`: keep the body streamlined — hyperlinks and citations over inline derivation — and push required application background (e.g. NNI, other standard algorithms) into a dedicated appendix, cited from the point of use rather than re-derived there. Treat the main text as a high-level overview of the current best-known approach (simulation, models) in terms of the roadmap, not an exhaustive record; link out to supporting docs, with plots, and results for dedicated studies that informed the technical doc.
-
-**Figures follow the same contract, in the register of an academic letter.** `python/phylo/qa/style.py` fixes it once and every QA script draws inside it: a serif face matching the body text, one-column sizing, a recessive frame, and no ornament that carries no information. Identity is never colour alone — the palette is a fixed, never-cycled colourblind-safe order, paired index-for-index with markers and linestyles so a figure survives greyscale printing, and a fifth series is a reason to facet rather than to invent a hue. A figure states its own evidence: where a claim is checked against a tolerance, the caption gives the realized value beside it.
-
 ## Writing Style
 1.  **Be concise and direct:** Omit needless words, use active voice, and lead with the most important fact.
 2.  **Be concrete and precise:** Use exact facts and numbers ("40% faster") instead of vague intensifiers ("much faster").
-3.  **Stay neutral and objective:** Avoid marketing hype, subjective opinions, and weak qualifiers ("very", "rather").
-4.  **Provide evidence:** Back every claim in PRs/commits with benchmark numbers, test outputs, or reproductions.
+3.  **Stay neutral and objective:** Avoid hype, subjective opinions, weak qualifiers.  use nouns and verbs, avoid adjectives and adverbs.
+4.  **Provide evidence:** Back every claim in PRs/commits with benchmark numbers, test validated outputs, or reproductions.
 5.  **Maintain formatting:** Apply naming, terminology, and syntax consistently.
 
+**Expected Reader:** a well-educated developer with scientific and performance-computing background, but not an application expert, e.g. phylogenetics. Keep tech. doc. streamlined — hyperlinks and citations over inline derivation — and push required application background (e.g. NNI, other standard algorithms) into a dedicated appendix, cited from the point of use rather than re-derived there. Treat the main text as a high-level overview of the current best-known approach (simulation, models, results) in terms of the roadmap, not an exhaustive record; link out to supporting docs, with plots, and results for dedicated studies that informed the technical doc. Adopt the style of an academic paper/letter.
+
 ## Definition of Done
-1.  **Regression Test:** Asserts scientific validity (not just shape/execution) and pins expected output.
+1.  **Regression Test:** Asserts scientific validity (not just shape/execution/coverage theatre) and pins expected output.
 2.  **Benchmark:** New/changed hot functions include a `pytest-benchmark` (Python) or `criterion` bench (Rust). Baseline numbers reported in PR.
 3.  **Coverage:** `--cov-fail-under` gate is maintained or raised. Never lower it to pass a PR.
 4.  **Docs & Tooling:** CI covers the new code. `ruff`, `mypy`, and `cargo` checks pass locally. Documentation Sync above is satisfied.
@@ -98,10 +95,3 @@ This file is authoritative. The remainder exist so there is not replication, and
 *   Must be open source (OSI-approved license).
 *   Ask for explicit permission before adding new tools/dependencies.
 *   Flag any proposed dependency with $<1,000$ GitHub stars (or equivalent ecosystem metric) for explicit review.
-
-## Known Gaps
-GitHub issues and labels are the project board (`infra/TICKETING.md`): what exists, what is only recorded as intent, and what is untouched — including gaps in the current scaffolding — is tracked there, not in a second list in this repository. `ROADMAP.md` records milestone-level progress; file or update an issue for anything narrower.
-
-## Working with Sub-Agents
-*   **Parallel:** Use isolated git worktrees/PRs for disjoint tasks (e.g., Rust extension scaffold vs. Python test harness).
-*   **Sequential:** Keep coupled work in a single thread to avoid context-derivation overhead and merge conflicts.
