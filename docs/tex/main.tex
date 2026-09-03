@@ -698,8 +698,41 @@ route around a barrier a greedy searcher walks into. This is a harder problem
 than the tree fixture of Section~\ref{sec:hill-climbing}, where the optimum
 led the runner-up by $41.6$ log units and hill climbing was never challenged.
 
-\emph{Not yet implemented:} the phylogenetic environment, PPO, and a learned
-state-value baseline. Milestone~8 needs all three.
+\subsection{The phylogenetic environment, and the reward it can afford}
+\label{sec:rl-phylo}
+
+The application instance is now built: a state is a topology, an action is a
+neighbour under NNI or SPR, and the reward is the improvement in
+log-likelihood. It lives in the search package rather than beside the
+estimator, for the reason the phylogenetic objective lives beside the
+likelihood --- an agent developed against a tree is an agent shaped by trees,
+and the module that must stay model-agnostic may import no application code.
+
+The reward is where the cost is. Scoring a candidate at its \emph{maximized}
+branch lengths is the honest quantity and runs an optimization per candidate;
+an episode evaluates a whole neighbourhood at every step, so training on it
+is not affordable. Scoring at fixed known parameters instead is the
+substitution Figure~\ref{fig:rl-reward-surface} measures.
+
+One detail of that substitution is forced rather than chosen. ``The known
+parameters'' do not survive a change of topology: a branch length belongs to
+an edge, and a different topology has different edges. The only thing that
+transfers is a scalar, so every candidate is scored at one fixed branch
+length --- which makes the cheap reward a \emph{different surface} from the
+fitted one rather than an approximation of it, and is why the two are
+compared rather than assumed interchangeable. This is the same fact
+Section~\ref{sec:opt-interface} states about discrete moves, seen from the
+other side: a move changes what the parameter vector means.
+
+\emph{Not claimed here:} that a learned policy beats hill climbing on trees.
+The 6-taxon fixture cannot support that claim in either direction --- greedy
+already reaches the enumerated optimum from every start, as
+Section~\ref{sec:hill-climbing} reports, so there is nothing left to win. A
+fixture that separates them is a harder problem than exhaustive enumeration
+can referee, and that is the obstacle between here and Milestone~8 rather
+than any missing machinery.
+
+\emph{Not yet implemented:} PPO and a learned state-value baseline.
 
 \section{Computational structure}
 
@@ -877,6 +910,22 @@ continuous fit.
   \includegraphics[width=0.9\linewidth]{figures/search_topologies}
   \caption{\searchTopologiesCaption}
   \label{fig:search-topologies}
+\end{figure}
+
+Figure~\ref{fig:rl-reward-surface} is the one an agent depends on. An
+episode evaluates a whole neighbourhood at every step, so a reward costing
+one optimization per candidate puts training out of reach; scoring at fixed
+known parameters instead is cheap enough, and the question is whether it is
+the same problem. Panel~(b) exists because the cheap surface has exactly one
+free parameter, and a result that held only at the value we happened to pick
+would not be a result.
+
+\qacaptionread{figures/rl_reward_surface_caption.txt}{\rlRewardSurfaceCaption}
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.9\linewidth]{figures/rl_reward_surface}
+  \caption{\rlRewardSurfaceCaption}
+  \label{fig:rl-reward-surface}
 \end{figure}
 
 \section{Sources}

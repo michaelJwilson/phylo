@@ -66,6 +66,12 @@ uv run python -m phylo.qa.search_topologies \
   --params tests/regression/fixtures/simulation_params_6taxa.yaml \
   --output-dir docs/tex/figures
 
+# The reward-surface comparison scores all 105 topologies twice, once of them
+# at one optimization per topology. Same reason as above.
+uv run python -m phylo.qa.rl_reward_surface \
+  --params tests/regression/fixtures/simulation_params_6taxa.yaml \
+  --output-dir docs/tex/figures
+
 (
   cd docs/tex
   latexmk -pdf -interaction=nonstopmode -halt-on-error \

@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib as mpl
+import numpy as np
 from matplotlib.figure import Figure
 
 # LaTeX special characters a caption may not contain unescaped. Backslash is
@@ -77,6 +78,70 @@ def check_latex_safe(text: str) -> None:
 
 
 _NUCLEOTIDES = "ACGT"
+
+
+def spearman_correlation(first: np.ndarray, second: np.ndarray) -> float:
+    """Rank correlation of two equal-length samples.
+
+    Pearson's correlation of the ranks, which is what makes it insensitive to
+    any monotone rescaling of either axis. That is the property wanted when
+    comparing two scoring surfaces: the question is whether they *order*
+    candidates the same way, not whether they agree on values, and they are
+    not even on the same scale.
+
+    Written here rather than taken from ``scipy``, which this project does not
+    depend on. Ties are averaged, so a surface with repeated values is scored
+    the way the usual definition scores it rather than by an arbitrary
+    tie-break.
+
+    Parameters
+    ----------
+    first, second : np.ndarray
+        1-D arrays of the same length, at least two entries.
+
+    Returns
+    -------
+    float
+        The correlation, in ``[-1, 1]``.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are not 1-D and of equal length, if either has fewer
+        than two entries, or if either is constant --- a constant sample has
+        no ranking, so the correlation is undefined rather than zero.
+    """
+    if first.ndim != 1 or second.ndim != 1 or first.shape != second.shape:
+        msg = (
+            f"expected two 1-D arrays of equal length, got shapes "
+            f"{first.shape} and {second.shape}"
+        )
+        raise ValueError(msg)
+    if first.size < 2:
+        msg = f"need at least 2 entries to rank, got {first.size}"
+        raise ValueError(msg)
+
+    ranks = [_average_ranks(values) for values in (first, second)]
+    centred = [values - values.mean() for values in ranks]
+    norms = [float(np.sqrt(values @ values)) for values in centred]
+    if min(norms) == 0.0:
+        msg = "a constant sample has no ranking; the correlation is undefined"
+        raise ValueError(msg)
+    return float(centred[0] @ centred[1] / (norms[0] * norms[1]))
+
+
+def _average_ranks(values: np.ndarray) -> np.ndarray:
+    """Ranks of ``values``, ties sharing their average rank."""
+    order = np.argsort(values, kind="stable")
+    ranks = np.empty(values.size, dtype=np.float64)
+    ranks[order] = np.arange(values.size, dtype=np.float64)
+    sorted_values = values[order]
+    start = 0
+    for stop in range(1, values.size + 1):
+        if stop == values.size or sorted_values[stop] != sorted_values[start]:
+            ranks[order[start:stop]] = ranks[order[start:stop]].mean()
+            start = stop
+    return ranks
 
 
 def state_label(state: int, k: int) -> str:
