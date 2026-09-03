@@ -257,8 +257,23 @@ jobs:
       # these packages are what the document needs (poppler-utils is for the
       # staleness check below), and no new GitHub Action joins the supply
       # chain.
+      # The .deb files, not the installed tree: apt's cache is what can be
+      # restored safely, and dpkg still installs from it in a second or two.
+      # `uv` and Cargo are both cached above; this was the one install left
+      # paying full price on every run (issue #154).
+      - name: Cache the TeX Live packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: texlive-${{ runner.os }}-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: |
+            texlive-${{ runner.os }}-
       - name: Install TeX Live
         run: |
+          # Keep the downloaded .debs so the cache above has something to save.
+          sudo rm -f /etc/apt/apt.conf.d/docker-clean
+          echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' \
+            | sudo tee /etc/apt/apt.conf.d/99keep-debs
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             latexmk \
