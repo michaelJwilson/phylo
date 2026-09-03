@@ -2,7 +2,7 @@
 
 Repository structure, CI enforcement, and contribution rules. For setup, see [INSTALL.md](INSTALL.md); for the project's trajectory and for the development loop these rules sit inside — ticket, plan, pull request, validation, record — see [ROADMAP.md](ROADMAP.md) §0. **`CLAUDE.md` is the authoritative source for conventions; in any conflict, `CLAUDE.md` prevails.**
 
-This file covers the mechanics: what the layout is, what the checks are, what the templates hold. It does not restate the loop, and where the two appear to disagree `ROADMAP.md` §0 is the loop's definition.
+This file is worked in, so it carries the mechanics in full — the layout, the checks, what the templates hold, how a release is cut — including where `ROADMAP.md` §0 has already stated the shape of them. Per `CLAUDE.md`'s altitude rule, detail may repeat between a planning document and a worked-in one; what it may not do is disagree. `ROADMAP.md` §0 is the loop's intent, and anything here that contradicts it is a defect here.
 
 ## Repository Layout
 
@@ -92,9 +92,10 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 * **Reproducibility:** Pin the environment. Use `--locked` for CI installs, pin runner images (`ubuntu-24.04`), and seed every generator through `np.random.default_rng(seed)`.
 * **Versioning:** Lives in `Cargo.toml` (`[package].version`), and nowhere else.
 * **Definition of Done:** Follow `CLAUDE.md`'s checklist.
-* **A PR implements a plan already approved.** `ROADMAP.md` §0.2 defines the plan — its shape, and the `Open Questions` section a reviewer reads first — and §0.3 the pull request. A pull request that arrives without one, or that implements something other than what was approved, is the thing the loop exists to prevent.
+* **A PR implements a plan already approved.** The ticket carries a plan comment before any code exists, the issue is labelled `planned`, and a maintainer applies `approved`; only then may the pull request open, and it implements that plan. A plan that turns out to be flawed gets a revised plan posted to the thread, not a silent correction in the diff.
+* **A plan is 2–5 steps**, or more where the work needs them and the plan says why, each stating how it will be validated — the analytic result, brute-force computation or enumeration it is checked against, not "tests pass". It ends with an `Open Questions` section carrying every question on the desired behaviour, so a reviewer finds them in one place; a plan with none says so under that heading rather than omitting it.
 * **PR Template:** Every PR starts from `.github/pull_request_template.md`. It carries the Definition-of-Done checklist, a benchmark-numbers table, a Documentation Sync line, and a Follow-up / Deferred Work section for anything left to a tracking issue. A second table in the Benchmark section takes the realized value of every scientific or tolerance test the PR touches — test, reference, tolerance, realized value — or the text "N/A" and no table. The template reminds; it is not a CI gate.
-* **Agentic Approach:** How disjoint and coupled tickets are staged across worktrees and pull requests is stated in `ROADMAP.md` §0.2, and referenced here rather than restated.
+* **Agentic Approach:** Disjoint tickets run as parallel git worktrees and parallel pull requests; coupled changes run as a single sequential chain, each stacked on the last. Stated the same way in `ROADMAP.md` §0.2.
 
 ### Dependency Management
 

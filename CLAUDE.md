@@ -24,7 +24,7 @@ Two concerns are supported, and they must stay separable:
 An infrastructure rule that acquires an application reference has lost the separation. Structure enforces it: `README.md` and `DEV.md` put infrastructure before application, and the file layout keeps them apart (`infra/` against `python/phylo/*` and `docs/tex/`).
 
 ## Repository Map
-This file is authoritative. The remainder exist so there is not replication, and each has a defined task:
+This file is authoritative. Each of the remainder has a defined task:
 
 | Document | Job |
 | --- | --- |
@@ -38,6 +38,8 @@ This file is authoritative. The remainder exist so there is not replication, and
 | `docs/tex/` | The technical document: background, equations, algorithms |
 
 `python/phylo/sim/`, `likelihood/`, `opt/`, `learn/`, `search/`, `qa/`, `infra/`, and `docs/` each carry their own `CLAUDE.md`. Those add what applies only inside one module; they never override this file except for the vital **writing style rules, which bind every one of them**. A rule that binds the whole repository belongs here, not in one of them.
+
+**Altitude, and what may repeat.** `ROADMAP.md`, `STATUS.md` and `TICKETS.md` plan and track — what the project is doing, how far it has got, what remains — at a level a reader holds in their head. `CLAUDE.md`, `DEV.md`, `INSTALL.md` and the module files are worked in, and carry their detail in full rather than as pointers: someone following one of them should not have to assemble the answer from three. Detail may therefore repeat across them, and where it repeats it must agree — a copy that has drifted is a defect, and this file settles which reading is right. The Writing Style above is the one text referenced rather than copied, because it binds every file at once.
 
 ## Environment & Tooling
 *   **Python (3.12):** Manage via `uv`. Run `uv sync --locked --all-extras`. Regenerate locks with `uv lock` and commit `uv.lock` in the same PR.

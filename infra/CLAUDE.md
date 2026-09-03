@@ -22,3 +22,13 @@ so tests complete.
   unattended provided the PR implements a plan already posted to the thread.
   A plan that turns out to be flawed gets a revised plan posted in the
   thread, not a silent correction.
+- **A plan is 2–5 steps**, or more where the work needs them and the plan
+  says why, each stating how it will be validated — the analytic result,
+  brute-force computation or enumeration it is checked against, not "tests
+  pass". It ends with an `Open Questions` section carrying every question on
+  the desired behaviour, so a reviewer finds them in one place; a plan with
+  none says so under that heading rather than omitting it. This is the shape
+  the agent writing the plan needs, so it is stated here as well as in
+  `ROADMAP.md` §0.2 — per root `CLAUDE.md`, the two must agree.
+- **A plan is subject to the Writing Style**, like everything else written
+  here. Referenced, not restated: root `CLAUDE.md` holds it.
