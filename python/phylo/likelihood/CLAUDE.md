@@ -4,7 +4,9 @@ Felsenstein pruning, and the dispatch that runs it on whatever hardware is
 present. This is the hottest path in the project: every proposed move costs at
 least one evaluation, and search proposes many.
 
-Root `CLAUDE.md` holds the repository-wide rules. These are local.
+Root `CLAUDE.md` holds the repository-wide rules, and its **Writing Style**
+section binds this file too — and every docstring, comment and commit message
+in this module. It is referenced here, never restated. What follows is local.
 
 ## What lives here
 

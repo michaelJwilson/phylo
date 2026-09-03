@@ -4,7 +4,9 @@ High-level oversight scripts: the plots and tables that give scientific
 figures for `docs/tex/`, and that validate `sim/`, `likelihood/`, `opt/`,
 `search/` and `learn/` beyond what a unit test checks.
 
-Root `CLAUDE.md` holds the repository-wide rules. These are local.
+Root `CLAUDE.md` holds the repository-wide rules, and its **Writing Style**
+section binds this file too — and every docstring, comment and commit message
+in this module. It is referenced here, never restated. What follows is local.
 
 ## What lives here
 
