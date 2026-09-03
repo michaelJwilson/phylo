@@ -4,16 +4,15 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An agent-assisted exploration of modern optimization for phylogenetic
-inference — a high-performance Python package with a Rust-accelerated backend
-(`phylo.oxiphylo`, via [PyO3](https://pyo3.rs)/[maturin](https://www.maturin.rs)).
+An agent-assisted development of modern optimization discrete/continuous optimization
+for given applications, e.g. phylogenetic inference — a high-performance package with
+Rust-accelerated backend (`phylo.oxiphylo`, via [PyO3](https://pyo3.rs)/[maturin](https://www.maturin.rs))
+and autodiff.
 
-Two separable things live here, and keeping them separable is a constraint
-rather than an observation. **The infrastructure** — the build, the checks,
-the release process, the agentic workflow — mentions no phylogenetics and
-would transplant to an unrelated scientific project unchanged. **The
-application** is the science. This file is ordered accordingly:
-infrastructure first, application last.
+
+Two concerns are separated here. **The infrastructure** — the build, the checks,
+the release process, the agentic workflow without any application refernce. **The
+application** for science.
 
 ## Quick start
 
@@ -22,12 +21,6 @@ uv sync --locked --all-extras
 source .venv/bin/activate
 pytest -m "not release"
 ```
-
-`pytest -m "not release"` is what CI runs and what you want while developing.
-Plain `pytest` additionally runs the release-gated tests — one extra test for
-roughly seven times the wall clock, because the exhaustive topological checks
-grow combinatorially in taxon count. [DEV.md](DEV.md) has the measured
-numbers.
 
 [INSTALL.md](INSTALL.md) covers the full workflow: prerequisites, building the
 Rust extension, running both test suites, the checks CI enforces, dependency
@@ -41,7 +34,7 @@ audits, and building the docs.
 
 Work reaches this repository through a loop designed so that an agent's
 output is reviewable on the same terms as a human's — the interesting claim
-being not that an agent wrote the code, but that the repository can tell
+being not that an agent wrote the code, but that the process can validate
 whether the code is right.
 
 1. **A ticket is filed** through [`.github/ISSUE_TEMPLATE/task.yml`](.github/ISSUE_TEMPLATE/task.yml),
@@ -67,8 +60,6 @@ own `CLAUDE.md` for the rules local to it. Labels are defined in
 [`.github/labels.yml`](.github/labels.yml) and applied by a workflow, so the
 taxonomy cannot drift from the documentation; [`infra/TICKETING.md`](infra/TICKETING.md)
 describes the board.
-
-None of the above is specific to phylogenetics, and that is deliberate.
 
 ## What enforces the claims
 
@@ -121,8 +112,7 @@ design constraint rather than a coincidence.
 
 The techniques brought to bear are modern ones: automatic differentiation for
 the continuous fit, a reinforcement-learned proposal policy in place of
-hand-designed topological moves, and — further out — attention over a
-canonical serialization of the tree itself.
+hand-designed topological moves.
 
 ## What exists
 
