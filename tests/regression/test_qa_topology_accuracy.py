@@ -97,9 +97,23 @@ def test_the_sweep_covers_sizes_on_both_sides_of_the_requirement() -> None:
     assert REQUIREMENT == 0.05
 
 
-def test_main_writes_a_figure_and_caption(tmp_path: Path) -> None:
-    # At 5 taxa, so the whole pipeline -- sweep, search, distance, caption,
-    # render -- runs per PR rather than only behind the release gate.
+def test_main_writes_a_figure_and_caption(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # At 5 taxa and a two-by-two sweep, so the whole pipeline -- sweep,
+    # search, distance, caption, render -- runs per PR rather than only behind
+    # the release gate.
+    #
+    # The sweep is cut down deliberately (issue #154). At its committed size
+    # this test ran 6 site counts x 8 replicates = 48 searches, 27.7 s, 23% of
+    # the whole per-PR suite, to assert four things about a caption. The
+    # figure at full size is rendered once, by the technical-document build,
+    # and the scientific claim it makes is the release-gated test below. What
+    # is left here is what only this test checks: that the pipeline runs end
+    # to end and the caption reports the sweep it was handed.
+    monkeypatch.setattr(topology_accuracy, "SITE_COUNTS", (min(SITE_COUNTS), 250))
+    monkeypatch.setattr(topology_accuracy, "REPLICATES", 2)
+
     written = topology_accuracy.main(
         ["--params", str(FIVE_TAXA), "--output-dir", str(tmp_path)]
     )
@@ -107,6 +121,10 @@ def test_main_writes_a_figure_and_caption(tmp_path: Path) -> None:
     assert written.caption == written.caption_path.read_text()
     assert "Robinson-Foulds" in written.caption
     assert str(REQUIREMENT) in written.caption
+    # The caption reports the sweep that actually ran, not the module's
+    # defaults -- which is what makes the reduced size safe to assert on.
+    assert "2" in written.caption
+    assert str(min(SITE_COUNTS)) in written.caption
 
 
 @pytest.mark.release
