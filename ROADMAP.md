@@ -27,6 +27,15 @@ authoritative — where it and any other document disagree, it wins.
 - **Deliverable:** a plan posted to the ticket thread before any code exists,
   at which point the issue is labelled `planned`. Review of an approach costs
   a comment; review of an implementation costs the implementation.
+
+  A plan is 2–5 steps, or more where the work needs them and the plan says
+  why, each stating how it will be validated. It ends with an
+  **Open Questions** section carrying every question on the desired
+  behaviour, so a reviewer finds them in one place rather than reading prose
+  for them; a plan with nothing outstanding says so under that heading rather
+  than omitting it. Being written for a reviewer whose time and context are
+  finite, a plan is subject to the Writing Style in `CLAUDE.md` like anything
+  else here.
 - **Gate:** a maintainer applies `approved`, and only then may a pull request
   open. The pull request must implement the plan already in the thread. A plan
   that turns out to be flawed gets a revised plan posted to the same thread,
