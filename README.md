@@ -4,12 +4,19 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Agent-assisted development of mixed discrete/continuous optimization, applied
-to phylogenetic inference. A Rust-accelerated backend (`phylo.oxiphylo`, via
-[PyO3](https://pyo3.rs)/[maturin](https://www.maturin.rs)) and autodiff.
+Mixed discrete-continuous optimization over graph-structured models —
+phylogenetic trees, Potts models in an external field, and hidden Markov
+models. Autodiff fits the continuous half, a learned policy is intended to
+propose the discrete half, and a Rust backend (`phylo.oxiphylo`, via
+[PyO3](https://pyo3.rs)/[maturin](https://www.maturin.rs)) carries the
+CPU-bound recursions.
 
-Two concerns stay separate. **The infrastructure** — the build, the checks,
-the release process, the agentic workflow — names no application. **The
+Development is agent-assisted, and the repository is built so that claim is
+checkable: every result is pinned to an oracle that shares no code with what it
+checks.
+
+Two concerns stay separate. **The infrastructure** — the build, the checks, the
+release process, the agentic workflow — names no application. **The
 application** is the science.
 
 ## Quick start
@@ -53,11 +60,27 @@ holds it.
 5. **A release is itself a ticket**, gated on `infra/release.sh` passing before
    a version is tagged.
 
-`CLAUDE.md` is the contract an agent reads first, and it is authoritative:
-where it and any other document disagree, it wins. Each module carries its own
-`CLAUDE.md` for the rules local to it. [`.github/labels.yml`](.github/labels.yml)
-defines the labels and a workflow applies them, so the taxonomy cannot drift
-from the documentation.
+## The contract an agent reads first
+
+`CLAUDE.md` is authoritative: where it and any other document disagree, it
+wins. Each module carries its own, adding the rules local to it and never
+overriding the root. Read the root file, then the one for the directory you are
+working in.
+
+| Contract | Governs |
+| --- | --- |
+| [`CLAUDE.md`](CLAUDE.md) | The repository-wide rules: environment, conventions, performance, testing, the Definition of Done, the reference routing table |
+| [`python/phylo/sim/CLAUDE.md`](python/phylo/sim/CLAUDE.md) | Data generation and ground-truth retention |
+| [`python/phylo/likelihood/CLAUDE.md`](python/phylo/likelihood/CLAUDE.md) | Pruning, the backends, and the cross-device tolerance they are held to |
+| [`python/phylo/opt/CLAUDE.md`](python/phylo/opt/CLAUDE.md) | Continuous fitting, and why no application may be imported here |
+| [`python/phylo/learn/CLAUDE.md`](python/phylo/learn/CLAUDE.md) | The RL interface, its oracles, and the rules a reward and a baseline obey |
+| [`python/phylo/search/CLAUDE.md`](python/phylo/search/CLAUDE.md) | Move sets, search budgets, and the phylogenetic environment |
+| [`python/phylo/qa/CLAUDE.md`](python/phylo/qa/CLAUDE.md) | QA figures: rendering, never recomputing |
+| [`infra/CLAUDE.md`](infra/CLAUDE.md) | CI/CD, the agentic workflow, experiment tracking |
+| [`docs/CLAUDE.md`](docs/CLAUDE.md) | How the technical document is built and kept true |
+
+[`.github/labels.yml`](.github/labels.yml) defines the labels and a workflow
+applies them, so the taxonomy cannot drift from the documentation.
 
 ## What enforces the claims
 
@@ -81,49 +104,90 @@ Three further rules constrain what the suite may contain:
 | [INSTALL.md](INSTALL.md) | Installing, building, running the tests, working locally |
 | [DEV.md](DEV.md) | Repository layout, test layout, CI jobs, the CI budget, the release procedure |
 | [CHANGELOG.md](CHANGELOG.md) | What has landed, per dated release |
-| `CLAUDE.md` | The authoritative conventions |
-| `docs/CLAUDE.md` | How the technical document is built and kept true |
-| `docs/source/` | Sphinx API documentation, built from the docstrings |
+| [`docs/source/`](docs/source) | Sphinx API documentation, built from the docstrings |
 
 ---
 
 # Application
 
-## Mixed discrete and continuous optimization
+## One abstraction, three problem classes
 
-The scientific problem is a search over phylogenetic tree topologies — the
-large parsimony problem — scoring each candidate by its likelihood under a
-model of character substitution.
-
-Its structure is what makes the machinery reusable: the search is **discrete**
-over topologies, but scoring any one topology requires a **continuous** fit of
-that tree's branch lengths, rate matrix and root distribution. Neither half
-separates from the other. A better topology scored with badly fitted
-parameters looks worse than a poor one scored well.
+The scientific problem is a search over discrete structure where scoring any
+one candidate requires a continuous fit. In phylogenetics it is a search over
+tree topologies — the large parsimony problem — scoring each candidate by its
+likelihood under a model of character substitution. The search is **discrete**
+over topologies, but scoring one requires a **continuous** fit of that tree's
+branch lengths, rate matrix and root distribution, and neither half separates
+from the other: a better topology scored with badly fitted parameters looks
+worse than a poor one scored well.
 
 That shape is not unique to phylogenies. Felsenstein pruning, the HMM forward
 algorithm, and the Potts transfer matrix are the same sum-product recursion on
 different graphs — a tree, a chain, a lattice — so one discrete/continuous
 interface serves all three. The project treats that as a design constraint
-rather than a coincidence.
+rather than a coincidence, and enforces it structurally: `phylo.opt` and
+`phylo.learn` may import no application module, asserted by test.
 
-Automatic differentiation performs the continuous fit. A reinforcement-learned
-proposal policy is intended to replace hand-designed topological moves; the
-estimator and the phylogenetic environment exist, a trained agent does not.
+[ROADMAP.md](ROADMAP.md) states the goal, the accuracy and hardware
+requirements, and the milestones.
 
-## What exists
+## Features
 
-Simulation under a `k`-state Jukes–Cantor model, with the truth retained
+**A model-agnostic optimization interface.** An `Objective` is an unconstrained
+parameter vector, a differentiable scalar, and a map back to named constrained
+parameters. Four instances run against it unchanged — a Potts chain, a discrete
+HMM, branch lengths on a fixed topology, and the GTR substitution model — and
+none required a change to `phylo.opt`.
+
+**Fitting with intervals, not just convergence.** L-BFGS under a strong-Wolfe
+line search, with confidence intervals from the observed Fisher information
+pushed through the constraint map by the delta method, and convergence judged
+on the gradient relative to the objective's own magnitude. Validation is
+parameter recovery against known truth, not a falling loss curve.
+
+**Three pruning backends against one oracle.** Vectorized NumPy is the
+reference; differentiable PyTorch keeps branch lengths in the autograd graph;
+Rust carries the CPU-bound recursion. All three are pinned against independent
+brute-force marginalization at a worst relative deviation of 4.0e-14.
+
+**Device dispatch with a declared tolerance.** Selection prefers CUDA, then
+Metal/MPS, then CPU. Agreement is a *relative* bound keyed on the lowest
+precision in the comparison — 1e-11 in `float64`, 1e-6 where either side is
+`float32` — derived from measured agreement, never bitwise.
+
+**Discrete move sets with closed-form checks.** NNI and SPR neighbourhoods
+behind one interface, verified exhaustively against `2(n-3)` and
+`2(n-3)(2n-7)` at `n = 5..8`, plus exhaustive enumeration of unrooted
+topologies as the oracle that makes "did the search find the best tree" a
+question with an answer.
+
+**Reinforcement learning pinned to a closed form.** An `Environment`
+interface, a softmax-over-scored-actions policy, REINFORCE with a baseline, and
+an exact trajectory-enumeration oracle for the expected return and its
+gradient. Claims rest on that oracle rather than on a training curve.
+
+**A QA pipeline that is the evidence.** Every figure and table in the technical
+document is rendered by `phylo.qa` from the code it reports on, and CI rebuilds
+and compares them, so a plot cannot drift from what produced it.
+
+## What exists, measured
+
+Simulation under `k`-state Jukes–Cantor and GTR models, truth retained
 alongside the data and validated against the closed-form transition
-probabilities. Felsenstein pruning in vectorized NumPy, in differentiable
-PyTorch, and in Rust, each pinned against brute-force marginalization to
-machine precision. NNI and SPR neighbourhood generators, checked against
-closed-form neighbour counts at `n = 5..8`. Hill climbing over topologies,
-which reaches the exhaustively enumerated maximum from all 12 starting points
-on a 6-taxon fixture. A gradient update costs 203 ms at `n = 100`, `L = 1000`.
+probabilities. Felsenstein pruning agreeing with brute-force marginalization to
+4.0e-14 relative across three backends. Parameters recovered inside intervals
+whose 95% coverage is measured at the nominal rate over 60 replicates. Hill
+climbing reaching the exhaustively enumerated maximum from all 12 starting
+points on a 6-taxon fixture. Normalized Robinson–Foulds distance meeting the
+0.05 requirement from 125 sites upward. On a Potts landscape, a learned policy
+reaching the optimum from 86.6% of starts against greedy's 80.2%, in 8 of 8
+seeds. A gradient update costing 203 ms at `n = 100`, `L = 1000`.
+
+Not claimed: that a learned policy beats hill climbing on trees, any comparison
+against IQ-TREE 2 or RAxML-NG, GPU dispatch, or rate variation across sites.
 
 [STATUS.md](STATUS.md) records what has landed against each milestone, the
-evidence for it, and the pull request that carries it;
+oracle that established it, and the pull request that carries it;
 [TICKETS.md](TICKETS.md) records, as titles, what has not.
 
 ## Reading the science
@@ -133,13 +197,32 @@ evidence for it, and the pull request that carries it;
 | [ROADMAP.md](ROADMAP.md) | The development loop, the scientific goal, the requirements, and the milestones |
 | [STATUS.md](STATUS.md) | What has landed against each milestone, with its evidence and pull request |
 | [TICKETS.md](TICKETS.md) | The titles of the tickets remaining to complete the roadmap |
-| `docs/tex/` | The technical document: background, equations, algorithms |
+| [`docs/tex/`](docs/tex) | The technical document: formulations, derivations, the MDP, the appendices |
 | [`docs/draft.pdf`](docs/draft.pdf) | The rendered document, committed and regenerated by `infra/build_technical_doc.sh` |
 | [`docs/tex/figures/`](docs/tex/figures) | The QA figures the document rests on, committed so a changed plot is visible in review |
 
 Every figure in the document is rendered from the code it reports on and ships
 with a caption naming the seed, the sizes, and the model that produced it. A
 figure that cannot say what generated it is not evidence.
+
+## References
+
+The literature this work is built against is a routing table rather than a
+bibliography: each group informs one concern, and `CLAUDE.md` holds the full
+list with the rule that a deviation from a standard algorithm is stated
+explicitly where it is taken. `docs/tex/` cites them at the point of use, and
+its Reference Taxonomy appendix groups them the same way.
+
+| Concern | Anchor texts |
+| --- | --- |
+| Software craft, systems and hardware | Martin, *Clean Code*; Blandy et al., *Programming Rust*; Bryant & O'Hallaron, *Computer Systems*; Hwu et al., *Programming Massively Parallel Processors* |
+| Algorithms, discrete mathematics and continuous optimization | Cormen et al., *Introduction to Algorithms*; Rosen, *Discrete Mathematics*; Nocedal & Wright, *Numerical Optimization* |
+| Probabilistic inference and graphical models | MacKay, *Information Theory, Inference, and Learning Algorithms*; Koller & Friedman, *Probabilistic Graphical Models*; Frey, *Graphical Models*; Ortega, *Graph Signal Processing* |
+| Statistical physics and information geometry | Mézard & Montanari, *Information, Physics, and Computation*; Newman & Barkema, *Monte Carlo Methods in Statistical Physics*; Amari, *Information Geometry* |
+| Learning and reinforcement learning | Goodfellow et al. and Prince, *Deep Learning*; Sutton & Barto, *Reinforcement Learning*; Lapan, *Deep RL Hands-On*; Raschka, *Build a Large Language Model* |
+| Phylogenetics and sequence analysis | Felsenstein, *Inferring Phylogenies*; Durbin et al., *Biological Sequence Analysis*; Compeau & Pevzner, *Bioinformatics Algorithms*; Pachter & Sturmfels, *Algebraic Statistics for Computational Biology* |
+
+Full entries are in [`docs/tex/references.bib`](docs/tex/references.bib).
 
 ## License
 

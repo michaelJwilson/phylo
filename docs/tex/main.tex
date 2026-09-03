@@ -115,7 +115,7 @@ The following figures validate the mathematical exactness of the simulation and 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=0.8\linewidth]{figures/backend_agreement}
-  \caption{Backend Agreement: Pruning in PyTorch/Rust agrees with brute-force marginalization to $4.0 \times 10^{-14}$ relative tolerance.}
+  \caption{\backendAgreementCaption}
   \label{fig:backend-agreement}
 \end{figure}
 
@@ -176,10 +176,10 @@ In sequence decoding, the state is the unobserved path $Z$, with transition matr
 The engineering and mathematical architectures implemented herein are derived from the following core texts:
 
 \paragraph{Infrastructure (Build, Structure, and Speed):}
-Software craftsmanship and FFI boundaries follow \citet{martin2008} and \citet{blandy2021}. Systems architecture, memory hierarchies, and GPU kernel reductions are informed by \citet{bryant2015} and \citet{hwu2022}.
+Software craftsmanship and FFI boundaries follow \citet{martin2008} and \citet{blandy2021}. Systems architecture, memory hierarchies, and GPU kernel reductions are informed by \citet{bryant2015} and \citet{pmpp2022}.
 
 \paragraph{Optimization (Discrete and Continuous):}
-Algorithmic complexity and discrete combinatorics derive from \citet{cormen2022} and \citet{rosen2019}. Continuous trust-region and quasi-Newton optimization rely on \citet{nocedal2006}. Exact probabilistic inference (message passing, factor graphs) follows \citet{mackay2003}, \citet{koller2009}, \citet{frey1998}, and \citet{ortega2022}. Statistical physics phase transitions and sampling rely on \citet{mezard2009} and \citet{newman1999}. The statistical manifold and natural gradients follow \citet{amari2016}. Deep learning, autodiff, and RL architectures draw from \citet{goodfellow2016}, \citet{prince2023}, \citet{suttonbarto2018}, \citet{lapan2020}, and \citet{raschka2024}.
+Algorithmic complexity and discrete combinatorics derive from \citet{clrs2022} and \citet{rosen2019}. Continuous trust-region and quasi-Newton optimization rely on \citet{nocedal2006}. Exact probabilistic inference (message passing, factor graphs) follows \citet{mackay2003}, \citet{koller2009}, \citet{frey1998}, and \citet{ortega2022}. Statistical physics phase transitions and sampling rely on \citet{mezard2009} and \citet{newman1999}. The statistical manifold and natural gradients follow \citet{amari2016}. Deep learning, autodiff, and RL architectures draw from \citet{goodfellow2016}, \citet{prince2023}, \citet{suttonbarto2018}, \citet{lapan2020}, and \citet{raschka2024}.
 
 \paragraph{Application (The Science):}
 Phylogenetic theory, pruning, and model invariants follow \citet{felsenstein2004}, \citet{durbin1998}, \citet{compeau2015}, and \citet{pachter2005}. Algebraic coding for topology compression follows \citet{blahut2003}, with foundational quantum information theory sourced from \citet{nielsen2010} (background only).

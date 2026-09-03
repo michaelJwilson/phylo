@@ -15,6 +15,12 @@ cd "$repo_root"
 # byte-identical regardless of when it runs, which is what CI's staleness
 # check relies on.
 export SOURCE_DATE_EPOCH=1735689600
+# SOURCE_DATE_EPOCH alone fixes the PDF's /CreationDate but not \today, which
+# reads pdftex's \year/\month/\day primitives -- those follow the wall clock
+# unless FORCE_SOURCE_DATE is set. The title page prints \today, so without
+# this the rendered first page changes date every day and the staleness check
+# below fails on a PR that touched nothing.
+export FORCE_SOURCE_DATE=1
 
 uv run python -m phylo.qa.sim_tree \
   --params tests/regression/fixtures/simulation_params_8taxa.yaml \
