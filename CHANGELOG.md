@@ -10,6 +10,156 @@ convention and is retained as history.
 
 <!-- towncrier release notes start -->
 
+## [0.3.0] - 2026-09-03
+
+### Changed
+
+- The thirteen QA scripts share one command line (`phylo.qa.runner`). Each
+  declared its own `ArgumentParser`, `--output-dir`, load, write and
+  `try/finally` around `plt.close`, so a fix to one reached only that one; a
+  script now declares its output stem, the parameters files it takes, and the
+  builder that turns them into a figure or a `tabular` body.
+
+  Two behaviours were inconsistent and are now uniform. Every script reports what
+  it wrote, where three did and ten were silent. Every figure is closed even when
+  writing refuses it, where the twelve hand-written `finally` blocks each had to
+  get that right separately.
+
+  `sim_tree`, `sim_example` and `sim_problem_sizes` lose their
+  `render_*_figure`/`render_problem_sizes_table` wrappers, which loaded and wrote
+  around a build step; the build step is now `build_figure`/`build_table` and the
+  loading and writing are the runner's. `--n-sites-shown` keeps its default of 10.
+  Every one of the thirteen committed figures regenerates byte-identically. (#150)
+- `ROADMAP.md` is restructured around three problem classes rather than one:
+  phylogenetic trees, N-D Potts models in an external field, and HMMs each carry
+  a deliverable and a validation under every Stage 1 and Stage 2 milestone, and
+  milestones are keyed `N.M` so a reference resolves. It gains a first section
+  stating the agentic development loop — ticket, plan, pull request, validation,
+  and the record the loop writes into — each as a deliverable and the gate that
+  holds it.
+
+  Milestone status leaves the roadmap for `STATUS.md`, which states what landed,
+  the oracle that established it, and the pull request that carries it; a
+  requirements ledger against §1.2; and what is not claimed. `TICKETS.md` states,
+  as titles, the tickets remaining between the two. A roadmap that also tracked
+  its own progress could not be edited without re-litigating both. (#152)
+- `README.md` leads with the three problem classes the roadmap now states —
+  phylogenetic trees, Potts models in an external field, and HMMs — rather than
+  phylogenetics alone, and gains a Features section stating each capability with
+  the measurement behind it, a table of the nine `CLAUDE.md` contracts and what
+  each governs, and a reference table routing the literature by concern.
+
+  The technical document builds again. Two citations named keys absent from
+  `references.bib` (`cormen2022`, `hwu2022` against the bib's `clrs2022` and
+  `pmpp2022`), which `latexmk` reports while still exiting 0 — CI's log check
+  catches it, so `docs/draft.pdf` could not be regenerated. The backend-agreement
+  figure read its generated caption into a macro and then discarded it for a
+  hardcoded restatement quoting a stale measurement; it now uses the caption the
+  QA script wrote.
+
+  `infra/build_technical_doc.sh` exports `FORCE_SOURCE_DATE=1`. `SOURCE_DATE_EPOCH`
+  fixes the PDF's `/CreationDate` but not `\today`, which reads pdftex's date
+  primitives: the committed PDF's title page carried the day it was built, so the
+  staleness check would have failed on any pull request opened the following day. (#153)
+- The accuracy figure's per-PR test no longer re-runs the sweep at its committed
+  size. It ran 6 site counts x 8 replicates = 48 searches, 27.7 s, 23% of the
+  whole per-PR suite, to assert four things about a caption — while the
+  technical-document build rendered the same figure again and the release gate
+  asserted the scientific claim. It now sweeps two sizes by two replicates: the
+  pipeline still runs end to end, at 4.1 s.
+
+  The suite is 138.0 s over 540 tests, against 165.6 s over 525 before — faster
+  with fifteen more tests in it. (#154)
+- The technical-document build regenerates only the QA figures
+  `docs/tex/main.tex` cites, and the release gate regenerates the rest. The
+  figure list lived as thirteen invocations in `infra/build_technical_doc.sh`
+  that nothing connected to the document, so when the document stopped citing
+  eleven of them the build kept rendering all thirteen and no check noticed:
+  that job spent 281.6 s to run a 1.5 s LaTeX build, and 98.4% of it produced
+  figures nothing included. A full build is now 5.9 s, and `docs/draft.pdf` and
+  all thirteen committed figures are byte-identical to before.
+
+  `phylo.qa.manifest` is the single statement of which figures exist and what
+  renders each one. `phylo.qa.build` reads it and renders a selection: what the
+  document cites (per pull request), the whole manifest (`--all`, which
+  `infra/release.sh` now runs with `--check`), or named stems (`--only`).
+  Citing a figure the manifest cannot render is refused rather than skipped.
+
+  `phylo.qa.build` pins `SOURCE_DATE_EPOCH` for the figures it renders.
+  matplotlib embeds it, so without it two rebuilds of an unchanged figure
+  differ and a comparison reports every figure stale — which a caller had to
+  know to prevent. `infra/build_technical_doc.sh` reads the value back from
+  there rather than keeping a second copy.
+
+  `infra/measure_build.sh` times the build stage by stage, so a claim that it
+  got faster is a pair of numbers. (#154)
+- `tests/regression/` is split by submodule — `sim/`, `likelihood/`, `opt/`,
+  `learn/`, `search/`, `qa/` — which is `DEV.md`'s own rule once a kind outgrows
+  one flat directory, reached at 39 modules. Tests belonging to no submodule stay
+  at the top level. Pure moves; 540 tests pass before and after.
+
+  CI caches the TeX Live packages the `technical-doc` job installs, the one
+  install still paying full price on every run while `uv` and Cargo were both
+  cached.
+
+  `DEV.md`'s suite budget said 131 s over 140 tests and 954 s over 141. It is
+  138 s over 540 and 989 s over 550.
+
+  Selecting tests by the files a pull request changed is recorded as unavailable
+  rather than built: `python-tests` runs `--cov-fail-under=90` on the same
+  invocation, and a subset cannot meet it — `tests/regression/sim` alone measures
+  12% — so scoping would mean weakening a gate `CLAUDE.md` forbids weakening. (#154)
+- Root `CLAUDE.md`'s **Writing Style** section states what it governs: every
+  document in the repository, each module's `CLAUDE.md` included, and every
+  docstring, comment, commit message and pull-request body. The rules bound all
+  of that already; nothing said so, and the eight module files carried a generic
+  "these are local" line that never named the section, so an agent reading one
+  alone had no way to know.
+
+  Each of the eight now names **Writing Style** and states that it binds that
+  file. Referenced, not copied: the section changed three times on the day this
+  was written, and nine copies would already disagree. **Expected Reader** stays
+  in `docs/CLAUDE.md` alone, being a contract about the technical document.
+
+  A regression test enforces it, rather than leaving the invariant stated and
+  unchecked — the failure mode of `docs/source/index.rst`, which claimed to
+  cover every submodule while missing eighteen. (#155)
+- A generated plan has a stated shape: 2–5 steps, each saying how it will be
+  validated, ending with an **Open Questions** section that carries every
+  question on the desired behaviour. A reviewer now finds the questions in one
+  place instead of reading the prose for them, and a plan with none says so
+  rather than omitting the heading.
+
+  Root `CLAUDE.md` states which documents are read at which altitude, and what
+  that means for repetition. `ROADMAP.md`, `STATUS.md` and `TICKETS.md` plan and
+  track. `CLAUDE.md`, `DEV.md`, `INSTALL.md` and the module files are worked in
+  and carry their detail in full rather than as pointers into each other, so
+  someone following one of them need not assemble the answer from three. Detail
+  may repeat between them; where it repeats it must agree, and root `CLAUDE.md`
+  settles which reading is right. The Writing Style stays the exception — one
+  text, referenced — because it binds every file at once.
+
+  The plan's shape is therefore stated three times, at the altitude each
+  document is read at: `ROADMAP.md` §0.2 has it as part of the loop,
+  `DEV.md` and `infra/CLAUDE.md` add what the step's validation must name.
+  `DEV.md` also states a rule that was written nowhere — a pull request
+  implements a plan already approved — and says which document holds the loop's
+  intent when the two disagree.
+
+  Root `CLAUDE.md`'s Writing Style already governed every document, docstring,
+  comment, commit message and pull-request body; the list now names plans and
+  ticket comments too, which is what makes a plan subject to it. (#162)
+- `STATUS.md` is read at `0.3.0`. Between `0.2.0` and `0.3.0`, six pull requests
+  refined the development loop and its record — `ROADMAP.md`'s restructuring,
+  the QA figure-manifest and script-runner refactor, the test-layout split, and
+  the writing-style and plan-shape pointers — and no roadmap milestone moved.
+
+  The Release issue template drops its now-redundant one-ticket-per-version
+  notice, defaults its title and target-version field to the next expected
+  version, gains a blank-by-default Suggested work section, and its consistency
+  audit prompt now names the template itself as something the audit checks. (#165)
+
+
 ## [0.2.0] - 2026-09-03
 
 ### Added

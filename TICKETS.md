@@ -98,7 +98,6 @@ A parenthesized number is an issue already filed.
 ## Milestone 2.4 — Experiment Tracking, Ablations & Leaderboard
 
 - Create a ledger of benchmarked and validated runs with Aim (#75)
-- The QA script runner (#150)
 - Reproduce a run from a single manifest, and assert it
 - Budget-matched ablation leaderboard across shared seeds
 - Paired significance test required before a variant is adopted as
@@ -117,6 +116,8 @@ A parenthesized number is an issue already filed.
 
 ## Cross-Cutting Infrastructure
 
+- Fix the root-detection assertion blocking `infra/release.sh`'s full-suite
+  check (#168)
 - Re-key the milestone references in code and `docs/tex/` to the roadmap's
   `N.M` numbering
 - Reconcile the dangling `STATUS.md` references (#34)
