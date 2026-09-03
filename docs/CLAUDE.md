@@ -15,9 +15,12 @@ table ships as a `tabular` fragment the document `\input`s, not as an image,
 so it matches the surrounding type. `draft.pdf` is the rendered result.
 `source/` is Sphinx, built from the docstrings.
 
-`infra/build_technical_doc.sh` regenerates every figure and then runs
-`latexmk`. There is no partial rebuild, and nothing here invokes `latexmk`
-itself.
+`infra/build_technical_doc.sh` regenerates the figures this document cites
+and then runs `latexmk`; nothing here invokes `latexmk` itself. The rebuild is
+partial by design (issue #154): `phylo.qa.build` renders what `main.tex`
+refers to, and the figures it does not refer to are regenerated and compared
+at the release gate instead, so every committed figure is still checked
+against the code that produced it.
 
 **Committed:** `tex/main.tex`, `tex/references.bib`, `tex/figures/*.pdf`,
 `tex/figures/*.tex`, `tex/figures/*_caption.txt`, `draft.pdf`,
@@ -71,12 +74,25 @@ in. It is not restated here.
 
 - **`source/index.rst` claims to cover every submodule**, so a new module
   gets an entry in the same PR. It was missing fourteen when issue #135
-  repaired it, eight of them long-standing — which is how a stated invariant
-  fails when nothing checks it.
+  repaired it, eight of them long-standing, and the whole of `phylo.qa` —
+  eighteen modules — when issue #154 repaired it again. Which is how a stated
+  invariant fails when nothing checks it: `sphinx-build -W` fails on a broken
+  entry, never on an absent one.
 
-- **`SOURCE_DATE_EPOCH` is pinned** in the build script, because matplotlib
+- **`SOURCE_DATE_EPOCH` is pinned** in `phylo.qa.build`, because matplotlib
   and `pdftex` both embed it as a creation date. Without it every rebuild
-  differs and the staleness check is meaningless.
+  differs and the staleness check is meaningless. It is pinned in the module
+  that renders the figures rather than left to each caller: a comparison run
+  without it reports every figure stale, which is indistinguishable from the
+  rot it exists to detect. `infra/build_technical_doc.sh` reads the value back
+  from there for `latexmk` rather than keeping a second copy.
+
+- **`FORCE_SOURCE_DATE` is pinned too**, and is a separate switch.
+  `SOURCE_DATE_EPOCH` fixes the PDF's `/CreationDate` but not `\today`, which
+  reads `pdftex`'s `\year`/`\month`/`\day` primitives and otherwise follows
+  the wall clock. The title page prints `\today`, so without it the rendered
+  first page carries the day it was built and the staleness check fails on
+  any pull request opened after that day, on a diff that touched nothing.
 
 ## Boundaries
 
