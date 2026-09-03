@@ -29,6 +29,12 @@ so tests complete.
   unattended provided the PR implements a plan already posted to the thread.
   A plan that turns out to be flawed gets a revised plan posted in the
   thread, not a silent correction.
+- **Once a branch is created for an approved plan**, the first thing posted
+  is a single issue comment naming the branch (and, once opened, the PR
+  number) before any further commit is pushed. A session that fails, is
+  interrupted, or is deferred mid-implementation then leaves a ticket that
+  already points at the in-flight branch, instead of one requiring a search
+  across open branches and PRs to find it.
 - **A plan is 2–5 steps**, or more where the work needs them and the plan
   says why, each stating how it will be validated — the analytic result,
   brute-force computation or enumeration it is checked against, not "tests
