@@ -26,14 +26,9 @@ itself.
 
 ## The reader
 
-A well-educated developer with a scientific and performance-computing
-background, but not an application expert — not a phylogeneticist. That sets
-the formatting contract. Keep the body streamlined: hyperlinks and citations
-over inline derivation. Push required application background — NNI, and other
-standard algorithms — into the appendix and cite it from the point of use
-rather than re-deriving it there. Treat the main text as a high-level view of
-the current best-known approach in terms of the roadmap, not an exhaustive
-record; link out to supporting documents for the studies that informed it.
+Root `CLAUDE.md`'s **Expected Reader** states the formatting contract — what
+goes in the body, what goes in the appendix, and the register to write in.
+It is not restated here.
 
 ## Local rules
 
