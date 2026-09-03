@@ -16,8 +16,6 @@ A parenthesized number is an issue already filed.
   same footing (#149)
 - Simulate N-D Potts lattices with declared couplings and external fields
 - Simulate Markov random fields on a general graph
-- Promote the HMM from an optimizer fixture to a first-class simulator with
-  retained ground truth
 - Validate lattice spin distributions against the closed-form partition
   function at enumerable sizes
 - Additional evolutionary models (#107)

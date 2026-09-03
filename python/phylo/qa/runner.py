@@ -27,9 +27,9 @@ from typing import Any
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
-from phylo.opt.hmm import load_hmm_params
 from phylo.opt.potts import load_potts_params
 from phylo.qa.figure import QAFigure, QATable, write_qa_figure, write_qa_table
+from phylo.sim.hmm import load_hmm_params
 from phylo.sim.params import load_simulation_params
 
 

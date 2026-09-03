@@ -13,8 +13,9 @@ from __future__ import annotations
 import math
 
 from phylo.opt.fit import constrained_standard_errors, fit
-from phylo.opt.hmm import HmmObjective, load_hmm_params, simulate_sequences
+from phylo.opt.hmm import HmmObjective
 from phylo.opt.potts import PottsObjective, load_potts_params, simulate_chains
+from phylo.sim.hmm import load_hmm_params, simulate_sequences
 from pytest_benchmark.fixture import BenchmarkFixture
 
 from tests._fixtures import FIXTURES_DIR
@@ -38,7 +39,7 @@ def test_potts_fit_benchmark(benchmark: BenchmarkFixture) -> None:
 def test_hmm_fit_benchmark(benchmark: BenchmarkFixture) -> None:
     params = load_hmm_params(HMM_FIXTURE)
     objective = HmmObjective(
-        simulate_sequences(params), params.n_states, params.n_symbols
+        simulate_sequences(params).observations, params.n_states, params.n_symbols
     )
 
     result = benchmark(fit, objective)
@@ -50,7 +51,7 @@ def test_hmm_fit_benchmark(benchmark: BenchmarkFixture) -> None:
 def test_hmm_interval_benchmark(benchmark: BenchmarkFixture) -> None:
     params = load_hmm_params(HMM_FIXTURE)
     objective = HmmObjective(
-        simulate_sequences(params), params.n_states, params.n_symbols
+        simulate_sequences(params).observations, params.n_states, params.n_symbols
     )
     theta = fit(objective).theta
 
