@@ -1,6 +1,6 @@
 # Developing phylo
 
-This document outlines repository structure, CI enforcement, and contribution rules. For setup, see `INSTALL.md`; for project trajectory, see `ROADMAP.md`. **`CLAUDE.md` is the authoritative source for conventions; in any conflict, `CLAUDE.md` prevails.**
+Repository structure, CI enforcement, and contribution rules. For setup, see [INSTALL.md](INSTALL.md); for project trajectory, see [ROADMAP.md](ROADMAP.md). **`CLAUDE.md` is the authoritative source for conventions; in any conflict, `CLAUDE.md` prevails.**
 
 ## Repository Layout
 
@@ -64,7 +64,7 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 | `build` | `pip install .` (no lockfile, mimics fresh consumer), smoke import |
 | `python-tests` | `pytest -m "not release"`, gated on minimum coverage; benchmarks skipped unless computational code changed |
 | `docs` | Sphinx build (warnings as errors) |
-| `technical-doc` | Regenerate QA figures (`infra/build_technical_doc.sh`), then LaTeX build (fails on undefined refs/citations, or if the rebuilt `docs/draft.pdf` differs from the committed one) |
+| `technical-doc` | Regenerate QA figures (`infra/build_technical_doc.sh`), then LaTeX build. Fails on an undefined reference or citation, a multiply-defined label, or a rebuilt `docs/draft.pdf` that differs from the committed one |
 | `audit` | `pip-audit`, `cargo audit` (skips on cache hit if lockfiles are unchanged) |
 
 `lint`, `python-tests`, and `docs` restore a `~/.cache/uv` cache keyed on `uv.lock`'s hash before installing `uv`. `rust-lint`, `rust-tests`, `build`, and those same three jobs restore a shared `~/.cargo/registry`, `~/.cargo/git`, and `target/` cache keyed on `Cargo.lock`'s hash, so `oxiphylo` (built via `maturin`/`pyo3` on every `uv sync` or `pip install .`) compiles from scratch only when a lockfile changes or no job has populated the cache yet. `audit`'s per-week marker cache (above) is unrelated and unaffected.
@@ -83,10 +83,10 @@ Eight required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs
 
 ### Core Development Standards
 
-* **Reproducibility:** Pin environments entirely. Use `--locked` for CI installs, pin runner images (`ubuntu-24.04`), and strictly use `np.random.default_rng(seed)`.
-* **Versioning:** Maintained strictly in `Cargo.toml` (`[package].version`).
+* **Reproducibility:** Pin the environment. Use `--locked` for CI installs, pin runner images (`ubuntu-24.04`), and seed every generator through `np.random.default_rng(seed)`.
+* **Versioning:** Lives in `Cargo.toml` (`[package].version`), and nowhere else.
 * **Definition of Done:** Follow `CLAUDE.md`'s checklist.
-* **PR Template:** Every PR starts from `.github/pull_request_template.md`, which carries the Definition-of-Done checklist, a benchmark-numbers table, a second Benchmark-section table for the realized value of any scientific/tolerance regression test the PR touches (test, reference, tolerance, realized value — write "N/A" as text and delete the table if none), a Documentation Sync line, and a Follow-up / Deferred Work section for TODOs left to a tracking issue, all as a reminder, not a CI gate.
+* **PR Template:** Every PR starts from `.github/pull_request_template.md`. It carries the Definition-of-Done checklist, a benchmark-numbers table, a Documentation Sync line, and a Follow-up / Deferred Work section for anything left to a tracking issue. A second table in the Benchmark section takes the realized value of every scientific or tolerance test the PR touches — test, reference, tolerance, realized value — or the text "N/A" and no table. The template reminds; it is not a CI gate.
 * **Agentic Approach:** Use parallel git worktrees/PRs for disjoint tasks. Use single sequential PRs for coupled changes.
 
 ### Dependency Management
@@ -138,11 +138,11 @@ gating on before step 3–4 cut the tag.
 
 ### Performance
 
-Accelerate hot paths via GPU (PyTorch/Triton/JAX) *only* if benchmarking proves a $\ge 10x$ speedup over vectorized NumPy at realistic sizes. Otherwise, use Rust. The pure Python implementation must be retained as a pinned regression oracle.
+Accelerate a hot path on the GPU (PyTorch/Triton/JAX) *only* where a benchmark shows a $\ge 10\times$ speedup over vectorized NumPy at realistic sizes. Otherwise use Rust. The pure Python implementation stays, as a pinned regression oracle.
 
 ### Testing
 
-Assert scientific validity. Generate fixtures via component-wise simulation under known generative models. Shape-only or runs-without-raising assertions are strictly forbidden.
+Assert scientific validity. Generate fixtures by component-wise simulation under a known generative model. A shape-only assertion, or one that checks nothing raised, is forbidden.
 
 ### Technical Document
 
