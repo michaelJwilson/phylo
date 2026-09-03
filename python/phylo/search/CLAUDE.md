@@ -61,3 +61,10 @@ environment cannot live beside the estimator that consumes it.
   comparison is rerun when the fixture changes: agreeing on the argmax is the
   property that licenses training on the cheap one, and it is not guaranteed
   by the correlation being high.
+- **The fitted surface does not totally order topologies.** Many candidates
+  share a maximized log-likelihood to within the optimizer's convergence,
+  because the branch that would distinguish them is fitted to zero and the
+  tree collapses to the same polytomy. Their relative order is not a property
+  of the model, so any statistic that depends on it — a rank correlation
+  above all — is unstable across machines and is not a measurement. Report
+  comparisons with a statistic continuous in the scores.
