@@ -10,6 +10,307 @@ convention and is retained as history.
 
 <!-- towncrier release notes start -->
 
+## [0.2.0] - 2026-09-03
+
+### Added
+
+- A model-agnostic optimization interface (`phylo.opt`): an unconstrained
+  parameter vector, a differentiable scalar objective, and a map back to named
+  constrained parameters, with the shared constraint maps that keep every
+  parameter feasible by construction. Two reference instances ship with it — a
+  1-D Potts chain in an external field and a discrete HMM — each validated
+  against an exact independent oracle (transfer matrix and brute-force path
+  enumeration respectively) and a central-difference derivative check. The
+  interface carries no application knowledge, and a test asserts it imports
+  nothing from `phylo.sim`, `phylo.likelihood` or `phylo.search`.
+
+  Gradient-based fitting for any `Objective` (`phylo.opt.fit`): L-BFGS with a
+  strong-Wolfe line search, convergence judged on the gradient relative to the
+  objective's own magnitude, and confidence intervals from the observed Fisher
+  information pushed through the constraint map by the delta method. Validated
+  by parameter recovery on both instances — the Potts chain's 95% intervals
+  cover the truth at exactly the nominal rate over 60 replicates, and the HMM's
+  gradient fit is cross-checked against Baum–Welch, an independent fitting
+  algorithm sharing no optimizer, parameterization or constraint map with it.
+  Two QA figures report the recovery and how fast the intervals converge on
+  their nominal coverage. (#63)
+- Branch-length fitting for a fixed topology (`phylo.likelihood.objective`),
+  behind the same model-agnostic interface as the Potts and HMM instances — the
+  optimizer needed no phylogenetic special-casing, which is the evidence issue
+  \#63's abstraction was not shaped by one model. Branch lengths are recovered
+  within their confidence intervals on both the unrooted and rooted fixtures,
+  and `ROADMAP.md`'s sub-second gradient update at n=100 is now measured (203 ms
+  at 1000 sites) rather than asserted.
+
+  The two branches below a rooted binary tree's root are fitted as one
+  parameter and reported as their sum, because only the sum is estimable: under
+  a reversible model the likelihood is unchanged by moving length between them.
+  `phylo.opt.fit.parameter_covariance` now rejects an ill-conditioned observed
+  information rather than inverting it, since a numerically singular matrix
+  inverts successfully and yields a meaningless interval.
+
+  The general time-reversible model (`phylo.sim.gtr`), so `Q` and `π` have free
+  parameters to fit at all — Jukes–Cantor has none. Exchangeabilities and the
+  stationary distribution are fitted alongside the branch lengths and recovered
+  within their intervals, and `simulate_alignment` takes an optional
+  `rate_matrix` (omitting it keeps the Jukes–Cantor closed form unchanged).
+  Equal exchangeabilities with a uniform `π` reproduce `jc_rate_matrix` and
+  `jc_transition_probabilities` to machine precision, which is how the model is
+  validated. Its three normalizations are gauges rather than conventions: each
+  removes an exactly flat direction that would otherwise leave every parameter
+  without a confidence interval. (#104)
+- Device dispatch for the likelihood engine (`phylo.likelihood.device`):
+  availability-based selection preferring CUDA, then Metal/MPS, then CPU, and
+  the cross-device agreement tolerance `CLAUDE.md` had long promised was stated
+  somewhere. `pruning_torch` takes dtype and device from the branch-length
+  tensor it is given rather than hardcoding `float64` in six places, so a caller
+  moves the whole recursion by moving one tensor; `float64` remains the default.
+  The tolerance is relative and keyed on the lowest precision in the comparison
+  — `1e-11` for `float64` on both sides, `1e-6` where either side is `float32`,
+  since Metal cannot do `float64`. Both are derived from measured agreement
+  rather than chosen, and the `float32` figure is exercised on CPU, so runners
+  without an accelerator still check it. (#106)
+- Topology search (`phylo.search.infer`): a user-facing `infer(alignment, k,
+  ...)` that hill-climbs over NNI or SPR neighbourhoods, fitting the continuous
+  parameters of every candidate, and reduces to a plain continuous fit when a
+  topology is supplied. This is the first user of the seam issue #63 recorded
+  and left unbuilt — a discrete move builds a new `Objective` rather than
+  stepping inside a fit — and `phylo.opt` needed no change to serve it, which
+  is the evidence that abstraction was not shaped by one model.
+
+  Budgets are counted in candidate fits rather than seconds, so a run is
+  reproducible from its seed; a topology is scored at most once per search,
+  keyed on `leaf_bipartitions`; and `phylo.search.topology.random_topology`
+  draws a seeded starting tree that reaches every topology on its leaf set.
+
+  Exhaustive enumeration of unrooted topologies
+  (`phylo.search.topology.enumerate_topologies`), which gives search quality
+  its first independent oracle: below 8 taxa every topology can be scored, so
+  "did hill climbing find the best tree" has an answer rather than an opinion.
+  Measured on a 6-taxon fixture, both NNI and SPR reach the enumerated maximum
+  and recover the generating topology from all 12 starting points — at a median
+  of 14 candidate fits for NNI against 48 for SPR.
+
+  Two QA figures for search: a trajectory against the exhaustive landscape, and
+  the tree the search selected beside the highest-scoring one it rejected. The
+  second reports a detail worth having in writing — the rejected topology fits
+  the internal branch that would create the wrong grouping at essentially zero
+  length, which is what rejecting a topology looks like from inside the
+  continuous fit. `BranchLengthObjective.fitted_tree` is new, the inverse of
+  `theta_from_truth`, so a fitted tree can be drawn or serialized as a tree. (#117)
+- Reinforcement learning (`phylo.learn`): the `Environment` interface, a
+  softmax-over-scored-actions policy, REINFORCE with a baseline, and an exact
+  trajectory-enumeration oracle. Model-agnostic on the terms `phylo.opt` is —
+  it imports nothing from `phylo.sim`, `phylo.likelihood` or `phylo.search`,
+  asserted by an import-graph test — so the phylogenetic environment will live
+  in `phylo.search` rather than here.
+
+  The reference environment is single-flip local search over the same 1-D Potts
+  chain `phylo.opt` fits, appearing once as an objective and once as a search
+  problem. Its reward decomposes exactly into the two features the policy
+  scores, which puts hill climbing *inside* the policy class as the weight
+  vector proportional to `(J, 1)`, so a comparison against it is a statement
+  about learning rather than about two unrelated algorithms.
+
+  Rewards are closed forms at known parameters, with no inner optimization —
+  issue #131's simplification, and what makes an episode cost microseconds
+  rather than one L-BFGS solve per action.
+
+  Because the action set and horizon are finite, the expected return is a
+  closed form and its gradient follows by differentiating it. That is the
+  oracle every claim here is pinned to, rather than to a training curve: the
+  enumerated gradient agrees with central finite differences to 1.5e-11
+  relative, and the sampled estimator with the enumerated gradient to 9.9e-03
+  over 6000 episodes, while a myopic variant that credits each action with only
+  its own reward is rejected at 71%.
+
+  On that landscape the learned policy beats hill climbing at a matched
+  decision budget, reaching the enumerated optimum from 86.6% of the 81 starts
+  against greedy's 80.2%, in 8 of 8 training seeds.
+
+  The phylogenetic RL environment (`phylo.search.rl`): tree search as the MDP
+  the technical document specifies — a state is a topology, an action is an NNI
+  or SPR neighbour, the reward is the improvement in log-likelihood. It lives in
+  `phylo.search` rather than `phylo.learn` for the reason the phylogenetic
+  `Objective` lives in `phylo.likelihood`: the model-agnostic module may import
+  no application code.
+
+  Two reward models, and the comparison between them is the deliverable.
+  `FITTED` maximizes over branch lengths per candidate; `KNOWN` evaluates at one
+  fixed branch length with no optimization, which is what makes an episode
+  affordable — measured at 352 us against 113.7 ms per candidate.
+
+  The substitution is validated rather than assumed
+  (`phylo.qa.rl_reward_surface`). "The known parameters" cannot transfer across
+  topologies at all — a branch length belongs to an edge, and a different
+  topology has different edges — so the cheap reward is a different surface, not
+  an approximation of the fitted one. On the 6-taxon fixture the two score the
+  generating topology highest, agree on the best of all 105 topologies, and
+  correlate at 0.9568; across a 50-fold range of the fixed branch length they
+  still agree on the best topology every time, with the correlation never below
+  0.8719.
+
+  Measuring that turned up a property of the fitted surface worth recording: it
+  does not totally order topologies. Many candidates share a maximized
+  log-likelihood to within the optimizer's convergence, because the branch that
+  would distinguish them is fitted to zero and the tree collapses to the same
+  polytomy. Their order is therefore not a property of the model, and a rank
+  correlation — which depends on it — moves by up to 0.04 under a perturbation
+  of one part in 1e9, so it is not a measurement and cannot appear in a
+  committed document that CI rebuilds.
+
+  `phylo.qa.figure` gains `pearson_correlation`, which is continuous in the
+  scores, written here rather than pulling in `scipy`.
+
+  Not claimed: that a learned policy beats hill climbing on trees. The 6-taxon
+  fixture cannot support that claim in either direction, because greedy already
+  reaches the enumerated optimum from every start. (#131)
+
+### Changed
+
+- Cut the `0.1.0` release: `towncrier build --version 0.1.0` merged the fragments above into this file, `ROADMAP.md` records Milestone 5's NNI/SPR generators as landed, and `STATUS.md` (deleted from the repository but still described elsewhere as a live ledger) is dropped from `CLAUDE.md`, `DEV.md`, and the PR template — GitHub issues and labels (`infra/TICKETING.md`) are the project board now. `ROADMAP.md`'s remaining milestones (1, 2, 4, 6) gain the same landed/not-started status notes that 3 and 5 already carried; the fixtures directory, previously spelled out in eleven test modules under two names, moves to a single `tests/_fixtures.py`; and `DEV.md` states the measured cost of the release-gated suite so `pytest -m "not release"` is the obvious default while developing. (#101)
+- CI skips the benchmark suite unless the change touches code a benchmark
+  measures — `src/`, `python/phylo/{sim,likelihood,opt,search}/`,
+  `tests/benchmarks/`, or a lockfile. Benchmarks are half the suite's wall clock
+  (36 s of 71 s), and a documentation or QA change cannot alter what they
+  measure. The job still runs and reports, since it is a required check, and
+  coverage is unaffected because every line a benchmark reaches is also reached
+  by the regression module it pairs with. (#109)
+- Tolerances on log-likelihoods and gradients are now relative rather than
+  absolute. Both quantities are sums over sites, so an absolute bound fixed at
+  one site count does not transfer: the backends agree to ~8e-13 relative at
+  every size, but the same agreement reads as 7.4e-07 absolute at 200,000 sites
+  and would fail the previous 1e-9 bound. The suite's fast tests ran at tens of
+  sites because that is cheap, not because the tolerance required it — a
+  release-gated test now checks the bound at full fixture scale, and asserts
+  that the previous absolute bound would have failed there. Absolute tolerances
+  are kept where the quantity does not scale: transition probabilities, rate
+  matrix row sums, and Monte Carlo frequencies. (#111)
+- The technical document is restructured around the optimization abstraction
+  rather than the phylogenetic application: notation is split into a
+  model-agnostic half and an application half, the substitution model and its
+  reversibility move to an appendix, code paths are gone from the body, and the
+  reinforcement-learning section carries the theory needed to implement it.
+  Two QA figures — backend agreement and analytic-versus-finite-difference
+  gradients — are dropped with their scripts, since both reported checks the
+  regression suite performs rather than performing any.
+
+  Fixed a preamble setting that suppressed the space at *every* source line
+  break in the document, so text wrapped mid-sentence set as "substitutionmodel".
+
+  `phylo.qa.figure` gains `write_qa_table`, which emits a LaTeX `tabular`
+  fragment instead of a matplotlib image, and `latex_integer`, which separates
+  large numbers as `200\_000`. Caption safety is now enforced at the point of
+  writing rather than asserted per test, so a caption that would break the
+  LaTeX build fails in the script that wrote it. `render_problem_sizes_figure`
+  is replaced by `render_problem_sizes_table`, and `state_label` moves from
+  `phylo.qa.sim_example` to `phylo.qa.figure`. (#118)
+- The technical document's prose is tightened globally: the quality-assurance
+  section drops from 968 to 654 words and the body as a whole from 5986 to
+  5581, with no claim, number or reference removed. The cut is mostly one
+  duplication — a figure's body paragraph restating the caption the figure
+  already carries, and the drift guarantee stated twice within twenty lines.
+  The rule now applied throughout is that the caption says what a figure shows
+  and the body says why it is there. (#125)
+- `docs/` gains its own `CLAUDE.md`, on the pattern of the other module files.
+  It carries the rules that keep a committed, CI-regenerated artifact true:
+  what is committed against what is generated, that a figure is regenerated
+  rather than edited, that the document reads captions and never restates them,
+  and that a generated caption may report only quantities continuous in their
+  inputs — since CI rebuilds `docs/draft.pdf` and byte-compares it, a
+  discontinuous statistic breaks the build and was never a measurement anyway.
+  The formatting contract stays in root `CLAUDE.md` under **Expected Reader**,
+  referenced rather than restated. (#136)
+- Docstrings and comments are revised against the writing style. The corpus
+  needed five edits: of 50 flagged hedges, all ten uses of "strictly" are
+  mathematical ("strictly positive", "strictly bifurcating"), and most of the
+  rest are contrastive — "not merely wide", "exact rather than merely
+  convenient", "obviously correct, not fast".
+
+  Two magnitude claims are replaced by their measurements. `phylo.search.rl`
+  called the fitted reward "roughly two orders of magnitude" more expensive
+  than the known one; it is 113.7 ms against 352 us, a factor of 323. The
+  search benchmark said a search spends "essentially all" of its time in
+  candidate fits, and now says what the two benchmarks beside each other
+  measure. (#138)
+- Root `CLAUDE.md`, `DEV.md` and the module `CLAUDE.md` files are revised
+  against the writing style, correcting three defects along the way.
+
+  Root `CLAUDE.md` named the project `snakes_and_ladders`; the package is
+  `phylo`. Its "Check known math properties/Invariants" rule was a label with no
+  body, so the invariants it names — transition rows summing to 1, detailed
+  balance, gradients against finite differences, a monotone likelihood — are
+  restored. Its reference table announced a count of 25 that nothing checks, and
+  now announces none.
+
+  `DEV.md`'s `technical-doc` row said the job fails on undefined references or
+  citations; it also fails on a multiply-defined label. `qa/CLAUDE.md` said it
+  validates `search/` "later", where `phylo.qa` has validated `search/` and
+  `learn/` since issues #117 and #131.
+
+  No rule was added, dropped or re-scoped: the section headings and rule labels
+  of both files are unchanged, checked by diff, except the empty rule above. (#138)
+- `README.md`, `INSTALL.md` and `ROADMAP.md` are revised against the writing
+  style in `CLAUDE.md`, along with one hedge in `docs/tex/main.tex`.
+
+  The pass corrected more than it compressed. `README.md`'s opening sentence
+  said "modern optimization discrete/continuous optimization" and misspelled
+  "reference"; `ROADMAP.md`'s objective and numerics requirements were
+  ungrammatical; `README.md` linked to `infra/TICKETING.md`, deleted in
+  `aae9e74`. `INSTALL.md` carried two claims that had gone stale: that one
+  `phylo.qa` script renders the technical document's figures, where eleven now
+  do, and that CI's LaTeX job fails on undefined references or citations, where
+  it also fails on a multiply-defined label and on a committed `docs/draft.pdf`
+  that differs from the rebuild.
+
+  `ROADMAP.md`'s milestones now state a specification and then a **Status:**
+  line, so a reader can find what landed without reading a paragraph.
+  `README.md`'s "What exists" gains the measurements behind its claims — `n =
+  5..8` for the neighbour counts, 12 of 12 starting points at 6 taxa, 203 ms per
+  gradient update at n=100, L=1000. (#138)
+- The technical document is restructured as an academic letter: an abstract, an
+  introduction stating the contributions and what is *not* claimed, methods,
+  results grouped by claim rather than by the order the build emits figures,
+  a discussion with threats to validity and outstanding work, and conclusions.
+
+  Two figures answer requirements `ROADMAP.md` states and nothing had measured.
+  `phylo.qa.backend_agreement` puts all three pruning backends against
+  brute-force marginalization, which shares no code with the recursion it
+  checks: worst relative deviation 4.0e-14 across four site counts spanning a
+  factor of 30. `phylo.qa.topology_accuracy` measures the normalized
+  Robinson-Foulds distance from the inferred topology to the generating one
+  against the site count, and finds the margin: the 0.05 accuracy requirement
+  is met from 125 sites upward, with 8 of 8 replicates recovering the topology
+  exactly at 2000 sites against 5 of 8 at 60.
+
+  `phylo.search.topology` gains `robinson_foulds` and
+  `normalized_robinson_foulds`. The normalizer counts internal splits only:
+  every tree over the same leaves induces all the trivial ones, so including
+  them would shrink every distance by a taxon-count-dependent factor and
+  silently weaken the bound.
+
+  The competitiveness comparison against IQ-TREE 2 and RAxML-NG, and the
+  learning curve of a trained phylogenetic agent, are stated as outstanding
+  rather than drawn: neither measurement exists, and a figure with invented
+  data in a committed document is worse than a stated gap. (#144)
+- `phylo.numerics` holds the vectorized categorical sampler that
+  `phylo.sim.simulate`, `phylo.opt.potts` and `phylo.opt.hmm` each carried a
+  private copy of. The copies had drifted: two omitted the clamp on the last
+  cumulative column that the third had, so a probability row summing to
+  `1 - 4e-16` after rounding could return a category one past the end of the
+  alphabet. The surviving copy carries the guard, and a test constructs the
+  draw that triggers it rather than waiting for a 4e-16 event.
+
+  `DEV.md` no longer restates `CLAUDE.md`'s Performance and Testing rules or
+  `docs/CLAUDE.md`'s technical-document rules, and its release worked example
+  no longer describes cutting `0.1.0` — a version whose changelog section was
+  already built.
+
+  `CHANGELOG.md`'s legacy `[Unreleased]` section is labelled as older than the
+  dated sections above it rather than newer. `ROADMAP.md` records that the
+  accuracy requirement's first half is now measured and its second half is not. (#146)
+
+
 ## [0.1.0] - 2026-09-02
 
 ### Added
@@ -108,7 +409,10 @@ convention and is retained as history.
   ask instead of retyping it. (#98)
 
 
-## [Unreleased]
+## [Unreleased] — pre-0.1.0 history
+
+This section predates the `towncrier` convention and is retained as history.
+It is older than the dated sections above, not newer.
 
 ### Added
 

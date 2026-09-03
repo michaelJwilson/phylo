@@ -31,6 +31,7 @@ import numpy as np
 import torch
 import yaml
 
+from phylo.numerics import sample_rows
 from phylo.opt.constrain import free_from_log_simplex, log_simplex
 
 # How far apart the emission rows start, in unconstrained units. Large
@@ -179,10 +180,10 @@ def simulate_sequences(params: HmmParams) -> np.ndarray:
         (params.n_sequences, params.sequence_length), dtype=np.int64
     )
     states = rng.choice(params.n_states, size=params.n_sequences, p=params.initial)
-    observations[:, 0] = _sample_rows(rng, params.emission, states)
+    observations[:, 0] = sample_rows(rng, params.emission, states)
     for t in range(1, params.sequence_length):
-        states = _sample_rows(rng, params.transition, states)
-        observations[:, t] = _sample_rows(rng, params.emission, states)
+        states = sample_rows(rng, params.transition, states)
+        observations[:, t] = sample_rows(rng, params.emission, states)
     return observations
 
 
@@ -343,16 +344,6 @@ def forward_log_likelihood(
             + emit[observations[:, t]]
         )
     return torch.logsumexp(alpha, dim=1).sum()
-
-
-def _sample_rows(
-    rng: np.random.Generator, distributions: np.ndarray, rows: np.ndarray
-) -> np.ndarray:
-    """Draw one index per entry of ``rows`` from the row it selects."""
-    cumulative = distributions[rows].cumsum(axis=1)
-    draws = rng.random((rows.shape[0], 1))
-    result: np.ndarray = (draws > cumulative).sum(axis=1)
-    return result
 
 
 def align_states(

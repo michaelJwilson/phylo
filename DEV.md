@@ -126,24 +126,21 @@ consistency, duplicated machinery, suggested follow-up tickets) and gates on
    push origin v<version>`) and publish a GitHub release from that tag,
    with the new `CHANGELOG.md` section as its body.
 
-**Worked example (first release, `0.1.0`):** `Cargo.toml` and `Cargo.lock`
-already carry `0.1.0` with no `v0.1.0` tag yet, so step 2 is a no-op check
-rather than an edit. `infra/release.sh` passing clean plus the
-consolidation checklist above is what the Release-template issue is
-gating on before step 3–4 cut the tag.
+**A version whose changelog section exists is already spent.** `0.1.0`'s
+section was built into `CHANGELOG.md` before the repository was tagged, and
+fragments accumulated after it. Running `towncrier build` at that same version
+writes a second section rather than extending the first, so step 2 bumps to
+the next version whenever the top section of `CHANGELOG.md` already carries
+the one in `Cargo.toml`. `infra/release.sh` does not check this; issue #146
+records the gap.
 
 ---
 
 ## Application Standards
 
-### Performance
-
-Accelerate a hot path on the GPU (PyTorch/Triton/JAX) *only* where a benchmark shows a $\ge 10\times$ speedup over vectorized NumPy at realistic sizes. Otherwise use Rust. The pure Python implementation stays, as a pinned regression oracle.
-
-### Testing
-
-Assert scientific validity. Generate fixtures by component-wise simulation under a known generative model. A shape-only assertion, or one that checks nothing raised, is forbidden.
-
-### Technical Document
-
-`docs/tex/` is versioned as code. Update it in the same PR that alters a model, equation, algorithm, or QA figure. `docs/draft.pdf` is committed, not just built: regenerate it with `infra/build_technical_doc.sh` and commit the result in that same PR. CI's `technical-doc` job fails if the committed PDF is stale.
+`CLAUDE.md` states these and this file does not restate them: **Performance**
+for when a hot path earns a GPU port and why the NumPy reference stays,
+**Testing & Quality Assurance** for what an assertion must establish, and
+`docs/CLAUDE.md` for how the technical document is built and kept true. They
+were duplicated here until issue #146; a rule with two homes acquires two
+meanings.
