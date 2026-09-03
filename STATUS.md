@@ -239,23 +239,30 @@ one part in 1e9 and is not a measurement.
 
 ## §1.3 The Technical Document
 
-`docs/tex/` is structured as an academic letter — abstract, contributions, what
-is not claimed, methods, results grouped by claim, threats to validity,
-conclusions ([#148](https://github.com/michaelJwilson/phylo/pull/148)) — after
-being restructured around the optimization abstraction rather than the
-phylogenetic application
-([#124](https://github.com/michaelJwilson/phylo/pull/124)). Eleven QA scripts
-render its figures and tables, each committed with a caption naming the seed,
-the sizes and the model that produced it, and `docs/CLAUDE.md` states the rules
-that keep a CI-regenerated artifact true
-([#140](https://github.com/michaelJwilson/phylo/pull/140)).
+`docs/tex/` now spans all three problem classes rather than the phylogenetic
+application alone: the abstract, methods and appendices state the Potts
+Hamiltonian and the HMM decoding problem beside the substitution model, and the
+Reference Taxonomy appendix routes the literature by concern. It is an eight-page
+specification, cut down in `14d32d6` from the academic-letter structure of
+[#148](https://github.com/michaelJwilson/phylo/pull/148), and it is the shape
+the document is in rather than the shape §1.3 asks for.
 
-Present: the substitution models, the pruning derivation, the move sets, the
-gradient and interval machinery, and the MDP formulation with its credit
-assignment and baseline arguments. Absent: belief propagation and
-forward-backward derivations for the other two problem classes, and the
-branch-and-bound bounds and their proofs — no such bound is implemented, so
-none is claimed.
+Thirteen QA scripts run in the build, each committing a figure with a caption
+naming the seed, the sizes and the model that produced it, and `docs/CLAUDE.md`
+states the rules that keep a CI-regenerated artifact true
+([#140](https://github.com/michaelJwilson/phylo/pull/140)). The document
+currently includes two of them — the worked simulation example and the backend
+agreement — so eleven committed figures are rebuilt by CI but cited nowhere.
+
+Measured against §1.3's required contents: the model formulations are present
+for all three classes, at the level of a statement rather than a derivation.
+Absent are the derivations of pruning, belief propagation and forward-backward;
+the branch-and-bound bounds and their proofs, no such bound being implemented;
+and the parameter-recovery and convergence evidence, which exists as committed
+QA figures but is no longer included. Three framed placeholders stand in for
+the RL learning curve, the comparison against classical software, and hardware
+scaling — none of which is measured, and each labelled as a placeholder rather
+than drawn with invented data.
 
 ## What Is Not Claimed
 
