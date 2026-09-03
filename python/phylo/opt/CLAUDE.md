@@ -27,6 +27,11 @@ independent oracle for its own objective. They exist so the interface is
 tested against something that is not a tree. The phylogenetic instance
 belongs with them, as another instance.
 
+`hmm.py`'s truth type (`HmmParams`) and its data generator live in
+`phylo.sim.hmm`; this module imports the type and fits, but does not draw
+data — the same split `potts.py`'s own generator is moving towards
+(issue #170).
+
 ## Framework
 
 **PyTorch**, per root `CLAUDE.md`. What that means here: constraints and the

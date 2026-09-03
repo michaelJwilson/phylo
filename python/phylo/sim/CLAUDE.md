@@ -29,6 +29,13 @@ the rooted-binary-tree grammar, and counting distinct topologies for a
 given taxon count. `tree.py` holds only the `Node` structure and
 traversals; nothing outside `newick.py` builds or parses Newick strings.
 
+`hmm.py` draws a hidden state path and its emitted observations jointly from
+a declared `(pi, A, B)`, retaining the path alongside the data on the same
+footing as `simulate.py`'s ancestral states. `phylo.opt.hmm` imports the
+truth type (`HmmParams`) from here but draws no data itself — fitting and
+generation are split the same way `opt/CLAUDE.md` splits them for every
+reference instance.
+
 `graph.py` and `potts.py` (issue #170) are the one part of this module
 that names no phylogenetic application: a `PottsGraph` (nodes, a per-edge
 coupling, an explicit boundary condition), an N-D lattice built as an

@@ -13,9 +13,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-from phylo.opt.hmm import load_hmm_params
 from phylo.opt.potts import load_potts_params
 from phylo.qa.opt_recovery import build_figure, hmm_recovery, main, potts_recovery
+from phylo.sim.hmm import load_hmm_params
 
 from tests._fixtures import FIXTURES_DIR
 
