@@ -70,11 +70,18 @@ def sample_rows(
         raise ValueError(msg)
 
     draws = rng.random(size=(int(rows.shape[0]),))
-    # Every array crosses the boundary through the buffer protocol, and the
-    # result is written into `sampled` rather than returned. A binding that
-    # passed lists spent 64 ms marshalling in and 125 ms back at two million
-    # draws, against a NumPy oracle that finishes in 86 ms -- the kernel was
-    # never the thing that decided whether the port was worth having.
+    # Every array is borrowed rather than copied, and the result is written
+    # into `sampled` rather than returned. The boundary, not the kernel,
+    # decided whether this port was worth having: passing lists cost 64 ms
+    # marshalling in and 125 ms back at two million draws against a NumPy
+    # oracle that finishes in 86 ms, and copying through the buffer protocol
+    # still left the caller at 1.3x where the kernel runs at 3.6x. Borrowing
+    # (issue #202) puts it at 2.6x, and stops the ratio shrinking as the
+    # array grows.
+    #
+    # `ascontiguousarray` is what makes the borrow safe: Rust's `as_slice`
+    # accepts only a C-contiguous array, and this is free when the input
+    # already is one.
     sampled = np.empty(int(rows.shape[0]), dtype=np.int64)
     oxiphylo.sample_rows(
         np.ascontiguousarray(distributions, dtype=np.float64).reshape(-1),
