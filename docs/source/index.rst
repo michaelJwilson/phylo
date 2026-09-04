@@ -114,6 +114,12 @@ whether or not it has members yet.
 .. automodule:: phylo.search.rl
    :members:
 
+.. automodule:: phylo.search.potts_mcmc
+   :members:
+
+.. automodule:: phylo.search.statistics
+   :members:
+
 .. automodule:: phylo.qa
    :members:
 

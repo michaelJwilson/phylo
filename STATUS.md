@@ -17,7 +17,7 @@ started**, on the terms §0.4 sets.
 | 1.1 Simulation & ground truth | Trees, the HMM and Potts (1-D chain plus general N-D lattice/MRF) landed as first-class simulators | Simulated substitution frequencies against the closed-form JC probabilities; GTR reproduces JC to machine precision; HMM state and emission marginals against brute-force path enumeration; Potts single-site and pair marginals against exhaustive enumeration at 3-state 3x3 and 2-state 4x4 | [#58](https://github.com/michaelJwilson/phylo/pull/58), [#64](https://github.com/michaelJwilson/phylo/pull/64), [#115](https://github.com/michaelJwilson/phylo/pull/115), [#120](https://github.com/michaelJwilson/phylo/pull/120), [#182](https://github.com/michaelJwilson/phylo/pull/182), [#190](https://github.com/michaelJwilson/phylo/pull/190) |
 | 1.2 Likelihood & energy engine | CPU landed (NumPy, PyTorch, Rust); belief propagation landed with two exact oracles; GPU dispatch not started | Worst relative deviation 4.0e-14 against brute-force marginalization across three backends and four site counts spanning a factor of 30 | [#66](https://github.com/michaelJwilson/phylo/pull/66), [#74](https://github.com/michaelJwilson/phylo/pull/74), [#81](https://github.com/michaelJwilson/phylo/pull/81), [#112](https://github.com/michaelJwilson/phylo/pull/112), [#148](https://github.com/michaelJwilson/phylo/pull/148) |
 | 1.3 Continuous optimization | Landed for trees, the 1-D Potts chain and the HMM; Potts lattice not started | Gradients against central differences; 95% intervals cover truth at the nominal rate over 60 replicates | [#115](https://github.com/michaelJwilson/phylo/pull/115), [#116](https://github.com/michaelJwilson/phylo/pull/116), [#119](https://github.com/michaelJwilson/phylo/pull/119), [#120](https://github.com/michaelJwilson/phylo/pull/120) |
-| 1.4 Move sets & classical baselines | Trees landed; cluster updates and Viterbi not started | NNI and SPR neighbour counts exhaustively verified at `n = 5..8`; hill climbing reaches the enumerated optimum from 12 of 12 starts | [#82](https://github.com/michaelJwilson/phylo/pull/82), [#127](https://github.com/michaelJwilson/phylo/pull/127), [#128](https://github.com/michaelJwilson/phylo/pull/128) |
+| 1.4 Move sets & classical baselines | Trees landed; Potts cluster updates landed; Viterbi not started | NNI and SPR neighbour counts exhaustively verified at `n = 5..8`; hill climbing reaches the enumerated optimum from 12 of 12 starts | [#82](https://github.com/michaelJwilson/phylo/pull/82), [#127](https://github.com/michaelJwilson/phylo/pull/127), [#128](https://github.com/michaelJwilson/phylo/pull/128) |
 | 2.1 RL formulation & deployment | Estimator and both environments landed; a trained tree policy not started | Enumerated gradient against finite differences at 1.5e-11 relative; learned policy 86.6% against greedy's 80.2% on the Potts landscape, 8 of 8 seeds | [#135](https://github.com/michaelJwilson/phylo/pull/135), [#137](https://github.com/michaelJwilson/phylo/pull/137), [#139](https://github.com/michaelJwilson/phylo/pull/139) |
 | 2.2 Curriculum learning | Not started | — | — |
 | 2.3 Empirical validation | Not started | — | — |
@@ -243,9 +243,44 @@ counts internal splits only: every tree over the same leaves induces all the
 trivial ones, and including them would shrink every distance by a
 taxon-count-dependent factor and silently weaken the bound.
 
-**Not built:** Swendsen-Wang and Wolff cluster updates, Viterbi decoding, and
-iterated conditional modes over state paths. Single-flip local search over the
-Potts chain exists as an RL environment, not as a classical baseline suite.
+**Potts cluster updates landed, validated by the distribution they converge
+to.** Swendsen-Wang
+and Wolff run beside single-site heat bath behind one interface. Correctness is
+a chi-square goodness-of-fit against the exact Boltzmann distribution at an
+enumerable size, at a significance of 0.001, for all three move sets with and
+without an external field; the worst p-value over 36 runs spanning six seeds
+was 0.0145. That the test has the power it claims is itself pinned: replacing
+the field accept step with an unconditional recolouring is rejected at p = 0.0.
+
+Two errors that a test asserting only that the chain ran would have missed are
+recorded here because they are the ones this ticket existed to catch. The
+field accept step is the first: Wolff's cluster construction alone does not
+preserve detailed balance in a field, and without the Metropolis correction on
+`|C| * (h_new - h_old)` the sampler runs and converges to the wrong
+distribution. The second was a Wolff sweep sized to match the others by
+running clusters until their cumulative size reached the site count --- a
+state-dependent stopping rule, which biased an aligned two-site chain to 0.384
+per aligned state against an exact 0.334.
+
+The reason to have them, measured at the exact transition
+`J_c = ln(1 + sqrt(q))` on an open lattice, as energy autocorrelation time
+normalized to sites touched:
+
+| extent | single-site | Swendsen-Wang | Wolff |
+| --- | --- | --- | --- |
+| 8 | 3.27 | 2.56 | 2.71 |
+| 12 | 6.89 | 3.91 | 3.04 |
+| 16 | 9.74 | 4.33 | 3.68 |
+| 24 | 10.37 | 4.86 | 5.01 |
+
+Single-site slows by 3.2x between extent 8 and 24 while both cluster
+algorithms slow by roughly 1.9x, so the gap is 2.1x at extent 24 and widening.
+That understates the asymptotic separation: these lattices are small and their
+boundary is open, both of which soften the transition.
+
+**Not built:** Viterbi decoding, and iterated conditional modes over state
+paths. Single-flip local search over the Potts chain exists as an RL
+environment, not as a classical baseline suite.
 
 ## Milestone 2.1 — RL Agent Formulation & Deployment
 

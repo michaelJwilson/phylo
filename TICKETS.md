@@ -46,7 +46,6 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.4 — Discrete Move Sets & Classical Baselines
 
-- Swendsen-Wang and Wolff cluster updates on the Potts lattice
 - Viterbi decoding, pinned against brute-force path enumeration
 - Iterated conditional modes over HMM state paths
 - Make the rooted/unrooted distinction explicit and give topologies a canonical
