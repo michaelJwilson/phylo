@@ -54,6 +54,9 @@ whether or not it has members yet.
 .. automodule:: phylo.likelihood.brute_force
    :members:
 
+.. automodule:: phylo.likelihood.parsimony
+   :members:
+
 .. automodule:: phylo.likelihood.device
    :members:
 

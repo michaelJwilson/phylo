@@ -18,6 +18,11 @@ CPU), a non-differentiable Rust CPU backend (`pruning_rust.py`, wrapping
 Metal/MPS dispatch belong here too but are not yet implemented (ROADMAP.md
 Milestone 3).
 
+`parsimony.py` is Fitch's algorithm: a second evaluator over the same
+topology, with no model, no branch lengths and an integer score. Its oracle is
+exhaustive enumeration over internal-node labellings, sharing no traversal
+with it.
+
 `objective.py` adapts the recursion to `phylo.opt`'s fitting interface. It
 lives here, not in `opt/`, because that package may import no application
 module — the dependency runs application to infrastructure, never back.
@@ -62,6 +67,15 @@ module — the dependency runs application to infrastructure, never back.
   `CLAUDE.md` states it; here it means a backend is accepted when it agrees
   with the NumPy reference inside that tolerance, and rejected outside it —
   never adjusted until it matches.
+- **A criterion may be here to be wrong.** `parsimony.py` is not a method
+  this repository advocates; it exists because the Felsenstein zone is the one
+  place where a named criterion's failure is a *theorem* rather than a defect,
+  and almost every other fixture here is a case some method already solves.
+  Its correctness test is therefore paired: parsimony must fail the
+  Felsenstein zone **and** succeed in the Farris zone, because an
+  implementation that is simply broken fails both and the first result alone
+  cannot tell them apart.
+
 - **Rescaling must stay differentiable.** Partial likelihoods underflow, so
   they are rescaled with the log of the scaling accumulated separately. That
   transformation sits inside the autodiff graph.
