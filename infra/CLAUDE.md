@@ -29,6 +29,12 @@ so tests complete.
   unattended provided the PR implements a plan already posted to the thread.
   A plan that turns out to be flawed gets a revised plan posted in the
   thread, not a silent correction.
+- **Label the ticket `drafted` once its pull request is open.** The lifecycle
+  is `(unlabelled) -> planned -> approved -> drafted`, and the merge closes
+  the ticket rather than labelling it again. Without the last step a ticket
+  whose work is written is indistinguishable from one nobody has started, and
+  the two need opposite things from a maintainer: a review of the diff
+  against a review of the plan.
 - **Record the branch before the first commit.** Once a branch is created for
   an approved plan, the first thing posted is a single issue comment naming
   the branch (and, once opened, the PR number) — before any further commit is

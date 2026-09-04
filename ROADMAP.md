@@ -37,7 +37,9 @@ authoritative — where it and any other document disagree, it wins.
   finite, a plan is subject to the Writing Style in `CLAUDE.md` like anything
   else here.
 - **Gate:** a maintainer applies `approved`, and only then may a pull request
-  open. The pull request must implement the plan already in the thread. A plan
+  open; once one does, the ticket is labelled `drafted`, so a reader can tell
+  a ticket waiting on a reviewer from one waiting only on a merge. The pull
+  request must implement the plan already in the thread. A plan
   that turns out to be flawed gets a revised plan posted to the same thread,
   not a silent correction in the diff. Disjoint tickets run as parallel
   worktrees and parallel pull requests; coupled changes run as a single

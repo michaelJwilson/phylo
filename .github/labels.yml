@@ -30,16 +30,35 @@
 - name: "module:docs"
   color: "c00552"
   description: "Documentation and the technical document."
+- name: "module:cross-cutting"
+  color: "ededed"
+  description: "Spans submodules; no single one owns it."
 
-# Plan lifecycle. An issue moves (unlabelled) -> planned -> approved. `planned`
-# is set by automation once a plan is posted to the thread; it is also the guard
-# that stops a second plan being generated for the same issue.
+# Plan lifecycle. An issue moves (unlabelled) -> planned -> approved -> drafted.
+# `planned` is set by automation once a plan is posted to the thread; it is also
+# the guard that stops a second plan being generated for the same issue.
+# `drafted` says the work exists as an open pull request, so the ticket is no
+# longer waiting on anyone: it is waiting on that PR to merge, which closes it.
 - name: "planned"
   color: "1d76db"
   description: "A plan has been posted to the thread and awaits review."
 - name: "approved"
   color: "0e8a16"
   description: "A maintainer has approved the posted plan."
+- name: "drafted"
+  color: "17a67e"
+  description: "An open pull request implements this ticket."
+
+# Two states a ticket can be in that its lifecycle position does not say, both
+# already applied in the repository and neither previously recorded here. The
+# colours are the ones they are already wearing, so this file is brought up to
+# what exists rather than repainting labels in use; the descriptions were empty.
+- name: "inprogress"
+  color: "1ad6d6"
+  description: "Being worked now, ahead of a pull request."
+- name: "blocked"
+  color: "b60205"
+  description: "Waiting on another ticket or pull request to land first."
 - name: "release"
   color: "5319e7"
   description: "infra/release.sh passed clean; ready to tag and publish."
