@@ -110,6 +110,17 @@ in. It is not restated here.
   `SOURCE_DATE_EPOCH` problem above for a weaker payoff. A figure is checked
   only for still being produced.
 
+  **A notebook may print only what survives a run on another machine**, which
+  is the `tex/` rule above applied where it also bites. Its first live run
+  failed on two notebooks that printed an optimizer's residual gradient norm:
+  6.5e-10 against 1.7e-10, and 1.0e-11 against 7.7e-14, while every fitted
+  parameter, standard error and log-likelihood in the same cell agreed to the
+  digit. A converged optimizer's remaining gradient is floating-point noise
+  under whichever BLAS the machine has; what carries information is that it
+  cleared the tolerance, so that is what the notebooks print now. The test is
+  the same one issue #137 states for a caption: before printing a computed
+  value, ask whether it is continuous in its inputs.
+
   **Regenerate with `--write` on the same script**, never by hand and never
   with a second tool: the checker and the regenerator have to execute a
   notebook identically, or the one writes what the other rejects. It strips

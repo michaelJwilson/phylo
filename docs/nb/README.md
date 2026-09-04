@@ -36,6 +36,13 @@ and comparing them would reproduce the `SOURCE_DATE_EPOCH` problem
 printed numbers are what the notebooks assert with. What is checked for a
 figure is that the cell still produced one.
 
+This makes a notebook's printed numbers subject to the rule `docs/CLAUDE.md`
+states for a generated caption: **only quantities continuous in their inputs**.
+A near-zero residual is not one. The check's first run rejected two notebooks
+that printed a converged optimizer's gradient norm, which moved by two orders
+of magnitude between machines while every parameter it reported agreed to four
+decimals. They print the tolerance it cleared instead.
+
 Install the kernel with `uv sync --extra notebooks`; a normal `pip install .`
 does not need it.
 

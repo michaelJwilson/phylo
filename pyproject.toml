@@ -140,6 +140,18 @@ ignore_missing_imports = true
 module = "check_notebooks"
 disallow_untyped_calls = false
 
+[[tool.mypy.overrides]]
+# The `lint` job syncs `--extra test`, not `--extra notebooks`, so these are
+# absent where mypy runs and every import of them is `import-not-found`.
+# Moving the imports into the functions that execute a notebook does not help:
+# mypy resolves an import wherever it appears. They are optional dependencies
+# of one developer script, so the type checker is told they may be missing
+# rather than the job made to install a Jupyter kernel to type-check three
+# lines. Where they *are* installed -- a developer environment, the
+# `notebooks` job -- mypy still checks against the real thing.
+module = ["nbformat.*", "nbclient.*"]
+ignore_missing_imports = true
+
 [tool.towncrier]
 directory = "changelog.d"
 filename = "CHANGELOG.md"
