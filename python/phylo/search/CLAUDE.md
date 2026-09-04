@@ -13,6 +13,13 @@ NNI, SPR, and multi-SPR neighbourhoods behind one interface; hill-climbing
 and reinforcement-learning agents; annealing schedules and the
 likelihood-versus-temperature curves used to judge exploration.
 
+`maxflow.py` and `maxflow_rust.py` are the exact ground-state solver: Dinic's
+max flow, and the reduction that turns a two-state ferromagnetic Ising energy
+into a minimum cut. The Python one is the oracle and stays; the Rust kernel
+(`src/maxflow.rs`) is 28-34x faster measured on its own, and 6.6-10.6x as a
+caller sees it — the difference being the list marshalling that crosses the
+FFI boundary, the same gap #202 closes for the categorical sampler.
+
 `potts_mcmc.py` holds the Potts lattice's Monte Carlo move sets --- single-site
 heat bath, Swendsen-Wang, Wolff --- and `statistics.py` the two statistics they
 are judged by. Those are samplers rather than optimizers, and the distinction
@@ -59,6 +66,21 @@ environment cannot live beside the estimator that consumes it.
   predecessor heavily, and refitting is the dominant avoidable cost.
 - **Every proposed move set states whether it is complete**, in which of the
   two senses, and what it costs per step.
+- **Submodularity is the boundary, and it is refused rather than
+  approximated.** A minimum cut gives the *exact* ground state for two states
+  with every coupling non-negative. A negative coupling makes the energy
+  non-submodular and the problem NP-hard; more than two states is not a cut
+  problem at all, but alpha expansion (issue #207) with this as its inner
+  solver. Both are raised, because a lattice-shaped wrong answer is
+  indistinguishable from a right one at any size worth solving.
+
+- **A uniform field makes the ferromagnetic ground state trivial.** Every
+  coupling favours agreement and every site prefers the same state, so the
+  answer is `argmax(h)` everywhere. The problem only has content with a
+  *per-node* field — which is also the shape alpha expansion needs, since its
+  binary sub-problem reads a data term off the current labelling. A benchmark
+  or a test built on the uniform case is measuring nothing.
+
 - **A sampler is validated by its distribution, never by inspection.** At an
   enumerable size the exact Boltzmann distribution is available, so a move set
   is tested by a chi-square goodness-of-fit against it at a declared

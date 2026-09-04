@@ -184,6 +184,11 @@ nodes/taxa/states, with sequence/lattice lengths `L ∈ [100, 11000]`.
     - *Potts models:* Swendsen-Wang and Wolff cluster update algorithms.
     - *HMMs:* Viterbi decoding and structural state-space updates (e.g.
       iterated conditional modes).
+    - *Exact baselines:* where a discrete optimum is computable in polynomial
+      time, compute it — a minimum cut for the two-state submodular Ising
+      ground state, and alpha expansion above two states, with its proved
+      approximation bound. A heuristic past the size enumeration reaches has
+      otherwise nothing to be checked against.
 
 ## Stage 2: Reinforcement Learning & Variational Search
 

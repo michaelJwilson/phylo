@@ -278,6 +278,35 @@ algorithms slow by roughly 1.9x, so the gap is 2.1x at extent 24 and widening.
 That understates the asymptotic separation: these lattices are small and their
 boundary is open, both of which soften the transition.
 
+**An exact ground state landed, and it is the repository's first optimum that
+is proved rather than enumerated.** For two states with every coupling
+non-negative the Ising energy is submodular, so a minimum cut finds its global
+minimum in polynomial time. Every other discrete claim here rests on
+exhaustive enumeration and therefore stops at about twenty sites; this does
+not, so a heuristic past that point finally has something to be checked
+against.
+
+Validated three ways, because enumeration alone would inherit the same cap:
+against enumeration where it fits, at **exact equality** over 36
+shape-coupling-field combinations; against two analytic corners at sizes far
+past it — zero field gives an aligned state at `-J |E|`, zero coupling gives
+`argmax` per site; and by the max-flow min-cut theorem as a self-check, the
+flow value equalling the capacity of the cut residual reachability induces.
+
+A Rust kernel (`src/maxflow.rs`) runs **28-34x** faster than the NumPy
+reference measured on its own, and **6.6-10.6x** as a caller sees it; the
+difference is the list marshalling crossing the FFI boundary, which is the
+same gap #202 closes for the categorical sampler and is deferred to it rather
+than solved twice. The reference stays as the oracle. The port also removes a
+fragility: the
+Python blocking flow recurses to the depth of the level graph and needs
+`setrecursionlimit` raised past a few thousand nodes, while the Rust one uses
+an explicit stack.
+
+The boundary is refused rather than approximated. A negative coupling is
+NP-hard and raises; more than two states is alpha expansion (#207), which
+takes this as its inner solver.
+
 **Not built:** Viterbi decoding, and iterated conditional modes over state
 paths. Single-flip local search over the Potts chain exists as an RL
 environment, not as a classical baseline suite.
