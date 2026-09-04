@@ -20,6 +20,10 @@ into a minimum cut. The Python one is the oracle and stays; the Rust kernel
 caller sees it — the difference being the list marshalling that crosses the
 FFI boundary, the same gap #202 closes for the categorical sampler.
 
+`alpha_expansion.py` extends that to any label count, as a sequence of binary
+cuts, and carries the single-site descent baseline it has to beat. It is the
+only thing here with a *proved* approximation bound.
+
 `potts_mcmc.py` holds the Potts lattice's Monte Carlo move sets --- single-site
 heat bath, Swendsen-Wang, Wolff --- and `statistics.py` the two statistics they
 are judged by. Those are samplers rather than optimizers, and the distinction
@@ -80,6 +84,24 @@ environment cannot live beside the estimator that consumes it.
   *per-node* field — which is also the shape alpha expansion needs, since its
   binary sub-problem reads a data term off the current labelling. A benchmark
   or a test built on the uniform case is measuring nothing.
+
+- **An approximation with a bound states the bound and measures the gap.**
+  Alpha expansion's local minimum is within `2 c_max / c_min` of the global
+  one for a metric pairwise term — exactly 2 for a uniform Potts coupling.
+  That is the first claim here that holds at *every* size rather than only
+  where enumeration reaches, so it is the thing to report; the realized ratio
+  is measured beside it (39 of 40 runs found the optimum outright) rather
+  than the bound being quoted as if it were the result.
+
+- **A construction error in a cut does not break loudly.** Swapping the
+  terminal capacities, or mis-costing an auxiliary node, yields a labelling
+  that is merely *worse* — indistinguishable from the algorithm doing badly
+  on a hard problem. Both errors were present in the first draft of
+  `alpha_expansion.py` and passed every enumeration test at `3x3`. What
+  caught them is the **reduction**: at two labels one expansion is exact, so
+  it must reproduce `maxflow`'s minimum cut energy for energy. Any new cut
+  construction here needs an equivalent reduction to something already
+  validated, not only an enumeration.
 
 - **A sampler is validated by its distribution, never by inspection.** At an
   enumerable size the exact Boltzmann distribution is available, so a move set
