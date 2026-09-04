@@ -108,6 +108,9 @@ whether or not it has members yet.
 .. automodule:: phylo.learn.potts
    :members:
 
+.. automodule:: phylo.learn.relaxed
+   :members:
+
 .. automodule:: phylo.learn.rollout
    :members:
 

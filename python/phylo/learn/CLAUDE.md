@@ -31,6 +31,14 @@ searched discretely and there as an *objective* fitted continuously, so the
 claim that both halves of this project share one abstraction is demonstrated
 rather than asserted.
 
+`relaxed.py` is the Gumbel-softmax half of `ROADMAP.md` Stage 3's
+differentiable-search bullet, and only that half: it relaxes Potts
+configurations and HMM state paths, whose optima are enumerable, and leaves
+tree topologies to the tropical Grassmannian line in `TICKETS.md`, which has
+no oracle at any interesting size. `RelaxedObjective` is the seam — the
+estimators, the exact gradient and the optimizer are written against it, so a
+third discrete space costs one objective and not a second optimizer.
+
 ## Local rules
 
 - **No application imports.** Nothing here may import from `phylo.sim`,
@@ -93,3 +101,66 @@ cannot support.
 PPO, a learned state-value critic, and the phylogenetic environment. Issue
 #131 stages them; `docs/tex`'s reinforcement-learning section states the
 theory all three are built against.
+
+- **A relaxation must reduce to the discrete objective at the corners,
+  exactly.** Checked over *every* configuration of a small instance to the
+  float64 bound, not spot-checked. A relaxation that disagrees at a one-hot is
+  a different model, and every measurement made against it transfers to
+  nothing. The HMM case is checked across a module boundary — `phylo.learn`
+  may not import `phylo.likelihood`, so `RelaxedHmmPath.discrete` and
+  `phylo.likelihood.hmm_paths.path_log_probability` are genuinely independent
+  implementations of the same quantity.
+
+- **`E_q[score] = score(q)` for a multilinear objective, and the boundary is
+  multilinearity — not the chain.** Under a factorized `q` each term's
+  expectation is that term at the marginals, so the relaxed form at the
+  marginals *is* the expected discrete score. Two plausible statements of the
+  limit are false and are refuted by tests: it is not that the model must be a
+  chain (a lattice is equally multilinear), and it is not that terms must be
+  pairwise (three *distinct* sites is still one factor per site). What breaks
+  it is a term using one site twice, since `E[X**2] = E[X]` for an indicator —
+  measured at 1.000 against 0.557. That is not hypothetical: `PottsGraph`
+  permits a doubled bond, which after a periodic wrap at extent 2 joins a node
+  to itself.
+
+- **The relaxation adds no optimum the discrete problem lacks.** A multilinear
+  function on a product of simplices attains its maximum at a vertex, so the
+  relaxed optimum cannot exceed the discrete one. Everything a relaxed search
+  loses is lost to local optima of the ascent, never to the relaxation, and a
+  test pins the inequality over 200 random simplex points.
+
+- **A gradient estimator's bias is measured against the exact gradient, never
+  assumed small.** Enumeration gives `d E_q[score] / d logits` exactly at these
+  sizes, so the bias-variance trade is a measurement. Measured over 20000
+  draws, scaled by the largest exact component: bias falls from 0.598 at
+  `tau = 2.0` to 0.036 at `tau = 0.1` while the standard deviation rises from
+  0.165 to 3.39 — a factor of 17 against a factor of 21, so no temperature is
+  good at both. Straight-through's bias matches the soft estimator's within
+  error and its variance is higher at every temperature, so on this problem it
+  buys nothing.
+
+- **Averaging is variance reduction and never bias reduction**, so the two are
+  reported separately. A method failing because of bias cannot be fixed by
+  drawing more samples, and reporting one number hides which failure it is.
+
+- **The sampling is what costs here, not the relaxation.** Against single-flip
+  hill climbing on a chain whose optimum requires coordinated flips, over 40
+  shared seeds: greedy 5/40, deterministic relaxation 18/40 (McNemar
+  `p = 0.00098`), soft Gumbel-softmax 11/40 and straight-through 11/40 (both
+  `p = 0.18`), annealed soft 11/40 (`p = 0.18`). The deterministic ascent —
+  which the identity above licenses, so it is not a shortcut — is
+  significantly better; adding Gumbel noise gives that up for a tie, and
+  annealing does not recover it. It is also 15% cheaper per run (43.6 ms
+  against 50.1 ms for 100 steps).
+
+- **A tie is reported as a tie.** #193 set that precedent for the tree policy
+  and it holds here: three of the four variants tie with the baseline, and
+  saying so is worth more than promoting one on an unpaired difference.
+
+- **A fixture whose optimum every method finds measures nothing.** The
+  repository's `potts_params.yaml` has `J = 0.75 > 0`, so its optimum is
+  `argmax(h)` repeated and greedy, the relaxation and random guessing all
+  reach it. The comparison above uses an antiferromagnetic chain with two
+  nearly-degenerate states instead. This is the third time this has come up —
+  #177, #198, and #209's planted spin glass — and it is why the baseline is
+  run first, before any claim is made.
