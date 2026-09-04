@@ -81,6 +81,13 @@ in. It is not restated here.
   invariant fails when nothing checks it: `sphinx-build -W` fails on a broken
   entry, never on an absent one.
 
+  It had drifted a **third** time, by five modules, before
+  `tests/regression/docs/test_docs_index_covers_every_module.py` closed the
+  loop. Three repairs of one invariant is the signal that prose was never
+  going to hold it: the rule above is now enforced in milliseconds rather
+  than rediscovered. A stated invariant with no test is a defect waiting for
+  its next archaeologist.
+
 - **`SOURCE_DATE_EPOCH` is pinned** in `phylo.qa.build`, because matplotlib
   and `pdftex` both embed it as a creation date. Without it every rebuild
   differs and the staleness check is meaningless. It is pinned in the module

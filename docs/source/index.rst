@@ -33,6 +33,15 @@ whether or not it has members yet.
 .. automodule:: phylo.sim.simulate
    :members:
 
+.. automodule:: phylo.sim.graph
+   :members:
+
+.. automodule:: phylo.sim.potts
+   :members:
+
+.. automodule:: phylo.sim.hmm
+   :members:
+
 .. automodule:: phylo.sim.newick
    :members:
 
@@ -187,4 +196,10 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.qa.topology_accuracy
+   :members:
+
+.. automodule:: phylo.scripts
+   :members:
+
+.. automodule:: phylo.scripts.run_phylo
    :members:

@@ -159,6 +159,25 @@ derived from measured agreement, and the `float32` bound is exercised on CPU so
 runners without an accelerator still check it. The CUDA and Metal paths
 themselves are not implemented.
 
+**Belief propagation is now measured over an ensemble, not three fixtures.**
+`phylo.sim.graph.erdos_renyi_graph` draws `G(n, p)` beside `lattice_graph`,
+and BP is checked per draw against enumeration. Over 60 sparse draws, 106
+across two ensembles were acyclic and BP was exact on every one — worst
+relative deviation 3.7e-15 in `log Z` and 4.9e-13 in the marginals, inside
+the `1e-11` float64 bound. The ensemble also reaches what no committed
+fixture did: **104 of 120 draws carried an isolated vertex**, the case sitting
+on the boundary between the general message-passing loop and the edgeless
+special case.
+
+**A correction to what was expected.** #214 proposed asserting that the
+deviation on a cyclic draw sits well below the lattice's, on the
+locally-tree-like argument. It does not, at this scale: measured over 14
+cyclic draws the relative deviation ran 2.7e-04 to 7.4e-03, median 3.6e-03,
+against the lattice's peak of 5.2e-03 — comparable, not better. At `n <= 10` a
+single cycle is a large fraction of the graph, and the locally-tree-like
+argument is asymptotic. The deviation is reported; nothing claims BP is more
+accurate on a random graph than on a lattice at these sizes.
+
 **Potts and HMM evaluators: partial.** The 1-D transfer matrix and the HMM
 forward recursion exist, each with its exact oracle. Sum-product belief
 propagation over a general `PottsGraph` now joins them, with the 2-D strip

@@ -61,6 +61,28 @@ resolving, by moving `PottsParams`/`load_potts_params` here the way issue
 
 ## Local rules
 
+- **A drawn ensemble reaches structures a hand-built fixture does not.**
+  Belief propagation was tested on a connected tree, a connected lattice and a
+  fully edgeless graph; everything between was unexercised. Over 120
+  Erdos-Renyi draws, 104 carried an isolated vertex — the case sitting on the
+  boundary between the general message-passing loop and the edgeless special
+  case, and one no committed fixture reached. Where a property should hold
+  across a *class* of graphs, draw the class.
+
+- **`erdos_renyi_graph` takes a generator, never a seed.** An ensemble seeded
+  per call is the same graph repeatedly, which looks like a passing test over
+  many draws and is one draw. That mistake has been made here before
+  (`phylo.qa.rl_reward_surface`), so the signature makes it impossible rather
+  than warning against it.
+
+- **No asymptotic graph result is testable at this scale.** The
+  giant-component threshold at `p = 1/n` and the connectivity threshold at
+  `ln(n)/n` hold in the limit; at the `n <= 10` cap `infra/CLAUDE.md` sets so
+  enumeration stays affordable they say nothing. Check the property *per
+  draw* — acyclicity by union-find, not by a limit theorem — so the oracle
+  stays enumeration.
+
+
 - **Validate against the analytic result, never against our own likelihood.**
   The technical document gives the closed form for `k`-state Jukes–Cantor
   transition probabilities.
