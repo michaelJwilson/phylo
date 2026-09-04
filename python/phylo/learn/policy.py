@@ -163,9 +163,18 @@ class EpsilonGreedyPolicy:
     Parameters
     ----------
     policy : LinearPolicy
-        Supplies the greedy action. Wrapping a trained policy and wrapping an
-        untrained one are both meaningful, and the difference between them is
-        a measurement.
+        Supplies the greedy action.
+
+        **An untrained policy does not give hill climbing.** Weights start at
+        zero, so every action scores alike and :meth:`LinearPolicy.greedy`
+        returns the first one; wrapping it explores around "always take
+        action 0", which resembles a searcher without being one. It produces
+        plausible numbers rather than an error, which is what makes it worth
+        stating here --- the measurement in issue #194 was first run this way
+        and reported an escape rate of 0.000 where the baseline it had to
+        reproduce was 0.480. Wrap a trained policy, or set the weights to a
+        vector whose argmax is the action you mean.
+        ``tests/regression/search/test_search_escape.py`` pins both halves.
     epsilon : float
         Probability of the uniform draw, in ``[0, 1]``. At ``0`` this is the
         wrapped policy's greedy action every step, which is *not* the same as
