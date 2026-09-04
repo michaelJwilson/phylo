@@ -14,6 +14,8 @@ cell that lost its figure entirely.
 
 from __future__ import annotations
 
+import importlib
+import importlib.abc
 import sys
 from pathlib import Path
 from typing import Any
@@ -127,3 +129,30 @@ def test_a_notebook_of_a_different_length_is_refused() -> None:
     # silently stopping at the shorter would hide the truncation.
     with pytest.raises(ValueError, match="argument 2 is shorter"):
         differences("n.ipynb", [_cell(_stream("a\n"))], [])
+
+
+def test_the_comparison_imports_without_the_jupyter_stack() -> None:
+    # The `python-tests` job syncs `--extra test`, not `--extra notebooks`, so
+    # `nbformat` and `nbclient` are absent there. They were imported at module
+    # scope, and this whole file failed to collect (#205's first CI run). The
+    # comparison is dict arithmetic and needs neither; only `execute` does.
+    class Blocked(importlib.abc.MetaPathFinder):
+        def find_spec(self, name: str, *_: object, **__: object) -> None:
+            if name.split(".")[0] in {"nbformat", "nbclient"}:
+                message = f"No module named {name!r}"
+                raise ImportError(message)
+
+    hidden = {
+        name: module
+        for name, module in sys.modules.items()
+        if name.split(".")[0] in {"nbformat", "nbclient", "check_notebooks"}
+    }
+    for name in hidden:
+        del sys.modules[name]
+    sys.meta_path.insert(0, Blocked())
+    try:
+        module = importlib.import_module("check_notebooks")
+        assert module.differences("n.ipynb", [], []) == []
+    finally:
+        sys.meta_path.pop(0)
+        sys.modules.update(hidden)

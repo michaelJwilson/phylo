@@ -24,6 +24,12 @@ notebook is regenerated after a change moves what it prints. Both live here
 rather than in two tools because they must execute a notebook *identically* --
 a regenerator that differed from the checker in working directory, timeout or
 kernel would write a notebook the checker then rejects.
+
+`nbformat` and `nbclient` are imported inside the functions that run a
+notebook, not at module scope. Comparing two runs is pure dict arithmetic and
+needs neither; importing them here would put the whole Jupyter stack behind
+`tests/regression/test_check_notebooks.py`, which the `python-tests` job does
+not install (`uv sync --extra test`) and does not need to.
 """
 
 from __future__ import annotations
@@ -34,10 +40,6 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
-
-import nbformat
-from nbclient import NotebookClient
-from nbclient.exceptions import CellExecutionError
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK_DIR = REPO_ROOT / "docs" / "nb"
@@ -152,6 +154,9 @@ def execute(path: Path) -> Any:
     Any
         The notebook with outputs replaced by what this run produced.
     """
+    import nbformat
+    from nbclient import NotebookClient
+
     notebook = nbformat.read(path, as_version=4)
     nbformat.validator.normalize(notebook)
     NotebookClient(
@@ -176,6 +181,8 @@ def rewrite(path: Path) -> None:
     prints runs this and commits the result, exactly as a change that moves a
     figure runs ``infra/build_technical_doc.sh``.
     """
+    import nbformat
+
     nbformat.write(execute(path), path)
 
 
@@ -193,6 +200,9 @@ def compare(path: Path) -> list[str]:
         Human-readable differences; empty when the notebook still produces
         what it claims.
     """
+    import nbformat
+    from nbclient.exceptions import CellExecutionError
+
     committed = nbformat.read(path, as_version=4)
     try:
         executed = execute(path)
