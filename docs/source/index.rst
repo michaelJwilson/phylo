@@ -117,6 +117,9 @@ whether or not it has members yet.
 .. automodule:: phylo.search.alpha_expansion
    :members:
 
+.. automodule:: phylo.search.max_cut
+   :members:
+
 .. automodule:: phylo.search.maxflow
    :members:
 

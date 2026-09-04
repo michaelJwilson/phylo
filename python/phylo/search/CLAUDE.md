@@ -24,6 +24,11 @@ FFI boundary, the same gap #202 closes for the categorical sampler.
 cuts, and carries the single-site descent baseline it has to beat. It is the
 only thing here with a *proved* approximation bound.
 
+`max_cut.py` reads the same model from the other side: maximizing the weight
+of separated edges is minimizing the energy with every coupling negative,
+which is the NP-hard side of `maxflow.py`'s boundary. It carries the
+Goemans-Williamson relaxation and the 0.87856 guarantee that comes with it.
+
 `potts_mcmc.py` holds the Potts lattice's Monte Carlo move sets --- single-site
 heat bath, Swendsen-Wang, Wolff --- and `statistics.py` the two statistics they
 are judged by. Those are samplers rather than optimizers, and the distinction
@@ -102,6 +107,23 @@ environment cannot live beside the estimator that consumes it.
   it must reproduce `maxflow`'s minimum cut energy for energy. Any new cut
   construction here needs an equivalent reduction to something already
   validated, not only an enumeration.
+
+- **A certificate states what it actually certifies.** Goemans-Williamson's
+  0.87856 assumes the semidefinite relaxation is solved to optimality. This
+  repository has no SDP solver, so `max_cut.py` solves it approximately by
+  Burer-Monteiro gradient ascent, and the value it returns can sit *below* the
+  relaxation's optimum — which makes a ratio measured against it optimistic.
+  The symptom is measurable and is asserted rather than glossed: on a
+  bipartite graph, where the optimum is exactly `|E|`, the ratio comes out
+  slightly *above* 1, which an exact solve could never produce. Where
+  enumeration reaches, the realized ratio is measured against the true
+  optimum instead, and that is the number to trust.
+
+- **A bipartite fixture cannot separate a good solver from a lucky one.** Its
+  maximum cut is every edge, so anything that finds the two colour classes is
+  optimal — which includes a solver that is broken in ways a triangle would
+  expose. Lattices are bipartite, so the instances that do the work in
+  `test_max_cut.py` are random graphs with odd cycles.
 
 - **A sampler is validated by its distribution, never by inspection.** At an
   enumerable size the exact Boltzmann distribution is available, so a move set

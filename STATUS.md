@@ -336,6 +336,25 @@ at `3x3`. The **reduction** caught them: at two labels one expansion is exact,
 so it must reproduce the minimum cut energy for energy, and it was failing by
 up to 2.55.
 
+**Max-Cut landed as the other side of the same model.** Maximizing the weight
+of separated edges *is* minimizing the energy with every coupling negative,
+which is exactly the NP-hard side of the boundary the exact cut refuses to
+cross. A Goemans-Williamson relaxation gives a run a certificate where
+enumeration cannot reach: measured on random graphs with triangles at 12, 16
+and 18 nodes the rounded cut reached the enumerated optimum **every time**,
+and the computable certificate `value / relaxation` came out 0.95 to 0.98
+against a guarantee of 0.87856.
+
+**The certificate is weaker than the theorem, and the repository says so.**
+Goemans-Williamson assumes the semidefinite program is solved to optimality;
+there is no SDP solver here, so it is solved approximately by Burer-Monteiro
+gradient ascent in `torch` rather than by taking a dependency. The value
+returned can therefore sit *below* the relaxation's optimum, which makes a
+ratio measured against it optimistic. That is asserted rather than glossed: on
+a complete bipartite graph, whose maximum cut is exactly `|E|`, the ratio
+comes out slightly **above 1** — impossible for an exact solve, and the
+measurable evidence of what the certificate does and does not cover.
+
 **Not built:** Viterbi decoding, and iterated conditional modes over HMM state
 paths (`phylo.search.alpha_expansion` carries a lattice ICM as its baseline,
 which is a different object). Single-flip local search over the Potts chain exists as an RL
