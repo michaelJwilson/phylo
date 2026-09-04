@@ -110,6 +110,13 @@ in. It is not restated here.
   `SOURCE_DATE_EPOCH` problem above for a weaker payoff. A figure is checked
   only for still being produced.
 
+  **Regenerate with `--write` on the same script**, never by hand and never
+  with a second tool: the checker and the regenerator have to execute a
+  notebook identically, or the one writes what the other rejects. It strips
+  the four wall-clock timestamps nbclient records per cell for the same
+  reason `FORCE_SOURCE_DATE` is pinned above — a regeneration whose diff is
+  mostly times buries the change inside it.
+
 - **A notebook's Further Work section is load-bearing.** Each names, with its
   issue number, what the notebook could not demonstrate because the feature
   is not built. A notebook that quietly omitted the unbuilt half would read

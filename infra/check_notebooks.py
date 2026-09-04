@@ -18,6 +18,12 @@ What is checked for a figure is that the cell still produced one.
 
 Exits 0 when every notebook agrees, 1 on the first that does not, printing a
 unified diff of the cell's output.
+
+``--write`` re-executes and saves instead of comparing, which is how a
+notebook is regenerated after a change moves what it prints. Both live here
+rather than in two tools because they must execute a notebook *identically* --
+a regenerator that differed from the checker in working directory, timeout or
+kernel would write a notebook the checker then rejects.
 """
 
 from __future__ import annotations
@@ -25,6 +31,7 @@ from __future__ import annotations
 import argparse
 import difflib
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -82,6 +89,96 @@ def image_count(cell: dict[str, Any]) -> int:
     )
 
 
+def differences(
+    name: str,
+    committed: Sequence[dict[str, Any]],
+    executed: Sequence[dict[str, Any]],
+) -> list[str]:
+    """Report where two runs of the same notebook disagree.
+
+    Separated from execution so it can be tested without a kernel, which is
+    what `tests/regression/test_check_notebooks.py` does --- the figure-repr
+    exclusion in :func:`text_outputs` was a real bug and a 92-second test
+    would not have been run often enough to catch it.
+
+    Parameters
+    ----------
+    name : str
+        The notebook's filename, for the diff headers.
+    committed, executed : Sequence[dict[str, Any]]
+        The two runs' cells, in order.
+
+    Returns
+    -------
+    list[str]
+        Human-readable differences; empty when they agree.
+    """
+    problems = []
+    code_cells = [
+        (before, after)
+        for before, after in zip(committed, executed, strict=True)
+        if before["cell_type"] == "code"
+    ]
+    for index, (before, after) in enumerate(code_cells, start=1):
+        expected, realized = text_outputs(before), text_outputs(after)
+        if expected != realized:
+            diff = difflib.unified_diff(
+                "".join(expected).splitlines(keepends=True),
+                "".join(realized).splitlines(keepends=True),
+                fromfile=f"{name} cell {index}: committed",
+                tofile=f"{name} cell {index}: re-executed",
+            )
+            problems.append("".join(diff))
+        if image_count(before) != image_count(after):
+            problems.append(
+                f"{name} cell {index}: committed {image_count(before)} "
+                f"figure(s), re-executed produced {image_count(after)}"
+            )
+    return problems
+
+
+def execute(path: Path) -> Any:
+    """Run ``path`` in place and return the executed notebook.
+
+    Parameters
+    ----------
+    path : Path
+        The notebook to run. It is executed in its own directory, because
+        the notebooks resolve the repository root by walking up from the
+        working directory.
+
+    Returns
+    -------
+    Any
+        The notebook with outputs replaced by what this run produced.
+    """
+    notebook = nbformat.read(path, as_version=4)
+    nbformat.validator.normalize(notebook)
+    NotebookClient(
+        notebook,
+        timeout=CELL_TIMEOUT,
+        resources={"metadata": {"path": str(path.parent)}},
+    ).execute()
+    for cell in notebook.cells:
+        # nbclient records four wall-clock timestamps per cell. They are the
+        # notebooks' version of the `\today` that made `docs/draft.pdf` fail
+        # its own staleness check (`docs/CLAUDE.md`): nothing reads them, they
+        # differ on every run, and left in they would make each regeneration
+        # a diff of times with the real change buried inside it.
+        cell.get("metadata", {}).pop("execution", None)
+    return notebook
+
+
+def rewrite(path: Path) -> None:
+    """Re-execute ``path`` and save it, replacing the committed outputs.
+
+    The regeneration half of this tool. A change that moves what a notebook
+    prints runs this and commits the result, exactly as a change that moves a
+    figure runs ``infra/build_technical_doc.sh``.
+    """
+    nbformat.write(execute(path), path)
+
+
 def compare(path: Path) -> list[str]:
     """Re-execute ``path`` and report where it disagrees with what is committed.
 
@@ -97,15 +194,8 @@ def compare(path: Path) -> list[str]:
         what it claims.
     """
     committed = nbformat.read(path, as_version=4)
-    executed = nbformat.read(path, as_version=4)
-    # The notebooks resolve the repository root by walking up from the
-    # working directory, so they are executed where they live.
     try:
-        NotebookClient(
-            executed,
-            timeout=CELL_TIMEOUT,
-            resources={"metadata": {"path": str(path.parent)}},
-        ).execute()
+        executed = execute(path)
     except CellExecutionError as failure:
         # A notebook that no longer runs is the loudest way it can rot, and
         # reporting that as a crash of this tool rather than as a failure of
@@ -113,28 +203,7 @@ def compare(path: Path) -> list[str]:
         # `hmm.ipynb`'s import outright, which is exactly this case.
         return [f"{path.name} did not execute:\n{failure}"]
 
-    problems = []
-    code_cells = [
-        (before, after)
-        for before, after in zip(committed.cells, executed.cells, strict=True)
-        if before.cell_type == "code"
-    ]
-    for index, (before, after) in enumerate(code_cells, start=1):
-        expected, realized = text_outputs(before), text_outputs(after)
-        if expected != realized:
-            diff = difflib.unified_diff(
-                "".join(expected).splitlines(keepends=True),
-                "".join(realized).splitlines(keepends=True),
-                fromfile=f"{path.name} cell {index}: committed",
-                tofile=f"{path.name} cell {index}: re-executed",
-            )
-            problems.append("".join(diff))
-        if image_count(before) != image_count(after):
-            problems.append(
-                f"{path.name} cell {index}: committed {image_count(before)} "
-                f"figure(s), re-executed produced {image_count(after)}"
-            )
-    return problems
+    return differences(path.name, committed.cells, executed.cells)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -152,11 +221,25 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="Notebooks to check; default is every one under docs/nb/.",
     )
+    parser.add_argument(
+        "--write",
+        action="store_true",
+        help=(
+            "Re-execute and save instead of comparing. Run this after a "
+            "change moves what a notebook prints, then commit the result."
+        ),
+    )
     arguments = parser.parse_args(argv)
     paths = arguments.notebooks or sorted(NOTEBOOK_DIR.glob("*.ipynb"))
     if not paths:
         print(f"no notebooks found under {NOTEBOOK_DIR}", file=sys.stderr)
         return 1
+
+    if arguments.write:
+        for path in paths:
+            rewrite(path)
+            print(f"wrote {path}")
+        return 0
 
     failed = False
     for path in paths:
@@ -166,6 +249,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"FAIL {path}", file=sys.stderr)
             for problem in problems:
                 print(problem, file=sys.stderr)
+            print(
+                "  regenerate with: uv run python infra/check_notebooks.py "
+                f"--write {path}",
+                file=sys.stderr,
+            )
         else:
             print(f"ok   {path}")
     return 1 if failed else 0

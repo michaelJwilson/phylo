@@ -44,5 +44,19 @@ does not need it.
 A change to `phylo.sim`, `phylo.opt`, `phylo.likelihood`, `phylo.search` or
 `phylo.learn` that alters a number these notebooks print must re-run them in
 the same pull request, exactly as it must regenerate a `docs/tex/` figure —
-and CI now enforces that rather than trusting it. Nothing here may state a
-result the regression suite does not also pin.
+and CI now enforces that rather than trusting it.
+
+Regenerate with the same tool that checks them:
+
+```
+uv run python infra/check_notebooks.py --write
+```
+
+Checking and regenerating live in one tool because they must execute a
+notebook identically; a regenerator that differed in working directory,
+timeout or kernel would write a notebook the checker then rejects. Running it
+when nothing has moved rewrites nothing — the wall-clock timestamps nbclient
+records per cell are stripped, so a regeneration diff shows the change and not
+the time of day.
+
+Nothing here may state a result the regression suite does not also pin.
