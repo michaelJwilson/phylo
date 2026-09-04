@@ -244,7 +244,7 @@ trivial ones, and including them would shrink every distance by a
 taxon-count-dependent factor and silently weaken the bound.
 
 **Potts cluster updates landed, validated by the distribution they converge
-to.** Swendsen-Wang
+to** ([#212](https://github.com/michaelJwilson/phylo/pull/212)). Swendsen-Wang
 and Wolff run beside single-site heat bath behind one interface. Correctness is
 a chi-square goodness-of-fit against the exact Boltzmann distribution at an
 enumerable size, at a significance of 0.001, for all three move sets with and
