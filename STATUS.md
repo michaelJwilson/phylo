@@ -14,7 +14,7 @@ started**, on the terms §0.4 sets.
 | Roadmap item | Status | Evidence | Key PRs |
 | --- | --- | --- | --- |
 | §0 Development loop | Landed | Eight required checks; committed PDF byte-compared on every PR | [#49](https://github.com/michaelJwilson/phylo/pull/49), [#57](https://github.com/michaelJwilson/phylo/pull/57), [#72](https://github.com/michaelJwilson/phylo/pull/72), [#92](https://github.com/michaelJwilson/phylo/pull/92), [#102](https://github.com/michaelJwilson/phylo/pull/102), [#151](https://github.com/michaelJwilson/phylo/pull/151) |
-| 1.1 Simulation & ground truth | Trees and the HMM landed as first-class simulators; Potts 1-D only | Simulated substitution frequencies against the closed-form JC probabilities; GTR reproduces JC to machine precision; HMM state and emission marginals against brute-force path enumeration | [#58](https://github.com/michaelJwilson/phylo/pull/58), [#64](https://github.com/michaelJwilson/phylo/pull/64), [#115](https://github.com/michaelJwilson/phylo/pull/115), [#120](https://github.com/michaelJwilson/phylo/pull/120), [#182](https://github.com/michaelJwilson/phylo/pull/182) |
+| 1.1 Simulation & ground truth | Trees, the HMM and Potts (1-D chain plus general N-D lattice/MRF) landed as first-class simulators | Simulated substitution frequencies against the closed-form JC probabilities; GTR reproduces JC to machine precision; HMM state and emission marginals against brute-force path enumeration; Potts single-site and pair marginals against exhaustive enumeration at 3-state 3x3 and 2-state 4x4 | [#58](https://github.com/michaelJwilson/phylo/pull/58), [#64](https://github.com/michaelJwilson/phylo/pull/64), [#115](https://github.com/michaelJwilson/phylo/pull/115), [#120](https://github.com/michaelJwilson/phylo/pull/120), [#182](https://github.com/michaelJwilson/phylo/pull/182), [#190](https://github.com/michaelJwilson/phylo/pull/190) |
 | 1.2 Likelihood & energy engine | CPU landed (NumPy, PyTorch, Rust); GPU dispatch not started; belief propagation not started | Worst relative deviation 4.0e-14 against brute-force marginalization across three backends and four site counts spanning a factor of 30 | [#66](https://github.com/michaelJwilson/phylo/pull/66), [#74](https://github.com/michaelJwilson/phylo/pull/74), [#81](https://github.com/michaelJwilson/phylo/pull/81), [#112](https://github.com/michaelJwilson/phylo/pull/112), [#148](https://github.com/michaelJwilson/phylo/pull/148) |
 | 1.3 Continuous optimization | Landed for trees, the 1-D Potts chain and the HMM; Potts lattice not started | Gradients against central differences; 95% intervals cover truth at the nominal rate over 60 replicates | [#115](https://github.com/michaelJwilson/phylo/pull/115), [#116](https://github.com/michaelJwilson/phylo/pull/116), [#119](https://github.com/michaelJwilson/phylo/pull/119), [#120](https://github.com/michaelJwilson/phylo/pull/120) |
 | 1.4 Move sets & classical baselines | Trees landed; cluster updates and Viterbi not started | NNI and SPR neighbour counts exhaustively verified at `n = 5..8`; hill climbing reaches the enumerated optimum from 12 of 12 starts | [#82](https://github.com/michaelJwilson/phylo/pull/82), [#127](https://github.com/michaelJwilson/phylo/pull/127), [#128](https://github.com/michaelJwilson/phylo/pull/128) |
@@ -100,11 +100,24 @@ reduction — equal exchangeabilities with a uniform `π` reproduce the
 Jukes-Cantor rate matrix and its closed-form transition probabilities to
 machine precision.
 
-**Potts: 1-D only.** A Potts chain in an external field exists as an `opt`
-reference instance with an exact transfer-matrix oracle
-([#115](https://github.com/michaelJwilson/phylo/pull/115)), and appears again
-as a `learn` environment. The N-D lattice and general MRFs the milestone
-specifies are not built (issue #149).
+**Potts: 1-D chain plus a general N-D lattice/MRF simulator.** The 1-D chain
+in an external field still exists as an `opt` reference instance with an
+exact transfer-matrix oracle ([#115](https://github.com/michaelJwilson/phylo/pull/115)),
+and appears again as a `learn` environment. `phylo.sim.graph.PottsGraph`
+now generalizes it to an arbitrary undirected graph with a per-edge
+coupling, and `phylo.sim.potts.simulate_potts` samples on it — exactly, by
+the same backward-message recursion, when the graph is a 1-D open chain, and
+by single-site Gibbs (heat-bath) MCMC otherwise — with an N-D lattice a
+constructed case of the general graph rather than a second code path
+([#190](https://github.com/michaelJwilson/phylo/pull/190), closing #170,
+superseding the
+sampling half of #149). `phylo.opt.potts.simulate_chains` cannot import
+`phylo.sim` under `opt/CLAUDE.md`'s "no application imports" rule, so it
+keeps its own copy of the exact recursion rather than delegating to the new
+one — a duplication [#186](https://github.com/michaelJwilson/phylo/issues/186)
+tracks resolving, by moving `PottsParams` into `phylo.sim.potts` the way
+#171 moved the HMM's truth type. No fitting, cluster updates, or evaluator
+on the general graph yet (issues #172, #174).
 
 **HMMs: a first-class simulator.** `phylo.sim.hmm` draws a hidden state path
 and an observation sequence jointly from a declared `(pi, A, B)`, retaining

@@ -12,12 +12,9 @@ A parenthesized number is an issue already filed.
 ## Milestone 1.1 — Simulation & Ground Truth Engine
 
 - Define one fixture API across trees, lattices and chains (#132)
-- Extend the Potts fixture to a 2-D grid, and put all three applications on the
-  same footing (#149)
-- Simulate N-D Potts lattices with declared couplings and external fields
-- Simulate Markov random fields on a general graph
-- Validate lattice spin distributions against the closed-form partition
-  function at enumerable sizes
+- Move `PottsParams`/`load_potts_params` out of `phylo.opt.potts`, so
+  `simulate_chains` can call the general graph sampler instead of keeping
+  its own copy of the exact open-chain recursion (#186)
 - Additional evolutionary models (#107)
 - Rate variation across sites, in the simulator and every backend
 - Simulate at the declared scale — `n` to 1000, `L` to 11000 — and report the
