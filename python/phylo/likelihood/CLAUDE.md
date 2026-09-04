@@ -22,6 +22,10 @@ Milestone 3).
 lives here, not in `opt/`, because that package may import no application
 module — the dependency runs application to infrastructure, never back.
 
+`potts.py` and `belief_propagation.py` are the Potts MRF's evaluators:
+exhaustive enumeration and the 2-D strip transfer matrix as exact oracles, and
+sum-product belief propagation as the approximate one they referee.
+
 ## Local rules
 
 - **The NumPy reference is the oracle and it stays.** Every accelerated
@@ -62,6 +66,31 @@ module — the dependency runs application to infrastructure, never back.
   `CLAUDE.md` states it; here it means a backend is accepted when it agrees
   with the NumPy reference inside that tolerance, and rejected outside it —
   never adjusted until it matches.
+- **An approximate evaluator states which regime carries its correctness.**
+  Belief propagation is exact on a tree and approximate on a loop, so the two
+  regimes get different kinds of test and conflating them would prove nothing.
+  Equality against enumeration is asserted on the tree; on the lattice the
+  deviation from the strip transfer matrix is *reported*, because asserting
+  agreement would assert something false and asserting only that it ran is the
+  coverage theatre root `CLAUDE.md` forbids. What is asserted on the lattice
+  is structure the physics fixes independently: exact at zero coupling, and a
+  deviation peaking near `J_c = ln(1 + sqrt(q))` rather than growing without
+  bound.
+
+- **Refuse rather than return an unconverged number.** A Bethe free energy
+  read off messages that never settled is not an estimate of anything, and a
+  caller cannot distinguish it from one that is. `belief_propagation` raises
+  `ConvergenceError` carrying the residual it stopped at. The same reasoning
+  rejects `damping = 1`, where no message ever updates and every graph would
+  report convergence on the first sweep with the residual identically zero.
+
+- **The oracle for a loopy lattice cannot be enumeration alone.** Enumeration
+  is exponential in the site count and stops at about nine sites; the strip
+  transfer matrix is exponential in the *width* only, so it reaches a 6x4
+  lattice that BP finds hard. It is itself pinned twice — against enumeration
+  where both fit, and by reduction, since a strip of width 1 is a chain and
+  must reproduce `phylo.opt.potts.log_partition` to machine precision.
+
 - **Rescaling must stay differentiable.** Partial likelihoods underflow, so
   they are rescaled with the log of the scaling accumulated separately. That
   transformation sits inside the autodiff graph.
