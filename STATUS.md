@@ -163,6 +163,24 @@ topology, and the GTR substitution model — and none required a change to
 `phylo.likelihood` or `phylo.search`, so the separation cannot decay by
 convenience import.
 
+**The optimizer is now pinned to minimizers known in closed form, not only to
+likelihood surfaces.** Every earlier test of `fit` measured a statistical
+property — the first-order condition, coverage at the nominal rate, agreement
+with Baum-Welch — under which an optimizer that stops early and a parameter
+that is weakly identified look identical. Three standard test functions
+separate them: Rosenbrock is reached to `1e-11` of its analytic minimizer at
+2, 3 and 5 dimensions, the autodiff gradient matches the hand-written closed
+form exactly on all three functions, and all four of Himmelblau's equal minima
+are reachable, each from its own basin.
+
+The third is a measurement that constrains what may be claimed elsewhere.
+On Rastrigin, over 200 starts drawn uniformly from the standard `+/-5.12`
+domain, a single L-BFGS fit reached the global minimum **0 times**; restricted
+to `+/-2` it reached it in 4%. Every one of those runs reported `converged`,
+because every one satisfied the first-order condition. `converged` is a
+statement about the gradient and says nothing about global optimality, and any
+result resting on a single fit of a multimodal surface has to say so.
+
 **Fitting and intervals.** L-BFGS with a strong-Wolfe line search, convergence
 judged on the gradient relative to the objective's own magnitude, and
 confidence intervals from the observed Fisher information pushed through the
