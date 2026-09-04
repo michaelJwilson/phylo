@@ -13,7 +13,7 @@ started**, on the terms §0.4 sets.
 
 | Roadmap item | Status | Evidence | Key PRs |
 | --- | --- | --- | --- |
-| §0 Development loop | Landed | Eight required checks; committed PDF byte-compared on every PR | [#49](https://github.com/michaelJwilson/phylo/pull/49), [#57](https://github.com/michaelJwilson/phylo/pull/57), [#72](https://github.com/michaelJwilson/phylo/pull/72), [#92](https://github.com/michaelJwilson/phylo/pull/92), [#102](https://github.com/michaelJwilson/phylo/pull/102), [#151](https://github.com/michaelJwilson/phylo/pull/151) |
+| §0 Development loop | Landed | Nine required checks; committed PDF byte-compared and every notebook re-executed on each PR | [#49](https://github.com/michaelJwilson/phylo/pull/49), [#57](https://github.com/michaelJwilson/phylo/pull/57), [#72](https://github.com/michaelJwilson/phylo/pull/72), [#92](https://github.com/michaelJwilson/phylo/pull/92), [#102](https://github.com/michaelJwilson/phylo/pull/102), [#151](https://github.com/michaelJwilson/phylo/pull/151) |
 | 1.1 Simulation & ground truth | Trees and the HMM landed as first-class simulators; Potts 1-D only | Simulated substitution frequencies against the closed-form JC probabilities; GTR reproduces JC to machine precision; HMM state and emission marginals against brute-force path enumeration | [#58](https://github.com/michaelJwilson/phylo/pull/58), [#64](https://github.com/michaelJwilson/phylo/pull/64), [#115](https://github.com/michaelJwilson/phylo/pull/115), [#120](https://github.com/michaelJwilson/phylo/pull/120), [#182](https://github.com/michaelJwilson/phylo/pull/182) |
 | 1.2 Likelihood & energy engine | CPU landed (NumPy, PyTorch, Rust); GPU dispatch not started; belief propagation not started | Worst relative deviation 4.0e-14 against brute-force marginalization across three backends and four site counts spanning a factor of 30 | [#66](https://github.com/michaelJwilson/phylo/pull/66), [#74](https://github.com/michaelJwilson/phylo/pull/74), [#81](https://github.com/michaelJwilson/phylo/pull/81), [#112](https://github.com/michaelJwilson/phylo/pull/112), [#148](https://github.com/michaelJwilson/phylo/pull/148) |
 | 1.3 Continuous optimization | Landed for trees, the 1-D Potts chain and the HMM; Potts lattice not started | Gradients against central differences; 95% intervals cover truth at the nominal rate over 60 replicates | [#115](https://github.com/michaelJwilson/phylo/pull/115), [#116](https://github.com/michaelJwilson/phylo/pull/116), [#119](https://github.com/michaelJwilson/phylo/pull/119), [#120](https://github.com/michaelJwilson/phylo/pull/120) |
@@ -37,13 +37,14 @@ tolerance table, and the deferred-work section
 from `.github/labels.yml` by a workflow, so the taxonomy cannot drift from the
 documents that describe it.
 
-Eight required checks gate a merge, and two of them do work no reviewer can
+Nine required checks gate a merge, and three of them do work no reviewer can
 do by inspection: the technical-document job rebuilds only the QA figures
 `docs/tex/main.tex` cites, comparing the rest at the release gate instead
 ([#157](https://github.com/michaelJwilson/phylo/pull/157)), and fails a pull
 request whose rebuilt `docs/draft.pdf` differs from the committed one
-([#72](https://github.com/michaelJwilson/phylo/pull/72)); the coverage floor
-cannot be lowered to pass a change. Cost is managed rather than absorbed:
+([#72](https://github.com/michaelJwilson/phylo/pull/72)); the notebooks job
+re-executes every notebook under `docs/nb/` and fails one whose printed
+output has moved; and the coverage floor cannot be lowered to pass a change. Cost is managed rather than absorbed:
 benchmarks run only when the diff touches code they measure, and the
 release-gated suite is excluded per pull request — measured at 138 s over 540
 tests against 989 s for the full suite

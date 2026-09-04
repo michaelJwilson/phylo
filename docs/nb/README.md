@@ -22,17 +22,27 @@ The notebooks import `phylo` and read fixtures from
 are opened. Install the package first (`INSTALL.md`), then open them with any
 Jupyter front end.
 
-Jupyter is **not** a dependency of this repository and no continuous
-integration job re-executes these notebooks, so they are committed with the
-outputs they were written against and their numbers date from that commit.
-That is weaker than the contract `docs/tex/` figures hold, where CI
-regenerates every figure and fails a pull request whose rebuilt PDF differs
-from the committed one. Adding the dependency and the job would close the gap
-and needs the sign-off root `CLAUDE.md` requires before a dependency lands.
+Continuous integration re-executes every notebook here and fails a pull
+request whose re-executed output disagrees with the committed one
+(`infra/check_notebooks.py`, issue #203), so these numbers are held to the
+standard the figures in `docs/tex/` are — CI regenerates those and
+byte-compares the rebuilt PDF.
+
+**Text is compared; images are not.** Every number a notebook prints is
+determined by its seeds, so a re-executed stream output must match exactly.
+Rendered figures embed metadata that is not stable across matplotlib builds,
+and comparing them would reproduce the `SOURCE_DATE_EPOCH` problem
+`docs/CLAUDE.md` records for `docs/tex/` — for a weaker payoff, since the
+printed numbers are what the notebooks assert with. What is checked for a
+figure is that the cell still produced one.
+
+Install the kernel with `uv sync --extra notebooks`; a normal `pip install .`
+does not need it.
 
 ## Keeping them true
 
 A change to `phylo.sim`, `phylo.opt`, `phylo.likelihood`, `phylo.search` or
 `phylo.learn` that alters a number these notebooks print must re-run them in
-the same pull request, exactly as it must regenerate a `docs/tex/` figure.
-Nothing here may state a result the regression suite does not also pin.
+the same pull request, exactly as it must regenerate a `docs/tex/` figure —
+and CI now enforces that rather than trusting it. Nothing here may state a
+result the regression suite does not also pin.

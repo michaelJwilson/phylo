@@ -84,9 +84,10 @@ applies them, so the taxonomy cannot drift from the documentation.
 
 ## What enforces the claims
 
-Eight required checks run on every pull request: `ruff` and `mypy --strict`,
+Nine required checks run on every pull request: `ruff` and `mypy --strict`,
 `clippy` and `cargo fmt`, the Rust and Python suites, the Sphinx build with
-warnings as errors, the technical-document build, and dependency audits.
+warnings as errors, the technical-document build, the re-execution of every
+committed notebook, and dependency audits.
 Three further rules constrain what the suite may contain:
 
 - **No coverage theatre.** A test asserting only shapes, or only that nothing
