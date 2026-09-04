@@ -26,6 +26,14 @@ module — the dependency runs application to infrastructure, never back.
 exhaustive enumeration and the 2-D strip transfer matrix as exact oracles, and
 sum-product belief propagation as the approximate one they referee.
 
+`hmm_paths.py` enumerates every hidden path of an HMM, on the same footing as
+`brute_force.py` does for a tree: exponential, sharing no recursion with the
+forward algorithm in `phylo.opt.hmm`, and therefore able to referee it. Its
+job is not evidence — the forward recursion computes that faster and they are
+pinned against each other — but to hold *both* decodings of one sequence at
+once, so Viterbi and posterior decoding can be separated by a fixture rather
+than by assertion.
+
 ## Local rules
 
 - **The NumPy reference is the oracle and it stays.** Every accelerated
@@ -109,3 +117,12 @@ sum-product belief propagation as the approximate one they referee.
   ordered by `branch_order(tau)`, separate from the `Node` tree; it never
   reads `Node.branch_length`, so `torch.autograd` differentiates only
   through the tensor, never through Python floats baked into the topology.
+
+- **Viterbi and posterior decoding are different answers, not approximations
+  of each other.** One maximizes a path; the other maximizes each site's
+  marginal independently, and the sequence it returns need not be a path the
+  model favours — on `phylo.sim.canonical.ambiguous_hmm` it is the 5th most
+  likely of 32. They agree on almost every fixture, which is exactly why a
+  decoder that computes one and reports the other survives a suite that never
+  builds a case where they diverge. `hmm_paths.py` reads both off one
+  enumeration, so neither is trusted to validate the other.
