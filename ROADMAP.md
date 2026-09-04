@@ -42,6 +42,11 @@ authoritative — where it and any other document disagree, it wins.
   not a silent correction in the diff. Disjoint tickets run as parallel
   worktrees and parallel pull requests; coupled changes run as a single
   sequential chain.
+- **Record the branch before the first commit.** Once a branch is created for
+  an approved plan, the first thing posted is a single issue comment naming
+  the branch (and, once opened, the PR number) — before any further commit is
+  pushed, so an interrupted or deferred session leaves a ticket that already
+  points at the in-flight branch.
 
 ### 0.3 The Pull Request
 
