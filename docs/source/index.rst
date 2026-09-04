@@ -87,6 +87,9 @@ whether or not it has members yet.
 .. automodule:: phylo.learn.potts
    :members:
 
+.. automodule:: phylo.learn.hmm
+   :members:
+
 .. automodule:: phylo.learn.rollout
    :members:
 

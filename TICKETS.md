@@ -65,7 +65,6 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 2.1 — RL Agent Formulation & Deployment
 
-- Potts and HMM environments behind `phylo.learn.Environment`
 - A feature set for the tree environment, with the unidentifiable-constant
   invariance pinned
 - A tree fixture hard enough to separate a policy from greedy
