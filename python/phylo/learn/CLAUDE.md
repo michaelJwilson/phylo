@@ -96,11 +96,26 @@ third discrete space costs one objective and not a second optimizer.
 oracle compares autodiff against central finite differences, which `float32`
 cannot support.
 
+## The instances
+
+Three, and the count is the point. `phylo.opt.Objective` earns its
+model-agnosticism by carrying four instances that required no change to
+`phylo.opt`; an interface justified by one model is shaped by that model.
+`potts.py` holds the Potts landscape over a chain *or* an arbitrary graph —
+one class with two constructors, since only the adjacency differs — and
+`hmm.py` the hidden Markov state path, whose objective is a decoding problem
+rather than an energy. The tree lives in `phylo.search`, which may import
+both halves.
+
+None of them takes an application type. A `PottsGraph` and an `HmmParams`
+are unpacked by the caller into edge indices and log-probability arrays,
+because the no-application-imports rule above admits no exception for
+convenience.
+
 ## What is not here yet
 
-PPO, a learned state-value critic, and the phylogenetic environment. Issue
-#131 stages them; `docs/tex`'s reinforcement-learning section states the
-theory all three are built against.
+PPO and a learned state-value critic. Issue #131 stages them; `docs/tex`'s
+reinforcement-learning section states the theory they are built against.
 
 - **A relaxation must reduce to the discrete objective at the corners,
   exactly.** Checked over *every* configuration of a small instance to the

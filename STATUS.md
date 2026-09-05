@@ -13,7 +13,7 @@ started**, on the terms §0.4 sets.
 
 | Roadmap item | Status | Evidence | Key PRs |
 | --- | --- | --- | --- |
-| §0 Development loop | Landed | Eight required checks; committed PDF byte-compared on every PR | [#49](https://github.com/michaelJwilson/phylo/pull/49), [#57](https://github.com/michaelJwilson/phylo/pull/57), [#72](https://github.com/michaelJwilson/phylo/pull/72), [#92](https://github.com/michaelJwilson/phylo/pull/92), [#102](https://github.com/michaelJwilson/phylo/pull/102), [#151](https://github.com/michaelJwilson/phylo/pull/151) |
+| §0 Development loop | Landed | Nine required checks; committed PDF byte-compared and every notebook re-executed on each PR | [#49](https://github.com/michaelJwilson/phylo/pull/49), [#57](https://github.com/michaelJwilson/phylo/pull/57), [#72](https://github.com/michaelJwilson/phylo/pull/72), [#92](https://github.com/michaelJwilson/phylo/pull/92), [#102](https://github.com/michaelJwilson/phylo/pull/102), [#151](https://github.com/michaelJwilson/phylo/pull/151) |
 | 1.1 Simulation & ground truth | Trees, the HMM and Potts (1-D chain plus general N-D lattice/MRF) landed as first-class simulators | Simulated substitution frequencies against the closed-form JC probabilities; GTR reproduces JC to machine precision; HMM state and emission marginals against brute-force path enumeration; Potts single-site and pair marginals against exhaustive enumeration at 3-state 3x3 and 2-state 4x4 | [#58](https://github.com/michaelJwilson/phylo/pull/58), [#64](https://github.com/michaelJwilson/phylo/pull/64), [#115](https://github.com/michaelJwilson/phylo/pull/115), [#120](https://github.com/michaelJwilson/phylo/pull/120), [#182](https://github.com/michaelJwilson/phylo/pull/182), [#190](https://github.com/michaelJwilson/phylo/pull/190) |
 | 1.2 Likelihood & energy engine | CPU landed (NumPy, PyTorch, Rust); belief propagation landed with two exact oracles; GPU dispatch not started | Worst relative deviation 4.0e-14 against brute-force marginalization across three backends and four site counts spanning a factor of 30 | [#66](https://github.com/michaelJwilson/phylo/pull/66), [#74](https://github.com/michaelJwilson/phylo/pull/74), [#81](https://github.com/michaelJwilson/phylo/pull/81), [#112](https://github.com/michaelJwilson/phylo/pull/112), [#148](https://github.com/michaelJwilson/phylo/pull/148) |
 | 1.3 Continuous optimization | Landed for trees, the 1-D Potts chain and the HMM; Potts lattice not started | Gradients against central differences; 95% intervals cover truth at the nominal rate over 60 replicates | [#115](https://github.com/michaelJwilson/phylo/pull/115), [#116](https://github.com/michaelJwilson/phylo/pull/116), [#119](https://github.com/michaelJwilson/phylo/pull/119), [#120](https://github.com/michaelJwilson/phylo/pull/120) |
@@ -37,13 +37,14 @@ tolerance table, and the deferred-work section
 from `.github/labels.yml` by a workflow, so the taxonomy cannot drift from the
 documents that describe it.
 
-Eight required checks gate a merge, and two of them do work no reviewer can
+Nine required checks gate a merge, and three of them do work no reviewer can
 do by inspection: the technical-document job rebuilds only the QA figures
 `docs/tex/main.tex` cites, comparing the rest at the release gate instead
 ([#157](https://github.com/michaelJwilson/phylo/pull/157)), and fails a pull
 request whose rebuilt `docs/draft.pdf` differs from the committed one
-([#72](https://github.com/michaelJwilson/phylo/pull/72)); the coverage floor
-cannot be lowered to pass a change. Cost is managed rather than absorbed:
+([#72](https://github.com/michaelJwilson/phylo/pull/72)); the notebooks job
+re-executes every notebook under `docs/nb/` and fails one whose printed
+output has moved; and the coverage floor cannot be lowered to pass a change. Cost is managed rather than absorbed:
 benchmarks run only when the diff touches code they measure, and the
 release-gated suite is excluded per pull request — measured at 138 s over 540
 tests against 989 s for the full suite
@@ -159,6 +160,23 @@ derived from measured agreement, and the `float32` bound is exercised on CPU so
 runners without an accelerator still check it. The CUDA and Metal paths
 themselves are not implemented.
 
+**Parsimony landed, and it is here to be wrong.** Fitch's algorithm scores a
+topology beside the likelihood, pinned against exhaustive enumeration over
+internal-node labellings — equality, not a tolerance, since the score is an
+integer. Its purpose is the Felsenstein zone, where four taxa with two long
+branches placed non-adjacently make parsimony *statistically inconsistent*:
+convergent change on the long branches is cheaper to explain by grouping them
+than by the true topology, so more data does not help. Measured over 12
+replicates, parsimony recovered the true topology **0 of 12 times at 200,
+1000 and 5000 sites** while likelihood went 10/12, 12/12, 12/12.
+
+The Farris zone is the control that makes that interpretable: move the same
+two long branches to be adjacent and parsimony is right **12 of 12 at every
+site count**, while likelihood needs more data — 4/12, 6/12, 10/12. An
+implementation that were simply broken would fail both zones, and one result
+alone cannot tell the two apart. This is the repository's first fixture where
+a named method's failure is a theorem rather than a defect.
+
 **Belief propagation is now measured over an ensemble, not three fixtures.**
 `phylo.sim.graph.erdos_renyi_graph` draws `G(n, p)` beside `lattice_graph`,
 and BP is checked per draw against enumeration. Over 60 sparse draws, 106
@@ -263,6 +281,45 @@ topology, and the GTR substitution model — and none required a change to
 `phylo.opt`. A test asserts the module imports nothing from `phylo.sim`,
 `phylo.likelihood` or `phylo.search`, so the separation cannot decay by
 convenience import.
+
+**The optimizer is now pinned to minimizers known in closed form, not only to
+likelihood surfaces.** Every earlier test of `fit` measured a statistical
+property — the first-order condition, coverage at the nominal rate, agreement
+with Baum-Welch — under which an optimizer that stops early and a parameter
+that is weakly identified look identical. Three standard test functions
+separate them: Rosenbrock is reached to `1e-11` of its analytic minimizer at
+2, 3 and 5 dimensions, the autodiff gradient matches the hand-written closed
+form exactly on all three functions, and all four of Himmelblau's equal minima
+are reachable, each from its own basin.
+
+The third is a measurement that constrains what may be claimed elsewhere.
+On Rastrigin, over 200 starts drawn uniformly from the standard `+/-5.12`
+domain, a single L-BFGS fit reached the global minimum **0 times**; restricted
+to `+/-2` it reached it in 4%. Every one of those runs reported `converged`,
+because every one satisfied the first-order condition. `converged` is a
+statement about the gradient and says nothing about global optimality, and any
+result resting on a single fit of a multimodal surface has to say so.
+
+**Intervals now have a second, non-asymptotic source.** Hamiltonian Monte
+Carlo samples the posterior over any `Objective`, so an interval can be a
+quantile rather than a curvature estimate at the mode. The integrator is
+pinned where it is exact before anything statistical is claimed: it is
+reversible to `1e-15`, and its energy error is second order in the step size,
+measured at a ratio of exactly 4.00 across four halvings at fixed trajectory
+length. The chain is then checked against two references that are not
+samplers -- an analytic Gaussian, and the Potts chain's own two-dimensional
+posterior integrated on a grid, which it matches to 0.005 in the mean and 10%
+in the spread. On that fixture the Laplace standard error agrees with the
+posterior's to 15%, which is the expected outcome for a well-identified
+two-parameter model and is what would make a disagreement elsewhere
+informative.
+
+**A step size too large biases the spread while the acceptance rate looks
+healthy**, and that is why `HmcChain` reports the per-proposal energy error.
+Measured against quadrature: at a step of 0.020 the acceptance rate was 0.982
+and the posterior standard deviation was 12% low, because divergent
+trajectories are rejected preferentially in the tails. Acceptance rate does
+not detect it; `max |dH|` tracks it monotonically.
 
 **Fitting and intervals.** L-BFGS with a strong-Wolfe line search, convergence
 judged on the gradient relative to the objective's own magnitude, and
@@ -471,6 +528,38 @@ branch distinguishing them fits to zero and the tree collapses to the same
 polytomy — so a rank correlation moves by up to 0.04 under a perturbation of
 one part in 1e9 and is not a measurement.
 
+**All three problem classes are now MDPs.** `phylo.learn.Environment` had
+one instance, a 1-D Potts chain, which is the same position `phylo.opt` was in
+before four instances made its model-agnosticism a measurement rather than an
+assertion. It now carries the Potts landscape over an arbitrary graph — the
+chain is the one-dimensional case of the same class, not a second one — and
+the hidden Markov state path, whose objective is a decoding problem rather
+than an energy. Both are pinned against the enumerated estimator oracle
+carried over unchanged from the chain, and against exhaustive enumeration of
+their own state spaces: 19,683 configurations for a 3-state 3x3 lattice, 729
+paths for a 3-state sequence of six. Neither takes an application type, so
+`phylo.learn` still imports nothing from `phylo.sim`, `phylo.likelihood` or
+`phylo.search`, and a test asserts it.
+
+**The lattice is fitted, against an exact normalizer.** `log Z` is
+enumerated over all 19,683 configurations of a 3-state 3x3 lattice rather than
+approximated, so the fitted optimum is checked against a brute-force scan of
+the likelihood instead of against the optimizer's own convergence, and the
+enumerated normalizer reduces to `phylo.opt.potts.log_partition`'s transfer
+matrix on a chain to machine precision. Interval coverage over 40 replicates
+is 157/160 at 100 samples, 153/160 at 400 and 153/160 at 1600 — approaching
+the nominal rate from above and settling, as the Potts chain does.
+
+That closes the requirements row. It also leaves the hidden Markov model's
+half of the same row less settled than the committed coverage figure reads:
+its 45/48 = 0.938 at 150 sequences and 91/96 = 0.948 at 2400 both sit within
+one binomial standard error of 0.95 (0.032 and 0.022 respectively), so the
+under-coverage the caption describes is not distinguishable from sampling
+noise at those replicate counts. The two identified causes are real — an
+emission fitted near zero, and the post-selection cost of aligning the hidden
+states — but stating a sample size at which nominal coverage begins to hold
+would need more replicates than the figure runs, and none is claimed here.
+
 ## Stage 3 — Research Extensions
 
 **Only the half with an oracle is built.** `ROADMAP.md`'s differentiable-search
@@ -560,8 +649,8 @@ what the roadmap bullet ultimately asks for.
 | Requirement | Status |
 | --- | --- |
 | Phylogenetic RF ≤0.05 against simulated truth | **Met**, from 125 sites upward ([#148](https://github.com/michaelJwilson/phylo/pull/148)) |
-| Potts/HMM parameter recovery within 95% intervals | **Met** for the 1-D chain and the discrete HMM ([#116](https://github.com/michaelJwilson/phylo/pull/116)); lattice outstanding |
-| Precise state-sequence decoding | **Not started** — no Viterbi decoder |
+| Potts/HMM parameter recovery within 95% intervals | **Met** for the 1-D chain, the discrete HMM ([#116](https://github.com/michaelJwilson/phylo/pull/116)) and the 2-D lattice — realized 0.981 at 100 samples and 0.956 at 400 and 1600, over 40 replicates each |
+| Precise state-sequence decoding | **Not started** — no Viterbi decoder (issue #175) |
 | Parity with exact oracles on small `n` | **Met** for tree search against exhaustive enumeration ([#128](https://github.com/michaelJwilson/phylo/pull/128)) |
 | Parity with IQ-TREE 2 / RAxML-NG on large `n` | **Not started**; the tools are not in the environment (issue #126) |
 | `O(n×L×k)` memory inside 16 GB / 24 GB | **Not measured**; deterministic and reportable, but no figure exists |
@@ -601,7 +690,8 @@ than drawn with invented data.
   cannot support the claim in either direction, because greedy already reaches
   the enumerated optimum from every start. Separating a policy from greedy
   needs a problem harder than exhaustive enumeration can referee, so the oracle
-  that validates the search cannot validate the agent replacing it.
+  that validates the search cannot validate the agent replacing it
+  (issues #177 and #178).
 - Any comparison against established software. IQ-TREE 2 and RAxML-NG are not
   installed, and no statement anywhere in the repository compares against them.
 - Runtime scaling. Benchmarks are not ranked on CI hardware, so timings live in

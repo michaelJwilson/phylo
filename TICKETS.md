@@ -22,7 +22,7 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.2 — Differentiable Likelihood & Energy Engine
 
-- Expose forward-backward as an evaluator, not as Baum-Welch's internals
+- Expose forward-backward as an evaluator, not as Baum-Welch's internals (#173)
 - One energy/likelihood evaluator API across the three problem classes,
   asserted by an import-graph test
 - CUDA dispatch for the pruning recursion, pinned against the NumPy oracle
@@ -35,8 +35,6 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.3 — Continuous Optimization via Autodiff
 
-- Fit Potts couplings `J` and external fields `h` on the lattice, with
-  intervals whose coverage is measured
 - Fit HMM transition and emission matrices to nominal interval coverage
 - Refuse an unidentifiable fit rather than returning a meaningless interval
   (#122)
@@ -47,10 +45,10 @@ A parenthesized number is an issue already filed.
 ## Milestone 1.4 — Discrete Move Sets & Classical Baselines
 
 - Viterbi decoding, pinned against brute-force path enumeration and against
-  the fixture where it disagrees with posterior decoding (#209)
+  the fixture where it disagrees with posterior decoding (#175, #209)
 - Posterior decoding, reported as the per-site marginal maximum it is and
   never as the most likely path
-- Iterated conditional modes over HMM state paths
+- Iterated conditional modes over HMM state paths (#176)
 - A discrete instance no baseline solves within budget — still open. #177's
   tree is solved by random-restart greedy at 1.000 (#198), and #209 measured
   single-site descent matching or beating the planted Viana-Bray state at
@@ -68,14 +66,13 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 2.1 — RL Agent Formulation & Deployment
 
-- Potts and HMM environments behind `phylo.learn.Environment`
 - A feature set for the tree environment, with the unidentifiable-constant
   invariance pinned
-- A tree fixture hard enough to separate a policy from greedy
+- A tree fixture hard enough to separate a policy from greedy (#177)
 - PPO and a learned state-value critic
 - Truth as a terminal penalty, never a training signal
 - Train a phylogenetic policy and report its learning curve against the
-  enumerated expected return
+  enumerated expected return (#178)
 
 ## Milestone 2.2 — Curriculum Learning
 

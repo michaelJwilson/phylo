@@ -250,6 +250,38 @@ jobs:
       - run: uv sync --locked --extra docs
       - run: uv run sphinx-build -b html docs/source docs/_build/html -W
 
+  notebooks:
+    name: Notebooks (re-execute docs/nb)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache the uv environment
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+      - name: Cache Cargo registry and the oxiphylo build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+      - run: pip install "uv==${UV_VERSION}"
+      - run: uv sync --locked --extra notebooks
+      # Runs every notebook and diffs what it printed against what is
+      # committed. Measured at 92 s for the three, so it is its own job
+      # rather than release-gated: a notebook that stopped running would
+      # otherwise reach main and sit there until a release.
+      - run: uv run python infra/check_notebooks.py
+
   technical-doc:
     name: Technical document (LaTeX)
     runs-on: ubuntu-24.04

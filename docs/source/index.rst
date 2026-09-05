@@ -15,6 +15,9 @@ whether or not it has members yet.
 .. automodule:: phylo.numerics
    :members:
 
+.. automodule:: phylo.numerics_rust
+   :members:
+
 .. automodule:: phylo.sim
    :members:
 
@@ -66,6 +69,9 @@ whether or not it has members yet.
 .. automodule:: phylo.likelihood.brute_force
    :members:
 
+.. automodule:: phylo.likelihood.parsimony
+   :members:
+
 .. automodule:: phylo.likelihood.device
    :members:
 
@@ -90,6 +96,12 @@ whether or not it has members yet.
 .. automodule:: phylo.opt.fit
    :members:
 
+.. automodule:: phylo.opt.testfunctions
+   :members:
+
+.. automodule:: phylo.opt.hmc
+   :members:
+
 .. automodule:: phylo.opt.potts
    :members:
 
@@ -107,6 +119,8 @@ whether or not it has members yet.
 
 .. automodule:: phylo.learn.potts
    :members:
+
+.. automodule:: phylo.learn.hmm
 
 .. automodule:: phylo.learn.relaxed
    :members:
