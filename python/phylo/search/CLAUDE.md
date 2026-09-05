@@ -165,3 +165,19 @@ environment cannot live beside the estimator that consumes it.
   of the model, so any statistic that depends on it — a rank correlation
   above all — is unstable across machines and is not a measurement. Report
   comparisons with a statistic continuous in the scores.
+
+- **The cluster refusal now has an instance behind it.** `sample_potts`
+  refuses Swendsen-Wang and Wolff on a negative coupling, and until
+  `phylo.sim.canonical.frustrated_triangular_lattice` existed that branch was
+  reachable only by a hand-written coupling in a test. It is now reached by a
+  canonical instance, alongside a check that single-site sampling still runs
+  on the same graph — without which the refusal test would also pass if
+  `sample_potts` rejected the graph outright.
+
+- **The frustrated triangular lattice is where Max-Cut has a closed form.**
+  Minimizing agreeing edges is maximizing the cut, and on the periodic
+  triangular lattice a double count fixes the answer exactly: `2N` of the `3N`
+  edges, at every size. That makes it the one instance here where
+  `enumerate_max_cut` can be checked against a number rather than against
+  itself, and the reason it is in `phylo.sim.canonical` rather than in this
+  module's tests is that three modules consume it.

@@ -177,6 +177,78 @@ implementation that were simply broken would fail both zones, and one result
 alone cannot tell the two apart. This is the repository's first fixture where
 a named method's failure is a theorem rather than a defect.
 
+**Belief propagation is now measured over an ensemble, not three fixtures.**
+`phylo.sim.graph.erdos_renyi_graph` draws `G(n, p)` beside `lattice_graph`,
+and BP is checked per draw against enumeration. Over 60 sparse draws, 106
+across two ensembles were acyclic and BP was exact on every one — worst
+relative deviation 3.7e-15 in `log Z` and 4.9e-13 in the marginals, inside
+the `1e-11` float64 bound. The ensemble also reaches what no committed
+fixture did: **104 of 120 draws carried an isolated vertex**, the case sitting
+on the boundary between the general message-passing loop and the edgeless
+special case.
+
+**A correction to what was expected.** #214 proposed asserting that the
+deviation on a cyclic draw sits well below the lattice's, on the
+locally-tree-like argument. It does not, at this scale: measured over 14
+cyclic draws the relative deviation ran 2.7e-04 to 7.4e-03, median 3.6e-03,
+against the lattice's peak of 5.2e-03 — comparable, not better. At `n <= 10` a
+single cycle is a large fraction of the graph, and the locally-tree-like
+argument is asymptotic. The deviation is reported; nothing claims BP is more
+accurate on a random graph than on a lattice at these sizes.
+
+**Three canonical fixtures, each consumed by more than one module.**
+`phylo.sim.canonical` holds instances whose answer comes from outside this
+repository, admitted on two clauses stated in `sim/CLAUDE.md`: the answer must
+be independently known, and more than one module must consume it
+([#209](https://github.com/michaelJwilson/phylo/issues/209)).
+
+| Fixture | Known from | Consumed by |
+| --- | --- | --- |
+| Triangular Ising antiferromagnet | a double count that closes exactly: `N` of `3N` edges agree in any ground state, at every size | `sim` builds, `likelihood.potts` enumerates, `search.max_cut` optimizes, `search.potts_mcmc` refuses |
+| Planted Viana-Bray spin glass | the planted state's energy, an upper bound on the ground state past enumeration | `sim` builds, `search.alpha_expansion` scores |
+| Ambiguous-emission HMM | enumeration of all `2**5` paths | `sim` builds, `likelihood.hmm_paths` decodes both ways |
+
+**The triangular ground-state energy is known at every size.** `3N` edges,
+`2N` triangles, each triangle needs one agreeing edge because a 3-cycle is not
+2-colourable, each edge lies in two triangles — so at least `N` edges agree,
+and enumeration attains that at `N = 9, 12, 16`. With `coupling = -|J|` the
+ground-state energy is `|J| * N` exactly. Alpha expansion's factor of 2
+([#207](https://github.com/michaelJwilson/phylo/pull/207)) and Goemans-Williamson's
+0.87856 ([#215](https://github.com/michaelJwilson/phylo/pull/215)) are the only
+other discrete claims here that survive past enumeration, and both are bounds
+rather than answers.
+
+**Wannier's residual entropy is reported, never asserted.** The constant
+0.3231 per site is a thermodynamic limit. Measured: 0.4153 at `N = 9`, 0.3516
+at `N = 12`, 0.2336 at `N = 16` — not close, and not monotone, because a `4x4`
+torus is incommensurate with the three-sublattice ground state. The exact
+degeneracies (42, 68, 42) are asserted instead. This is the same discipline
+[#214](https://github.com/michaelJwilson/phylo/pull/214) arrived at for graph
+threshold results.
+
+**The planted spin glass does not replace #177, and this is measured rather
+than assumed.** It was proposed as the instance whose difficulty scales, after
+[#198](https://github.com/michaelJwilson/phylo/pull/198) measured random-restart
+greedy solving #177's tree at 1.000. Against 20-restart iterated conditional
+modes at `n = 100` and mean degree 4, descent lands on the planted energy
+below frustration 0.2 (mean gap +0.30 at 0.00, -0.12 at 0.05, +0.12 at 0.10,
+-0.25 at 0.15) and beats it above (-8.2 at 0.20, -25.7 at 0.30), where the
+planted state is no longer near-optimal and is a weak reference. Raising
+connectivity does not open a window: at mean degree 12 and frustration 0.05
+descent matches the planted energy exactly on every instance. What the fixture
+does supply is a **known-energy reference past the size enumeration reaches**,
+which nothing else in the repository has. The search for an instance no
+baseline solves stays open, and `TICKETS.md` now says so.
+
+**Viterbi and posterior decoding can now be told apart.** Neither decoder is
+implemented, but the fixture that separates them is: on `ambiguous_hmm` the
+Viterbi path is `(0,0,0,0,0)` — unique, 0.3033 nats clear of the runner-up —
+while posterior decoding returns `(0,1,0,1,0)`, the observations themselves,
+with every marginal above 0.6256. That posterior sequence is the **5th** most
+likely path of 32, 0.6066 nats behind the Viterbi path. A decoder that
+computes one and reports the other passes every fixture where they agree,
+which is most of them.
+
 **Potts and HMM evaluators: partial.** The 1-D transfer matrix and the HMM
 forward recursion exist, each with its exact oracle. Sum-product belief
 propagation over a general `PottsGraph` now joins them, with the 2-D strip

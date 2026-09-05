@@ -15,6 +15,9 @@ whether or not it has members yet.
 .. automodule:: phylo.numerics
    :members:
 
+.. automodule:: phylo.numerics_rust
+   :members:
+
 .. automodule:: phylo.sim
    :members:
 
@@ -31,6 +34,18 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.sim.simulate
+   :members:
+
+.. automodule:: phylo.sim.graph
+   :members:
+
+.. automodule:: phylo.sim.potts
+   :members:
+
+.. automodule:: phylo.sim.hmm
+   :members:
+
+.. automodule:: phylo.sim.canonical
    :members:
 
 .. automodule:: phylo.sim.newick
@@ -64,6 +79,9 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.likelihood.belief_propagation
+   :members:
+
+.. automodule:: phylo.likelihood.hmm_paths
    :members:
 
 .. automodule:: phylo.opt
@@ -199,4 +217,10 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.qa.topology_accuracy
+   :members:
+
+.. automodule:: phylo.scripts
+   :members:
+
+.. automodule:: phylo.scripts.run_phylo
    :members:

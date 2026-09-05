@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from itertools import product
 
+import numpy as np
+
 
 class BoundaryCondition(StrEnum):
     """How a lattice's outermost sites connect.
@@ -159,6 +161,146 @@ def lattice_graph(
 
     return PottsGraph(
         n_nodes=n_nodes,
+        edges=tuple(edges),
+        coupling=(coupling,) * len(edges),
+        shape=shape,
+        boundary=boundary,
+    )
+
+
+def erdos_renyi_graph(
+    n_nodes: int, probability: float, coupling: float, rng: np.random.Generator
+) -> PottsGraph:
+    """A `G(n, p)` random graph as a :class:`PottsGraph`, with a uniform coupling.
+
+    Every unordered pair is an edge independently with probability
+    ``probability``. A lattice is the *regular* extreme of a graph and this is
+    the disordered one; between them they exercise the two structures a
+    message-passing evaluator behaves differently on.
+
+    **What this is for, and what it is not.** Sparse `G(n, p)` is locally
+    tree-like: at ``p = c / n`` the expected number of triangles tends to a
+    constant, ``c**3 / 6``, so a vanishing fraction of vertices lie on a short
+    cycle. That is the regime belief propagation is asymptotically exact in,
+    and the complement of the lattice, where every vertex sits on four
+    4-cycles and the Bethe approximation is at its worst (issue #172).
+
+    None of the famous `G(n, p)` results are usable here. The giant-component
+    threshold at ``p = 1 / n`` and the connectivity threshold at
+    ``ln(n) / n`` hold in the limit, and at the ``n <= 10`` cap
+    ``infra/CLAUDE.md`` sets so enumeration stays affordable they mean
+    nothing. Nothing in this repository tests them, and a test that did would
+    be measuring a limit at a size where it does not hold.
+
+    Parameters
+    ----------
+    n_nodes : int
+        Number of nodes, ``>= 1``.
+    probability : float
+        Edge probability, in ``[0, 1]``.
+    coupling : float
+        Uniform ``J`` applied to every edge drawn.
+    rng : np.random.Generator
+        Passed in rather than seeded here, so a caller drawing an *ensemble*
+        gets independent graphs rather than the same one repeatedly --- the
+        mistake a `seed` parameter invites and which
+        `phylo.qa.rl_reward_surface` already made once.
+
+    Returns
+    -------
+    PottsGraph
+        With ``shape`` and ``boundary`` both ``None``: this is not a lattice
+        and must not be mistaken for one by
+        :meth:`PottsGraph.is_open_chain`.
+
+    Raises
+    ------
+    ValueError
+        If ``n_nodes`` is below 1 or ``probability`` is outside ``[0, 1]``.
+    """
+    if n_nodes < 1:
+        msg = f"n_nodes must be at least 1, got {n_nodes}"
+        raise ValueError(msg)
+    if not 0.0 <= probability <= 1.0:
+        msg = f"probability must lie in [0, 1], got {probability}"
+        raise ValueError(msg)
+
+    pairs = [
+        (first, second)
+        for first in range(n_nodes)
+        for second in range(first + 1, n_nodes)
+    ]
+    drawn = rng.random(len(pairs)) < probability
+    edges = tuple(pair for pair, keep in zip(pairs, drawn, strict=True) if keep)
+    return PottsGraph(n_nodes=n_nodes, edges=edges, coupling=(coupling,) * len(edges))
+
+
+def triangular_lattice_graph(
+    shape: tuple[int, int], boundary: BoundaryCondition, coupling: float
+) -> PottsGraph:
+    """A 2-D triangular lattice: the square lattice plus one diagonal per cell.
+
+    Rows and columns are joined as in :func:`lattice_graph`, and each unit
+    cell gains the ``(row, column) -- (row + 1, column + 1)`` diagonal. Every
+    cell is then split into two triangles, so the graph contains 3-cycles and
+    is **not bipartite** --- which is the whole point of it.
+
+    **Why an odd cycle matters.** A two-state antiferromagnet wants every edge
+    to disagree. That is possible exactly when the graph is 2-colourable, so
+    on a bipartite graph --- a chain, a square lattice --- the ground state is
+    unfrustrated and the minimum energy is zero. A triangle cannot be
+    2-coloured, so at least one edge of it must agree, and the ground state
+    pays for it. That is geometric frustration, and it is the reason the
+    triangular Ising antiferromagnet retains entropy at zero temperature
+    (Wannier 1950).
+
+    Parameters
+    ----------
+    shape : tuple[int, int]
+        ``(rows, columns)``, each ``>= 2``.
+    boundary : BoundaryCondition
+        ``OPEN`` drops the edges that would leave the grid; ``PERIODIC`` wraps
+        both dimensions, giving every node degree 6.
+    coupling : float
+        Uniform ``J``. Negative is the antiferromagnet this exists for; the
+        sign is the caller's, because the same graph read ferromagnetically is
+        a perfectly ordinary unfrustrated instance and the contrast is worth
+        being able to draw.
+
+    Returns
+    -------
+    PottsGraph
+        Carrying ``shape`` and ``boundary``, as :func:`lattice_graph` does.
+        Note it is *not* an open chain even at ``shape = (2, 2)``, so
+        :meth:`PottsGraph.is_open_chain` correctly refuses it.
+
+    Raises
+    ------
+    ValueError
+        If either extent is below 2.
+    """
+    rows, columns = shape
+    if rows < 2 or columns < 2:
+        msg = f"every extent in shape must be >= 2, got {shape}"
+        raise ValueError(msg)
+
+    def index(row: int, column: int) -> int:
+        return row * columns + column
+
+    periodic = boundary is BoundaryCondition.PERIODIC
+    offsets = ((0, 1), (1, 0), (1, 1))
+    edges: list[tuple[int, int]] = []
+    for row, column in product(range(rows), range(columns)):
+        for row_step, column_step in offsets:
+            target_row, target_column = row + row_step, column + column_step
+            if periodic:
+                target_row, target_column = target_row % rows, target_column % columns
+            elif target_row >= rows or target_column >= columns:
+                continue
+            edges.append((index(row, column), index(target_row, target_column)))
+
+    return PottsGraph(
+        n_nodes=rows * columns,
         edges=tuple(edges),
         coupling=(coupling,) * len(edges),
         shape=shape,
