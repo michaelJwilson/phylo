@@ -44,8 +44,15 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.4 — Discrete Move Sets & Classical Baselines
 
-- Viterbi decoding, pinned against brute-force path enumeration (#175)
+- Viterbi decoding, pinned against brute-force path enumeration and against
+  the fixture where it disagrees with posterior decoding (#175, #209)
+- Posterior decoding, reported as the per-site marginal maximum it is and
+  never as the most likely path
 - Iterated conditional modes over HMM state paths (#176)
+- A discrete instance no baseline solves within budget — still open. #177's
+  tree is solved by random-restart greedy at 1.000 (#198), and #209 measured
+  single-site descent matching or beating the planted Viana-Bray state at
+  every frustration and connectivity tried
 - Make the rooted/unrooted distinction explicit and give topologies a canonical
   key (#114)
 - Multi-SPR neighbourhoods, each stating in which sense it is complete and what

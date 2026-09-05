@@ -45,6 +45,9 @@ whether or not it has members yet.
 .. automodule:: phylo.sim.hmm
    :members:
 
+.. automodule:: phylo.sim.canonical
+   :members:
+
 .. automodule:: phylo.sim.newick
    :members:
 
@@ -76,6 +79,9 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.likelihood.belief_propagation
+   :members:
+
+.. automodule:: phylo.likelihood.hmm_paths
    :members:
 
 .. automodule:: phylo.opt
