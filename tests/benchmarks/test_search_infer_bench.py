@@ -26,7 +26,11 @@ _SITES = 2000
 def _alignment() -> tuple[dict[str, np.ndarray], int]:
     params = load_fixture(SMALL_SITES)
     dataset = simulate_alignment(
-        tau=params.tau, k=params.k, pi=params.pi, seed=params.seed, n_sites=_SITES
+        tau=params.tau,
+        k=params.k,
+        pi=params.pi,
+        rng=np.random.default_rng(params.seed),
+        n_sites=_SITES,
     )
     return dict(dataset.alignment), params.k
 

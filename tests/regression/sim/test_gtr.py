@@ -213,7 +213,7 @@ def test_simulated_frequencies_match_the_generating_stationary_distribution() ->
         tau=params.tau,
         k=params.k,
         pi=TRUE_PI,
-        seed=params.seed,
+        rng=np.random.default_rng(params.seed),
         n_sites=200000,
         rate_matrix=rate,
     )
