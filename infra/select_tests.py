@@ -44,8 +44,8 @@ ALWAYS = (
     "tests/regression/test_numerics.py",
     "tests/regression/test_pairwise_distance.py",
     "tests/regression/test_claude_md_pointers.py",
-    "tests/test_run_phylo.py",
-    "tests/test_oxiphylo_bindings.py",
+    "tests/test_run_snakes_and_ladders.py",
+    "tests/test_oxi_snakes_and_ladders_bindings.py",
 )
 
 # A change to any of these could alter any result, so the whole suite runs.
