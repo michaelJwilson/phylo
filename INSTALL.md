@@ -39,9 +39,12 @@ pip install .
 ```
 
 This makes `phylo.oxiphylo` importable from Python: `double`, an example
-binding, and `pruning_log_likelihood`, the Rust CPU Felsenstein pruning backend
-behind `phylo.likelihood.pruning_rust`. Reinstall after editing anything under
-`src/`; the compiled module does not rebuild itself.
+binding; `pruning_log_likelihood`, the Rust CPU Felsenstein pruning backend
+behind `phylo.likelihood.pruning_rust`; `sample_rows`, the categorical
+sampler behind `phylo.numerics_rust`, which `phylo.sim` and `phylo.opt` draw
+their fixtures through; and `max_flow` with `ising_ground_state`, the
+minimum-cut kernels behind `phylo.search.maxflow_rust`. Reinstall after
+editing anything under `src/`; the compiled module does not rebuild itself.
 
 ## Running the tests
 

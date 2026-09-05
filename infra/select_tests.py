@@ -60,6 +60,7 @@ EVERYTHING = (
     ".github/workflows/",
     "python/phylo/__init__.py",
     "python/phylo/numerics.py",
+    "python/phylo/numerics_rust.py",
     "python/phylo/oxiphylo.pyi",
     "python/phylo/scripts/",
 )

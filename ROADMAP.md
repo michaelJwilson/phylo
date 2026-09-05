@@ -56,10 +56,10 @@ authoritative — where it and any other document disagree, it wins.
   every tolerance-based test beside the tolerance it was checked against, the
   documents the change made untrue, and anything deferred with the tracking
   issue that carries it.
-- **Gate:** eight required checks — `ruff`, `mypy --strict`, `clippy`,
+- **Gate:** nine required checks — `ruff`, `mypy --strict`, `clippy`,
   `cargo fmt`, the Rust suite, the Python suite under its coverage floor, the
-  Sphinx build with warnings as errors, the technical-document build, and the
-  dependency audits. Documentation Sync is part of the diff, not a follow-up:
+  Sphinx build with warnings as errors, the technical-document build, the
+  re-execution of every committed notebook, and the dependency audits. Documentation Sync is part of the diff, not a follow-up:
   a change that makes `README.md`, `DEV.md`, `INSTALL.md`, a `CLAUDE.md`,
   `STATUS.md`, `ROADMAP.md` or `docs/tex/` untrue corrects it in the same pull
   request, and adds a `changelog.d/` fragment if it is user-visible.
@@ -162,8 +162,14 @@ nodes/taxa/states, with sequence/lattice lengths `L ∈ [100, 11000]`.
     - *Potts models:* N-D lattices and Markov random fields (MRFs) with
       specified coupling constants and external fields.
     - *HMMs:* hidden state paths and emitted observation sequences.
+    - *Canonical cases:* instances whose answer is known from outside this
+      repository — a closed form, a published result, or an enumeration
+      sharing no code with what it tests — admitted only when more than one
+      module consumes them.
   - *Validation:* verify generated sequence/spin distributions against
     analytic, closed-form transition probabilities and partition functions.
+    A canonical case is validated against the outside answer it was admitted
+    for, never against a run of the method it is meant to referee.
 - **Milestone 1.2: Differentiable Likelihood & Energy Engine**
   - *Deliverable:* high-performance evaluators implemented in
     PyTorch/Triton/JAX (GPU) and Rust (CPU).
@@ -179,8 +185,13 @@ nodes/taxa/states, with sequence/lattice lengths `L ∈ [100, 11000]`.
       distributions `π`.
     - *Potts models:* coupling strengths `J`, external fields `h`.
     - *HMMs:* transition matrices `A`, emission matrices `B`.
+  - *Deliverable:* posterior sampling over the same interface, so an interval
+    can be a quantile of the posterior rather than the curvature at the mode,
+    and the two can be compared.
   - *Validation:* validate autodiff gradients against central finite
-    differences.
+    differences. Validate a sampler where it is exact before where it is
+    statistical — integrator reversibility and its order of accuracy — then
+    against a target whose normalizer is known by quadrature.
 - **Milestone 1.4: Discrete Move Sets & Classical Baselines**
   - *Deliverable:* implement strict structural neighborhoods for classical
     sampling.
@@ -189,6 +200,11 @@ nodes/taxa/states, with sequence/lattice lengths `L ∈ [100, 11000]`.
     - *Potts models:* Swendsen-Wang and Wolff cluster update algorithms.
     - *HMMs:* Viterbi decoding and structural state-space updates (e.g.
       iterated conditional modes).
+    - *Exact baselines:* where a discrete optimum is computable in polynomial
+      time, compute it — a minimum cut for the two-state submodular Ising
+      ground state, and alpha expansion above two states, with its proved
+      approximation bound. A heuristic past the size enumeration reaches has
+      otherwise nothing to be checked against.
 
 ## Stage 2: Reinforcement Learning & Variational Search
 

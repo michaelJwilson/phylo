@@ -40,6 +40,32 @@ Apple Silicon path the memory requirement in `ROADMAP.md` assumes.
 
 ## Local rules
 
+- **`converged` is a statement about the gradient, never about the global
+  minimum.** On Rastrigin, 200 uniform starts over the standard domain reached
+  the global minimum 0 times and every run reported converged, because every
+  run satisfied the first-order condition. A result that rests on a single fit
+  of a surface that may be multimodal states that, or reports a multi-start
+  rate instead (`testfunctions.py`).
+
+- **A test function is not a likelihood, so it has no observed information.**
+  `constrained_standard_errors` must not be called on one: the Hessian at
+  Rosenbrock's minimum is a curvature, not an information matrix, and an
+  interval built from it would carry no meaning. Issue #122 covers the general
+  form of this.
+
+- **An acceptance rate is not a diagnostic on its own.** A leapfrog step too
+  large biases a posterior's *spread* downward while leaving its mean right
+  and its acceptance rate healthy: measured at 0.982 acceptance with the
+  standard deviation 12% low, because divergent trajectories are rejected
+  preferentially in the tails. The energy error tracks it and the acceptance
+  rate does not, so `hmc.HmcChain` carries both.
+
+- **A negative log-likelihood is not a log posterior.** Reading a bare
+  likelihood as a density is a posterior under an improper flat prior, which
+  for most models is not normalizable, and no diagnostic inside a sampler can
+  notice. `hmc.WithGaussianPrior` makes the prior an explicit declaration by
+  the caller rather than an assumption by the sampler.
+
 - **No application imports.** Nothing here may import from `phylo.sim`,
   `phylo.likelihood` or `phylo.search`. This is asserted by
   `tests/regression/test_opt_objective.py`, not left to review: a single
