@@ -24,13 +24,13 @@ from collections.abc import Mapping
 import numpy as np
 import pytest
 import torch
-from phylo.opt.hmc import (
+from snakes_and_ladders.opt.hmc import (
     WithGaussianPrior,
     hamiltonian,
     leapfrog,
     sample,
 )
-from phylo.opt.potts import PottsObjective, PottsParams, simulate_chains
+from snakes_and_ladders.opt.potts import PottsObjective, PottsParams, simulate_chains
 
 EXACT = 1e-13
 
