@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
 import pytest
 from pytest_benchmark.fixture import BenchmarkFixture
 from snakes_and_ladders.likelihood import pruning, pruning_rust
@@ -34,7 +35,7 @@ def test_rust_log_likelihood_benchmark(
         tau=params.tau,
         k=params.k,
         pi=params.pi,
-        seed=params.seed,
+        rng=np.random.default_rng(params.seed),
         n_sites=params.n_sites,
     )
 
@@ -55,7 +56,7 @@ def test_numpy_vs_rust_forward_pass(benchmark: BenchmarkFixture) -> None:
         tau=params.tau,
         k=params.k,
         pi=params.pi,
-        seed=params.seed,
+        rng=np.random.default_rng(params.seed),
         n_sites=params.n_sites,
     )
 
