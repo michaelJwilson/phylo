@@ -44,7 +44,7 @@ import numpy as np
 import torch
 import yaml
 
-from phylo.numerics import sample_rows
+from phylo.numerics_rust import sample_rows
 from phylo.opt.constrain import free_from_log_simplex, log_simplex
 
 _REQUIRED_FIELDS = frozenset(
