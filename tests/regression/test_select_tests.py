@@ -16,7 +16,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "infra"))
 
-from select_tests import BENCHMARKED, MODULES, dependents, select
+from select_tests import ALWAYS, BENCHMARKED, EVERYTHING, MODULES, dependents, select
 
 
 def _modules_of(chosen: dict[str, list[str]]) -> set[str]:
@@ -178,3 +178,34 @@ def test_every_module_has_a_test_directory() -> None:
 
 def test_the_benchmarked_modules_are_a_subset_of_the_modules() -> None:
     assert set(BENCHMARKED) < set(MODULES)
+
+
+def test_every_always_run_path_names_a_file_that_exists() -> None:
+    # The failure this catches has no other symptom worth trusting: an entry
+    # renamed on one side only leaves `ALWAYS` naming a path that is gone, and
+    # a selection built from it either errors far from the cause or, worse,
+    # quietly stops running a test that is supposed to run on every change.
+    # A rename touching `tests/` is exactly when it happens.
+    root = Path(__file__).resolve().parents[2]
+    missing = [path for path in ALWAYS if not (root / path).is_file()]
+
+    assert missing == []
+
+
+def test_every_whole_suite_trigger_names_something_in_the_tree() -> None:
+    # `EVERYTHING` decides when the saving is abandoned and the whole suite
+    # runs. An entry that matches nothing is a trigger that never fires, so
+    # a change to what it was meant to guard would select a partial suite.
+    root = Path(__file__).resolve().parents[2]
+    tracked = [
+        str(path.relative_to(root))
+        for path in root.rglob("*")
+        if ".git" not in path.parts
+    ]
+    unmatched = [
+        trigger
+        for trigger in EVERYTHING
+        if not any(path.startswith(trigger) for path in tracked)
+    ]
+
+    assert unmatched == []
