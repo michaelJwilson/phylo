@@ -68,6 +68,17 @@ Every `CLAUDE.md`, this one included, is the exception, on rule 6: it carries th
 *   **Measurement:** Benchmark candidates against the NumPy reference before committing to a port. Report both numbers in the PR.
 *   **The Oracle:** Every accelerated kernel keeps its pure Python/NumPy implementation as an oracle. Regression tests must pin the accelerated output against it within an explicit tolerance.
 
+### Where the speedup actually is
+These decide what a port does; `DEV.md` carries the procedure and `STATUS.md` the numbers each is derived from.
+*   **Measure the port where the caller stands.** A kernel timed alone and the same kernel timed through its binding are different numbers, and the difference is the boundary: marshalling, copying, type conversion. `STATUS.md` records both for every port that has one, and that difference has been the dominant term here at least once. Cross the boundary once per call with contiguous arrays, never once per row.
+*   **Choose the loop before the language.** A term that is a small fraction of the runtime cannot pay for a port in any language, and the fraction is routinely not the one a reader expects. `tests/benchmarks/profile_hotpaths.py` ranks self time; it is run before a kernel is proposed, not after.
+*   **The live set is a design decision, not an outcome.** Where a recursion holds its intermediates alive, releasing them changes what the run costs without changing one arithmetic operation — and the working set is what decides whether that arithmetic runs at cache speed or at memory speed (Bryant & O'Hallaron, ch. 6). Report peak memory beside time for anything recursive.
+*   **An irregular neighbourhood carries its layout.** A list of lists is a pointer chase per neighbour; offsets into one contiguous array is a stride. A kernel that walks a graph ports the layout with it, or the port buys the language and leaves the access pattern behind.
+*   **A data-dependent branch in an inner loop is free or it is a stall, and only measurement says which.** The branchless form (a mask, a select, a table) does more arithmetic and wins only where the branch does not predict, so it is proposed with a number rather than on principle.
+*   **A loop vectorizes because of how it is written, never because of a flag.** Contiguous, unaliased, no early exit, no data-dependent reduction. Write it so it can, then confirm it did; asserting a SIMD width asserts something nothing here checks.
+*   **Double buffering is a modelling decision before it is a performance one.** A sweep that reads and writes one array is a different Markov chain from one that reads the previous buffer. The docstring says which, and the oracle pins it — the faster of the two is not a choice if it is the wrong chain.
+*   **A second CPU backend is a second implementation to keep in agreement.** `njit` and Rust are alternatives, not a stack: every accelerated kernel already keeps its NumPy oracle, and a further port doubles what a change to the model must be reproduced in. Adopt one only against a measurement on a hot path this repository already has, and as its own decision.
+
 ## Testing & Quality Assurance
 *   **Simulate Component-Wise:** Build fixtures by simulating from a known generative model under an explicitly seeded generator. Test components individually and in combination.
 *   **Pin to Independent Sources:** Validate expected values against analytic results, brute-force computations, or secondary implementations with stated tolerances.
@@ -82,8 +93,9 @@ Every `CLAUDE.md`, this one included, is the exception, on rule 6: it carries th
 `docs/tex/` is treated as code. Cite these texts where they carry the material, and state any deviation from their standard algorithms explicitly. The core references are a routing table, grouped by what they inform:
 
 **Infrastructure (Build, Structure, and Speed)**
-*   **Software Craft:** Martin (*Clean Code*); Blandy et al. (*Programming Rust*)
+*   **Software Craft:** Martin (*Clean Code*); Blandy et al. (*Programming Rust*); Ramalho (*Fluent Python*)
 *   **Systems & Hardware:** Bryant & O'Hallaron (*Computer Systems*); Hwu et al. (*Programming Massively Parallel Processors*)
+*   **Python Performance:** Gorelick & Ozsvald (*High Performance Python*); Antão (*Fast Python*)
 
 **Optimization (Discrete and Continuous)**
 *   **Algorithms & Math:** Cormen et al. (*Introduction to Algorithms*); Rosen (*Discrete Mathematics and Its Applications*)

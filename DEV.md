@@ -105,6 +105,18 @@ Nine required checks run via GitHub Actions (`.github/workflows/ci.yml`) on PRs 
 * **Tolerances on a quantity that scales with problem size are relative.** The log-likelihood is a sum over sites, so an absolute bound fixed at one site count does not transfer to another: the backends agree to ~8e-13 relative at every size, but that same agreement is 7.4e-07 absolute at 200,000 sites. Absolute bounds are correct for quantities that do not scale — a transition probability, a row sum, a Monte Carlo frequency — and are kept there.
 * **Concurrency:** Superseded CI runs on the same branch are automatically cancelled.
 
+### Profiling a Hot Path
+
+`CLAUDE.md`'s **Where the speedup actually is** states the rules; this is the order they are applied in. Every step runs on fixed hardware, per **No CI Profiling** above.
+
+1. **Rank self time before proposing anything.** `python tests/benchmarks/profile_hotpaths.py` reports a `cProfile` self-time ranking for `sim`, `search` and `learn` at a CI-sized fixture and one larger, non-CI size. It is not `pytest`-collected and asserts nothing — a ranking is not a pass or a fail — so it is run by hand and read. A candidate that is not near the top of it does not proceed.
+2. **Time the reference at the size the port would run at.** `pytest tests/benchmarks/test_<name>_bench.py` gives the NumPy or PyTorch baseline. The 10x rule in `CLAUDE.md` is stated against *realistic* sizes; a speedup measured at the smallest size that fits a CI budget is not evidence for one at the declared scale.
+3. **Time the port twice: alone, and through its binding.** These are different numbers and the pull request reports both. `benches/` (`cargo bench`, Criterion) times the Rust kernel in Rust; `tests/benchmarks/` times it as Python calls it. The difference is the FFI boundary, and on at least one port here it has been the dominant term — `STATUS.md` records which, and by how much.
+4. **Measure memory where the structure is recursive.** Peak resident size, not only time: a recursion that holds every intermediate alive and one that releases them do identical arithmetic at very different working-set sizes. **There is no helper for this yet.** `STATUS.md`'s requirements table records the `O(n×L×k)` memory requirement as *not measured*, and issue #232 is the ticket that closes it; until it lands, a pull request that changes what a recursion keeps alive reports `tracemalloc` peaks it took itself and says so.
+5. **Pin the port against the oracle before reporting the speedup.** `CLAUDE.md`'s **The Oracle** rule: the pure implementation stays, and the accelerated output is pinned against it within a stated tolerance. A fast wrong answer is not a result.
+
+**What each instrument cannot say.** `cProfile` attributes time to Python frames, so it cannot see inside a NumPy call or a Rust kernel and will under-report both; it ranks *where to look*, not *what it costs*. `pytest-benchmark` reports wall clock on one machine and says nothing about cache behaviour, branch prediction or vector width — those are inferred from a change and its measured effect, never asserted directly. Criterion times a kernel with its inputs already in Rust, which is exactly the number step 3 exists to stop a pull request from reporting on its own.
+
 ### Core Development Standards
 
 * **Reproducibility:** Pin the environment. Use `--locked` for CI installs, pin runner images (`ubuntu-24.04`), and seed every generator through `np.random.default_rng(seed)`.
