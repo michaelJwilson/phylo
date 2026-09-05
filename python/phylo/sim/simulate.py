@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from phylo.numerics import sample_rows
+from phylo.numerics_rust import sample_rows
 from phylo.sim.gtr import reversible_transition_probabilities
 from phylo.sim.jc import jc_transition_probabilities
 from phylo.sim.newick import to_newick

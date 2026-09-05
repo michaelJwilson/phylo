@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from phylo.numerics import sample_rows
+from phylo.numerics_rust import sample_rows
 
 _REQUIRED_FIELDS = frozenset(
     {

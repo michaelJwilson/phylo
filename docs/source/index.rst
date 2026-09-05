@@ -57,6 +57,12 @@ whether or not it has members yet.
 .. automodule:: phylo.likelihood.device
    :members:
 
+.. automodule:: phylo.likelihood.potts
+   :members:
+
+.. automodule:: phylo.likelihood.belief_propagation
+   :members:
+
 .. automodule:: phylo.opt
    :members:
 
@@ -67,6 +73,12 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.opt.fit
+   :members:
+
+.. automodule:: phylo.opt.testfunctions
+   :members:
+
+.. automodule:: phylo.opt.hmc
    :members:
 
 .. automodule:: phylo.opt.potts
@@ -85,6 +97,9 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.learn.potts
+   :members:
+
+.. automodule:: phylo.learn.hmm
    :members:
 
 .. automodule:: phylo.learn.rollout
@@ -106,6 +121,12 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.search.rl
+   :members:
+
+.. automodule:: phylo.search.potts_mcmc
+   :members:
+
+.. automodule:: phylo.search.statistics
    :members:
 
 .. automodule:: phylo.qa

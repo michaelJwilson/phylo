@@ -12,8 +12,9 @@ A parenthesized number is an issue already filed.
 ## Milestone 1.1 — Simulation & Ground Truth Engine
 
 - Define one fixture API across trees, lattices and chains (#132)
-- Simulate Potts models on N-D lattices and general Markov random fields, with
-  declared couplings and external fields (#170)
+- Move `PottsParams`/`load_potts_params` out of `phylo.opt.potts`, so
+  `simulate_chains` can call the general graph sampler instead of keeping
+  its own copy of the exact open-chain recursion (#186)
 - Additional evolutionary models (#107)
 - Rate variation across sites, in the simulator and every backend
 - Simulate at the declared scale — `n` to 1000, `L` to 11000 — and report the
@@ -21,9 +22,6 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.2 — Differentiable Likelihood & Energy Engine
 
-- Belief propagation on the Potts lattice, with the transfer matrix as its
-  oracle (#172)
-- Transfer-matrix energy for the 2-D strip, exact at enumerable widths (#172)
 - Expose forward-backward as an evaluator, not as Baum-Welch's internals (#173)
 - One energy/likelihood evaluator API across the three problem classes,
   asserted by an import-graph test
@@ -37,8 +35,6 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.3 — Continuous Optimization via Autodiff
 
-- Fit Potts couplings `J` and external fields `h` on the lattice, with
-  intervals whose coverage is measured
 - Fit HMM transition and emission matrices to nominal interval coverage
 - Refuse an unidentifiable fit rather than returning a meaningless interval
   (#122)
@@ -48,7 +44,6 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.4 — Discrete Move Sets & Classical Baselines
 
-- Swendsen-Wang and Wolff cluster updates on the Potts lattice (#174)
 - Viterbi decoding, pinned against brute-force path enumeration (#175)
 - Iterated conditional modes over HMM state paths (#176)
 - Make the rooted/unrooted distinction explicit and give topologies a canonical
@@ -64,7 +59,6 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 2.1 — RL Agent Formulation & Deployment
 
-- Potts and HMM environments behind `phylo.learn.Environment`
 - A feature set for the tree environment, with the unidentifiable-constant
   invariance pinned
 - A tree fixture hard enough to separate a policy from greedy (#177)
