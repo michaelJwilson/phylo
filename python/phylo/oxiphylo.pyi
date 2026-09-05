@@ -1,11 +1,11 @@
 """Type stub for the compiled `phylo.oxiphylo` Rust extension.
 
 Hand-written, so it can drift: keep the signatures here matching the
-`#[pyfunction]` definitions in src/lib.rs, src/pruning.rs and
-src/sampling.rs. Issue #37 tracks putting `stubtest` in CI so the drift is
-caught by a check rather than by whoever notices; until then, `mypy --strict`
-catches only the direction where the stub is missing something a caller
-uses, which is how `sample_rows` was caught.
+`#[pyfunction]` definitions in src/lib.rs, src/pruning.rs, src/maxflow.rs
+and src/sampling.rs. Issue #37 tracks putting `stubtest` in CI so the drift
+is caught by a check rather than by whoever notices; until then,
+`mypy --strict` catches only the direction where the stub is missing something
+a caller uses, which is how `sample_rows` was caught.
 """
 
 import numpy as np
@@ -26,3 +26,16 @@ def sample_rows(
     draws: np.ndarray,
     out: np.ndarray,
 ) -> None: ...
+def max_flow(
+    n_nodes: int,
+    arcs: list[int],
+    capacity: list[float],
+    source: int,
+    sink: int,
+) -> float: ...
+def ising_ground_state(
+    n_nodes: int,
+    field: list[float],
+    edges: list[int],
+    coupling: list[float],
+) -> list[int]: ...

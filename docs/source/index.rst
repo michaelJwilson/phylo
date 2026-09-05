@@ -123,6 +123,12 @@ whether or not it has members yet.
 .. automodule:: phylo.search.rl
    :members:
 
+.. automodule:: phylo.search.maxflow
+   :members:
+
+.. automodule:: phylo.search.maxflow_rust
+   :members:
+
 .. automodule:: phylo.search.potts_mcmc
    :members:
 
