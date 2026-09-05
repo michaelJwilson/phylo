@@ -346,8 +346,38 @@ The boundary is refused rather than approximated. A negative coupling is
 NP-hard and raises; more than two states is alpha expansion (#207), which
 takes this as its inner solver.
 
-**Not built:** Viterbi decoding, and iterated conditional modes over state
-paths. Single-flip local search over the Potts chain exists as an RL
+**Alpha expansion landed, with the repository's first proved approximation
+bound.** `k`-state MAP is NP-hard, so the exact cut above stops at two labels;
+alpha expansion recovers the general case as a sequence of binary cuts, each
+of which the exact solver handles unchanged. For a metric pairwise term its
+local minimum is within `2 c_max / c_min` of the global one — exactly 2 for a
+uniform Potts coupling.
+
+That bound matters because of what it is *not*: belief propagation reports a
+measured deviation, the samplers report a distribution, and enumeration stops
+at nine sites. A bound holds at every size, so a result can be checked where
+the algorithm actually runs. Measured at `3x3` with three labels over 40 runs,
+alpha expansion found the global optimum **39 times** and recovered 99.554% of
+the achievable improvement in the one miss — far inside the bound, which is
+not tight and is not expected to be.
+
+Where the move set earns its complexity is past enumeration. At `3x3` alpha
+expansion and single-site descent are indistinguishable, both finding the
+optimum in 31 of 32 runs between them; at `8x8` with four labels, expansion
+beat the best of eight single-site descents on every trial, by 1.8 to 11.0 in
+energy.
+
+**Two construction errors, and what caught them.** The first draft swapped the
+cut's terminal capacities and mis-costed the auxiliary nodes. Neither broke
+loudly — both produce a labelling that is merely worse, which is
+indistinguishable from a hard problem — and both passed every enumeration test
+at `3x3`. The **reduction** caught them: at two labels one expansion is exact,
+so it must reproduce the minimum cut energy for energy, and it was failing by
+up to 2.55.
+
+**Not built:** Viterbi decoding, and iterated conditional modes over HMM state
+paths (`phylo.search.alpha_expansion` carries a lattice ICM as its baseline,
+which is a different object). Single-flip local search over the Potts chain exists as an RL
 environment, not as a classical baseline suite.
 
 ## Milestone 2.1 — RL Agent Formulation & Deployment
