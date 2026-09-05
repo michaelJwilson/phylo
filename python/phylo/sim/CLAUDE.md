@@ -36,6 +36,29 @@ truth type (`HmmParams`) from here but draws no data itself — fitting and
 generation are split the same way `opt/CLAUDE.md` splits them for every
 reference instance.
 
+`graph.py` holds `PottsGraph`, a general undirected graph carrying a
+per-edge coupling, and `lattice_graph`, which builds an N-D lattice as a
+constructed case of it — a 1-D chain is `lattice_graph((L,), ...)`, not a
+separate type. The boundary is a `BoundaryCondition` rather than a string,
+so an unrecognized one is a type error at the call site instead of a
+constructor raising at run time; the yaml loader is the single place a
+string becomes one. `PottsGraph` checks its own invariants on construction
+— one coupling per edge, every edge naming a node that exists — because
+every consumer indexes the spin array by node and the coupling array by
+edge position, so a mismatch is a silently wrong energy rather than an
+`IndexError`. `potts.py` draws spin configurations on a `PottsGraph`: a
+graph recognized as a 1-D open chain is sampled exactly, by the same
+backward-message recursion `phylo.opt.potts.log_partition` sums via
+transfer matrix; every other graph is sampled by single-site Gibbs
+(heat-bath) MCMC, as `n_samples` independent chains rather than one long
+thinned chain, so a Python-level loop runs once per sweep rather than once
+per sample. `phylo.opt.potts`'s own `simulate_chains` cannot import this
+module (`opt/CLAUDE.md`'s "no application imports" rule covers all of
+`phylo.sim`), so it keeps an independent copy of the exact open-chain
+recursion rather than delegating to it — a duplication issue #186 tracks
+resolving, by moving `PottsParams`/`load_potts_params` here the way issue
+#171 moved the HMM's truth type.
+
 ## Local rules
 
 - **Validate against the analytic result, never against our own likelihood.**

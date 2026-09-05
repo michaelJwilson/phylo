@@ -83,6 +83,64 @@ class PottsLandscape:
         self._field = field
         self._chain_length = chain_length
         self._n_states = int(field.shape[0])
+        self._neighbours = _chain_neighbours(chain_length)
+
+    @classmethod
+    def on_graph(
+        cls,
+        coupling: float,
+        field: np.ndarray,
+        edges: Sequence[tuple[int, int]],
+        n_nodes: int,
+    ) -> PottsLandscape:
+        """The same landscape over an arbitrary graph rather than a chain.
+
+        A chain is the case ``edges == [(0, 1), (1, 2), ...]``, so this is a
+        second constructor and not a second class: the energy, the move set,
+        the features and the reward are shared, and only the adjacency
+        differs. `phylo.sim.graph.lattice_graph` builds the N-D lattices this
+        is for, and an adapter in ``phylo.search`` supplies its edges ---
+        ``phylo.learn`` may not import ``phylo.sim`` (``learn/CLAUDE.md``),
+        so the graph arrives as plain indices.
+
+        Parameters
+        ----------
+        coupling : float
+            ``J``, uniform across edges. `lattice_graph` takes a scalar for
+            the same reason: a per-edge coupling would leave the agreement
+            feature unable to span the reward, and the greedy searcher would
+            fall outside the policy class (``learn/CLAUDE.md``).
+        field : np.ndarray
+            ``h``, shape ``(n_states,)``.
+        edges : Sequence[tuple[int, int]]
+            Undirected edges as ``(i, j)``. A repeated pair counts twice, as
+            a doubled bond, matching `lattice_graph`'s edge count for a
+            periodic dimension of extent 2.
+        n_nodes : int
+            Number of sites, >= 2.
+
+        Returns
+        -------
+        PottsLandscape
+            The landscape over that graph.
+
+        Raises
+        ------
+        ValueError
+            If ``n_nodes < 2``, or an edge names a node outside
+            ``[0, n_nodes)``.
+        """
+        landscape = cls(coupling, field, n_nodes)
+        for first, second in edges:
+            if not (0 <= first < n_nodes and 0 <= second < n_nodes):
+                msg = f"edge {(first, second)} names a node outside [0, {n_nodes})"
+                raise ValueError(msg)
+        neighbours: list[list[int]] = [[] for _ in range(n_nodes)]
+        for first, second in edges:
+            neighbours[first].append(second)
+            neighbours[second].append(first)
+        landscape._neighbours = tuple(tuple(row) for row in neighbours)
+        return landscape
 
     @classmethod
     def from_params(cls, params: PottsParams) -> PottsLandscape:
@@ -109,7 +167,12 @@ class PottsLandscape:
         Absolute energies are reported for tests and for the exhaustive
         oracle; an agent only ever sees differences of them.
         """
-        agreement = sum(1 for left, right in itertools.pairwise(state) if left == right)
+        # Each edge once: the adjacency lists it from both ends.
+        agreement = 0.5 * sum(
+            float(state[node] == state[neighbour])
+            for node, row in enumerate(self._neighbours)
+            for neighbour in row
+        )
         return self._coupling * agreement + float(self._field[list(state)].sum())
 
     def reset(self, rng: np.random.Generator) -> Configuration:
@@ -192,16 +255,21 @@ class PottsLandscape:
     def _deltas(self, state: Configuration, action: Flip) -> tuple[float, float]:
         """Change in agreeing-neighbour count and in field, for one flip."""
         site, value = action
-        agreement = 0.0
-        if site > 0:
-            agreement += float(value == state[site - 1]) - float(
-                state[site] == state[site - 1]
-            )
-        if site + 1 < self._chain_length:
-            agreement += float(value == state[site + 1]) - float(
-                state[site] == state[site + 1]
-            )
+        agreement = sum(
+            float(value == state[neighbour]) - float(state[site] == state[neighbour])
+            for neighbour in self._neighbours[site]
+        )
         return agreement, float(self._field[value] - self._field[state[site]])
+
+
+def _chain_neighbours(length: int) -> tuple[tuple[int, ...], ...]:
+    """Adjacency of a 1-D open chain: each site next to the ones beside it."""
+    return tuple(
+        tuple(
+            neighbour for neighbour in (site - 1, site + 1) if 0 <= neighbour < length
+        )
+        for site in range(length)
+    )
 
 
 def enumerate_configurations(

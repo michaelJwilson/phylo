@@ -14,10 +14,10 @@ started**, on the terms §0.4 sets.
 | Roadmap item | Status | Evidence | Key PRs |
 | --- | --- | --- | --- |
 | §0 Development loop | Landed | Eight required checks; committed PDF byte-compared on every PR | [#49](https://github.com/michaelJwilson/phylo/pull/49), [#57](https://github.com/michaelJwilson/phylo/pull/57), [#72](https://github.com/michaelJwilson/phylo/pull/72), [#92](https://github.com/michaelJwilson/phylo/pull/92), [#102](https://github.com/michaelJwilson/phylo/pull/102), [#151](https://github.com/michaelJwilson/phylo/pull/151) |
-| 1.1 Simulation & ground truth | Trees and the HMM landed as first-class simulators; Potts 1-D only | Simulated substitution frequencies against the closed-form JC probabilities; GTR reproduces JC to machine precision; HMM state and emission marginals against brute-force path enumeration | [#58](https://github.com/michaelJwilson/phylo/pull/58), [#64](https://github.com/michaelJwilson/phylo/pull/64), [#115](https://github.com/michaelJwilson/phylo/pull/115), [#120](https://github.com/michaelJwilson/phylo/pull/120), [#182](https://github.com/michaelJwilson/phylo/pull/182) |
-| 1.2 Likelihood & energy engine | CPU landed (NumPy, PyTorch, Rust); GPU dispatch not started; belief propagation not started | Worst relative deviation 4.0e-14 against brute-force marginalization across three backends and four site counts spanning a factor of 30 | [#66](https://github.com/michaelJwilson/phylo/pull/66), [#74](https://github.com/michaelJwilson/phylo/pull/74), [#81](https://github.com/michaelJwilson/phylo/pull/81), [#112](https://github.com/michaelJwilson/phylo/pull/112), [#148](https://github.com/michaelJwilson/phylo/pull/148) |
+| 1.1 Simulation & ground truth | Trees, the HMM and Potts (1-D chain plus general N-D lattice/MRF) landed as first-class simulators | Simulated substitution frequencies against the closed-form JC probabilities; GTR reproduces JC to machine precision; HMM state and emission marginals against brute-force path enumeration; Potts single-site and pair marginals against exhaustive enumeration at 3-state 3x3 and 2-state 4x4 | [#58](https://github.com/michaelJwilson/phylo/pull/58), [#64](https://github.com/michaelJwilson/phylo/pull/64), [#115](https://github.com/michaelJwilson/phylo/pull/115), [#120](https://github.com/michaelJwilson/phylo/pull/120), [#182](https://github.com/michaelJwilson/phylo/pull/182), [#190](https://github.com/michaelJwilson/phylo/pull/190) |
+| 1.2 Likelihood & energy engine | CPU landed (NumPy, PyTorch, Rust); belief propagation landed with two exact oracles; GPU dispatch not started | Worst relative deviation 4.0e-14 against brute-force marginalization across three backends and four site counts spanning a factor of 30 | [#66](https://github.com/michaelJwilson/phylo/pull/66), [#74](https://github.com/michaelJwilson/phylo/pull/74), [#81](https://github.com/michaelJwilson/phylo/pull/81), [#112](https://github.com/michaelJwilson/phylo/pull/112), [#148](https://github.com/michaelJwilson/phylo/pull/148) |
 | 1.3 Continuous optimization | Landed for trees, the 1-D Potts chain and the HMM; Potts lattice not started | Gradients against central differences; 95% intervals cover truth at the nominal rate over 60 replicates | [#115](https://github.com/michaelJwilson/phylo/pull/115), [#116](https://github.com/michaelJwilson/phylo/pull/116), [#119](https://github.com/michaelJwilson/phylo/pull/119), [#120](https://github.com/michaelJwilson/phylo/pull/120) |
-| 1.4 Move sets & classical baselines | Trees landed; cluster updates and Viterbi not started | NNI and SPR neighbour counts exhaustively verified at `n = 5..8`; hill climbing reaches the enumerated optimum from 12 of 12 starts | [#82](https://github.com/michaelJwilson/phylo/pull/82), [#127](https://github.com/michaelJwilson/phylo/pull/127), [#128](https://github.com/michaelJwilson/phylo/pull/128) |
+| 1.4 Move sets & classical baselines | Trees landed; Potts cluster updates landed; Viterbi not started | NNI and SPR neighbour counts exhaustively verified at `n = 5..8`; hill climbing reaches the enumerated optimum from 12 of 12 starts | [#82](https://github.com/michaelJwilson/phylo/pull/82), [#127](https://github.com/michaelJwilson/phylo/pull/127), [#128](https://github.com/michaelJwilson/phylo/pull/128) |
 | 2.1 RL formulation & deployment | Estimator and both environments landed; a trained tree policy not started | Enumerated gradient against finite differences at 1.5e-11 relative; learned policy 86.6% against greedy's 80.2% on the Potts landscape, 8 of 8 seeds | [#135](https://github.com/michaelJwilson/phylo/pull/135), [#137](https://github.com/michaelJwilson/phylo/pull/137), [#139](https://github.com/michaelJwilson/phylo/pull/139) |
 | 2.2 Curriculum learning | Not started | — | — |
 | 2.3 Empirical validation | Not started | — | — |
@@ -100,11 +100,24 @@ reduction — equal exchangeabilities with a uniform `π` reproduce the
 Jukes-Cantor rate matrix and its closed-form transition probabilities to
 machine precision.
 
-**Potts: 1-D only.** A Potts chain in an external field exists as an `opt`
-reference instance with an exact transfer-matrix oracle
-([#115](https://github.com/michaelJwilson/phylo/pull/115)), and appears again
-as a `learn` environment. The N-D lattice and general MRFs the milestone
-specifies are not built (issue #149).
+**Potts: 1-D chain plus a general N-D lattice/MRF simulator.** The 1-D chain
+in an external field still exists as an `opt` reference instance with an
+exact transfer-matrix oracle ([#115](https://github.com/michaelJwilson/phylo/pull/115)),
+and appears again as a `learn` environment. `phylo.sim.graph.PottsGraph`
+now generalizes it to an arbitrary undirected graph with a per-edge
+coupling, and `phylo.sim.potts.simulate_potts` samples on it — exactly, by
+the same backward-message recursion, when the graph is a 1-D open chain, and
+by single-site Gibbs (heat-bath) MCMC otherwise — with an N-D lattice a
+constructed case of the general graph rather than a second code path
+([#190](https://github.com/michaelJwilson/phylo/pull/190), closing #170,
+superseding the
+sampling half of #149). `phylo.opt.potts.simulate_chains` cannot import
+`phylo.sim` under `opt/CLAUDE.md`'s "no application imports" rule, so it
+keeps its own copy of the exact recursion rather than delegating to the new
+one — a duplication [#186](https://github.com/michaelJwilson/phylo/issues/186)
+tracks resolving, by moving `PottsParams` into `phylo.sim.potts` the way
+#171 moved the HMM's truth type. No fitting, cluster updates, or evaluator
+on the general graph yet (issues #172, #174).
 
 **HMMs: a first-class simulator.** `phylo.sim.hmm` draws a hidden state path
 and an observation sequence jointly from a declared `(pi, A, B)`, retaining
@@ -164,9 +177,25 @@ alone cannot tell the two apart. This is the repository's first fixture where
 a named method's failure is a theorem rather than a defect.
 
 **Potts and HMM evaluators: partial.** The 1-D transfer matrix and the HMM
-forward recursion exist, each with its exact oracle. Belief propagation, the
-2-D transfer matrix, and a forward-backward routine exposed outside
-Baum-Welch's internals are not built.
+forward recursion exist, each with its exact oracle. Sum-product belief
+propagation over a general `PottsGraph` now joins them, with the 2-D strip
+transfer matrix as the oracle for the regime enumeration cannot reach
+([#206](https://github.com/michaelJwilson/phylo/pull/206)). A forward-backward
+routine exposed outside Baum-Welch's internals is still not built.
+
+**What belief propagation is claimed to do, and what it is not.** On a
+tree it is exact, and that is where the correctness claim sits: `log Z` agrees
+with exhaustive enumeration to 2.0e-15 relative and the single-site marginals
+to 2.8e-13, inside `likelihood/CLAUDE.md`'s `1e-11` `float64` bound. On a
+loopy lattice it is approximate, so nothing asserts agreement — the deviation
+from the exact strip transfer matrix is reported as a measurement, and it is
+1.7e-15 at zero coupling, 1.1e-03 at `J = 0.5`, and peaks at 5.2e-03 at
+`J = 0.875` on a 6x4 open strip in three states. That peak is the result worth
+having: the exact `q`-state transition on a square lattice is at
+`J_c = ln(1 + sqrt(q)) = 1.005` for `q = 3`, so the Bethe approximation is
+worst where the correlations it neglects are longest-ranged, and it recovers
+on both sides. Messages that do not settle raise rather than returning a
+number.
 
 ## Milestone 1.3 — Continuous Optimization via Autodiff
 
@@ -179,6 +208,45 @@ topology, and the GTR substitution model — and none required a change to
 `phylo.opt`. A test asserts the module imports nothing from `phylo.sim`,
 `phylo.likelihood` or `phylo.search`, so the separation cannot decay by
 convenience import.
+
+**The optimizer is now pinned to minimizers known in closed form, not only to
+likelihood surfaces.** Every earlier test of `fit` measured a statistical
+property — the first-order condition, coverage at the nominal rate, agreement
+with Baum-Welch — under which an optimizer that stops early and a parameter
+that is weakly identified look identical. Three standard test functions
+separate them: Rosenbrock is reached to `1e-11` of its analytic minimizer at
+2, 3 and 5 dimensions, the autodiff gradient matches the hand-written closed
+form exactly on all three functions, and all four of Himmelblau's equal minima
+are reachable, each from its own basin.
+
+The third is a measurement that constrains what may be claimed elsewhere.
+On Rastrigin, over 200 starts drawn uniformly from the standard `+/-5.12`
+domain, a single L-BFGS fit reached the global minimum **0 times**; restricted
+to `+/-2` it reached it in 4%. Every one of those runs reported `converged`,
+because every one satisfied the first-order condition. `converged` is a
+statement about the gradient and says nothing about global optimality, and any
+result resting on a single fit of a multimodal surface has to say so.
+
+**Intervals now have a second, non-asymptotic source.** Hamiltonian Monte
+Carlo samples the posterior over any `Objective`, so an interval can be a
+quantile rather than a curvature estimate at the mode. The integrator is
+pinned where it is exact before anything statistical is claimed: it is
+reversible to `1e-15`, and its energy error is second order in the step size,
+measured at a ratio of exactly 4.00 across four halvings at fixed trajectory
+length. The chain is then checked against two references that are not
+samplers -- an analytic Gaussian, and the Potts chain's own two-dimensional
+posterior integrated on a grid, which it matches to 0.005 in the mean and 10%
+in the spread. On that fixture the Laplace standard error agrees with the
+posterior's to 15%, which is the expected outcome for a well-identified
+two-parameter model and is what would make a disagreement elsewhere
+informative.
+
+**A step size too large biases the spread while the acceptance rate looks
+healthy**, and that is why `HmcChain` reports the per-proposal energy error.
+Measured against quadrature: at a step of 0.020 the acceptance rate was 0.982
+and the posterior standard deviation was 12% low, because divergent
+trajectories are rejected preferentially in the tails. Acceptance rate does
+not detect it; `max |dH|` tracks it monotonically.
 
 **Fitting and intervals.** L-BFGS with a strong-Wolfe line search, convergence
 judged on the gradient relative to the objective's own magnitude, and
@@ -231,9 +299,73 @@ counts internal splits only: every tree over the same leaves induces all the
 trivial ones, and including them would shrink every distance by a
 taxon-count-dependent factor and silently weaken the bound.
 
-**Not built:** Swendsen-Wang and Wolff cluster updates, Viterbi decoding, and
-iterated conditional modes over state paths. Single-flip local search over the
-Potts chain exists as an RL environment, not as a classical baseline suite.
+**Potts cluster updates landed, validated by the distribution they converge
+to** ([#212](https://github.com/michaelJwilson/phylo/pull/212)). Swendsen-Wang
+and Wolff run beside single-site heat bath behind one interface. Correctness is
+a chi-square goodness-of-fit against the exact Boltzmann distribution at an
+enumerable size, at a significance of 0.001, for all three move sets with and
+without an external field; the worst p-value over 36 runs spanning six seeds
+was 0.0145. That the test has the power it claims is itself pinned: replacing
+the field accept step with an unconditional recolouring is rejected at p = 0.0.
+
+Two errors that a test asserting only that the chain ran would have missed are
+recorded here because they are the ones this ticket existed to catch. The
+field accept step is the first: Wolff's cluster construction alone does not
+preserve detailed balance in a field, and without the Metropolis correction on
+`|C| * (h_new - h_old)` the sampler runs and converges to the wrong
+distribution. The second was a Wolff sweep sized to match the others by
+running clusters until their cumulative size reached the site count --- a
+state-dependent stopping rule, which biased an aligned two-site chain to 0.384
+per aligned state against an exact 0.334.
+
+The reason to have them, measured at the exact transition
+`J_c = ln(1 + sqrt(q))` on an open lattice, as energy autocorrelation time
+normalized to sites touched:
+
+| extent | single-site | Swendsen-Wang | Wolff |
+| --- | --- | --- | --- |
+| 8 | 3.27 | 2.56 | 2.71 |
+| 12 | 6.89 | 3.91 | 3.04 |
+| 16 | 9.74 | 4.33 | 3.68 |
+| 24 | 10.37 | 4.86 | 5.01 |
+
+Single-site slows by 3.2x between extent 8 and 24 while both cluster
+algorithms slow by roughly 1.9x, so the gap is 2.1x at extent 24 and widening.
+That understates the asymptotic separation: these lattices are small and their
+boundary is open, both of which soften the transition.
+
+**An exact ground state landed, and it is the repository's first optimum that
+is proved rather than enumerated.** For two states with every coupling
+non-negative the Ising energy is submodular, so a minimum cut finds its global
+minimum in polynomial time. Every other discrete claim here rests on
+exhaustive enumeration and therefore stops at about twenty sites; this does
+not, so a heuristic past that point finally has something to be checked
+against.
+
+Validated three ways, because enumeration alone would inherit the same cap:
+against enumeration where it fits, at **exact equality** over 36
+shape-coupling-field combinations; against two analytic corners at sizes far
+past it — zero field gives an aligned state at `-J |E|`, zero coupling gives
+`argmax` per site; and by the max-flow min-cut theorem as a self-check, the
+flow value equalling the capacity of the cut residual reachability induces.
+
+A Rust kernel (`src/maxflow.rs`) runs **28-34x** faster than the NumPy
+reference measured on its own, and **6.6-10.6x** as a caller sees it; the
+difference is the list marshalling crossing the FFI boundary, which is the
+same gap #202 closes for the categorical sampler and is deferred to it rather
+than solved twice. The reference stays as the oracle. The port also removes a
+fragility: the
+Python blocking flow recurses to the depth of the level graph and needs
+`setrecursionlimit` raised past a few thousand nodes, while the Rust one uses
+an explicit stack.
+
+The boundary is refused rather than approximated. A negative coupling is
+NP-hard and raises; more than two states is alpha expansion (#207), which
+takes this as its inner solver.
+
+**Not built:** Viterbi decoding, and iterated conditional modes over state
+paths. Single-flip local search over the Potts chain exists as an RL
+environment, not as a classical baseline suite.
 
 ## Milestone 2.1 — RL Agent Formulation & Deployment
 
@@ -274,13 +406,45 @@ branch distinguishing them fits to zero and the tree collapses to the same
 polytomy — so a rank correlation moves by up to 0.04 under a perturbation of
 one part in 1e9 and is not a measurement.
 
+**All three problem classes are now MDPs.** `phylo.learn.Environment` had
+one instance, a 1-D Potts chain, which is the same position `phylo.opt` was in
+before four instances made its model-agnosticism a measurement rather than an
+assertion. It now carries the Potts landscape over an arbitrary graph — the
+chain is the one-dimensional case of the same class, not a second one — and
+the hidden Markov state path, whose objective is a decoding problem rather
+than an energy. Both are pinned against the enumerated estimator oracle
+carried over unchanged from the chain, and against exhaustive enumeration of
+their own state spaces: 19,683 configurations for a 3-state 3x3 lattice, 729
+paths for a 3-state sequence of six. Neither takes an application type, so
+`phylo.learn` still imports nothing from `phylo.sim`, `phylo.likelihood` or
+`phylo.search`, and a test asserts it.
+
+**The lattice is fitted, against an exact normalizer.** `log Z` is
+enumerated over all 19,683 configurations of a 3-state 3x3 lattice rather than
+approximated, so the fitted optimum is checked against a brute-force scan of
+the likelihood instead of against the optimizer's own convergence, and the
+enumerated normalizer reduces to `phylo.opt.potts.log_partition`'s transfer
+matrix on a chain to machine precision. Interval coverage over 40 replicates
+is 157/160 at 100 samples, 153/160 at 400 and 153/160 at 1600 — approaching
+the nominal rate from above and settling, as the Potts chain does.
+
+That closes the requirements row. It also leaves the hidden Markov model's
+half of the same row less settled than the committed coverage figure reads:
+its 45/48 = 0.938 at 150 sequences and 91/96 = 0.948 at 2400 both sit within
+one binomial standard error of 0.95 (0.032 and 0.022 respectively), so the
+under-coverage the caption describes is not distinguishable from sampling
+noise at those replicate counts. The two identified causes are real — an
+emission fitted near zero, and the post-selection cost of aligning the hidden
+states — but stating a sample size at which nominal coverage begins to hold
+would need more replicates than the figure runs, and none is claimed here.
+
 ## §1.2 Requirements Ledger
 
 | Requirement | Status |
 | --- | --- |
 | Phylogenetic RF ≤0.05 against simulated truth | **Met**, from 125 sites upward ([#148](https://github.com/michaelJwilson/phylo/pull/148)) |
-| Potts/HMM parameter recovery within 95% intervals | **Met** for the 1-D chain and the discrete HMM ([#116](https://github.com/michaelJwilson/phylo/pull/116)); lattice outstanding |
-| Precise state-sequence decoding | **Not started** — no Viterbi decoder |
+| Potts/HMM parameter recovery within 95% intervals | **Met** for the 1-D chain, the discrete HMM ([#116](https://github.com/michaelJwilson/phylo/pull/116)) and the 2-D lattice — realized 0.981 at 100 samples and 0.956 at 400 and 1600, over 40 replicates each |
+| Precise state-sequence decoding | **Not started** — no Viterbi decoder (issue #175) |
 | Parity with exact oracles on small `n` | **Met** for tree search against exhaustive enumeration ([#128](https://github.com/michaelJwilson/phylo/pull/128)) |
 | Parity with IQ-TREE 2 / RAxML-NG on large `n` | **Not started**; the tools are not in the environment (issue #126) |
 | `O(n×L×k)` memory inside 16 GB / 24 GB | **Not measured**; deterministic and reportable, but no figure exists |
@@ -320,7 +484,8 @@ than drawn with invented data.
   cannot support the claim in either direction, because greedy already reaches
   the enumerated optimum from every start. Separating a policy from greedy
   needs a problem harder than exhaustive enumeration can referee, so the oracle
-  that validates the search cannot validate the agent replacing it.
+  that validates the search cannot validate the agent replacing it
+  (issues #177 and #178).
 - Any comparison against established software. IQ-TREE 2 and RAxML-NG are not
   installed, and no statement anywhere in the repository compares against them.
 - Runtime scaling. Benchmarks are not ranked on CI hardware, so timings live in

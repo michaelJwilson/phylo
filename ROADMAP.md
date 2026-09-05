@@ -179,8 +179,13 @@ nodes/taxa/states, with sequence/lattice lengths `L ∈ [100, 11000]`.
       distributions `π`.
     - *Potts models:* coupling strengths `J`, external fields `h`.
     - *HMMs:* transition matrices `A`, emission matrices `B`.
+  - *Deliverable:* posterior sampling over the same interface, so an interval
+    can be a quantile of the posterior rather than the curvature at the mode,
+    and the two can be compared.
   - *Validation:* validate autodiff gradients against central finite
-    differences.
+    differences. Validate a sampler where it is exact before where it is
+    statistical — integrator reversibility and its order of accuracy — then
+    against a target whose normalizer is known by quadrature.
 - **Milestone 1.4: Discrete Move Sets & Classical Baselines**
   - *Deliverable:* implement strict structural neighborhoods for classical
     sampling.
@@ -189,6 +194,11 @@ nodes/taxa/states, with sequence/lattice lengths `L ∈ [100, 11000]`.
     - *Potts models:* Swendsen-Wang and Wolff cluster update algorithms.
     - *HMMs:* Viterbi decoding and structural state-space updates (e.g.
       iterated conditional modes).
+    - *Exact baselines:* where a discrete optimum is computable in polynomial
+      time, compute it — a minimum cut for the two-state submodular Ising
+      ground state, and alpha expansion above two states, with its proved
+      approximation bound. A heuristic past the size enumeration reaches has
+      otherwise nothing to be checked against.
 
 ## Stage 2: Reinforcement Learning & Variational Search
 
