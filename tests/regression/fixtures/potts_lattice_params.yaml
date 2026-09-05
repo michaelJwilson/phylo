@@ -1,0 +1,25 @@
+# Ground truth for the Potts-lattice generator
+# (tests/regression/sim/test_potts_simulate.py). Every field is required --
+# see python/phylo/sim/potts.py and sim/CLAUDE.md.
+#
+# 3x3 at 3 states is small enough for exhaustive enumeration (3**9 = 19,683
+# configurations) to give the exact partition function and marginals, so the
+# Gibbs sampler this fixture drives is checked against an independent exact
+# reference rather than against itself.
+seed: 20260903
+shape: [3, 3]
+boundary: open
+n_states: 3
+coupling: 0.6
+field: [0.30, -0.10, -0.20]
+
+# 2000 independent chains, each run 500 Gibbs sweeps from its own random
+# start -- ample mixing for a weakly-coupled 9-site lattice -- holding Monte
+# Carlo error on a single-site marginal near p = 0.3 to
+# sqrt(0.3 * 0.7 / 2000) ~= 0.0102.
+n_samples: 2000
+burn_in: 500
+
+# Absolute tolerance a validation test checks simulated frequencies against
+# their exact (enumeration) counterpart within.
+tolerance: 0.04

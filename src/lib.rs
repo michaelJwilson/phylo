@@ -1,8 +1,10 @@
 use pyo3::prelude::*;
 
 pub mod pruning;
+pub mod sampling;
 
 pub use pruning::pruning_log_likelihood;
+pub use sampling::sample_rows;
 
 /// Doubles an integer.
 ///
@@ -22,6 +24,7 @@ pub fn double(x: i64) -> i64 {
 fn oxiphylo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(double, m)?)?;
     m.add_function(wrap_pyfunction!(pruning_log_likelihood, m)?)?;
+    m.add_function(wrap_pyfunction!(sample_rows, m)?)?;
     Ok(())
 }
 

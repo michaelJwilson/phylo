@@ -179,8 +179,13 @@ nodes/taxa/states, with sequence/lattice lengths `L ∈ [100, 11000]`.
       distributions `π`.
     - *Potts models:* coupling strengths `J`, external fields `h`.
     - *HMMs:* transition matrices `A`, emission matrices `B`.
+  - *Deliverable:* posterior sampling over the same interface, so an interval
+    can be a quantile of the posterior rather than the curvature at the mode,
+    and the two can be compared.
   - *Validation:* validate autodiff gradients against central finite
-    differences.
+    differences. Validate a sampler where it is exact before where it is
+    statistical — integrator reversibility and its order of accuracy — then
+    against a target whose normalizer is known by quadrature.
 - **Milestone 1.4: Discrete Move Sets & Classical Baselines**
   - *Deliverable:* implement strict structural neighborhoods for classical
     sampling.
