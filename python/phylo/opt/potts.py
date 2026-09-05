@@ -44,6 +44,7 @@ import numpy as np
 import torch
 import yaml
 
+from phylo.numerics import logsumexp
 from phylo.numerics_rust import sample_rows
 from phylo.opt.constrain import free_from_log_simplex, log_simplex
 
@@ -189,7 +190,7 @@ def simulate_chains(params: PottsParams) -> np.ndarray:
     # the state at site i; backward[-1] is empty and so zero.
     backward = np.zeros((params.chain_length, params.n_states))
     for i in range(params.chain_length - 2, -1, -1):
-        backward[i] = _logsumexp(log_transfer + backward[i + 1][np.newaxis, :], axis=1)
+        backward[i] = logsumexp(log_transfer + backward[i + 1][np.newaxis, :], axis=1)
 
     chains = np.empty((params.n_chains, params.chain_length), dtype=np.int64)
     first = _softmax(field + backward[0])
@@ -462,13 +463,6 @@ class PottsObjective:
                 free_from_log_simplex(as_tensor),
             ]
         )
-
-
-def _logsumexp(values: np.ndarray, axis: int) -> np.ndarray:
-    peak = values.max(axis=axis, keepdims=True)
-    total = peak + np.log(np.exp(values - peak).sum(axis=axis, keepdims=True))
-    result: np.ndarray = total.squeeze(axis)
-    return result
 
 
 def _softmax(values: np.ndarray, axis: int = -1) -> np.ndarray:

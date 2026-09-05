@@ -6,7 +6,9 @@ figures for `docs/tex/`, and that validate `sim/`, `likelihood/`, `opt/`,
 
 Root `CLAUDE.md` holds the repository-wide rules, and its **Writing Style**
 section binds this file too — and every docstring, comment and commit message
-in this module. It is referenced here, never restated. What follows is local.
+in this module. It is referenced here, never restated. What follows is local,
+and is principle: the numbers behind each rule live with the code that
+produces them or in `STATUS.md`.
 
 ## What lives here
 
@@ -47,11 +49,10 @@ LaTeX build; this package does not itself invoke `latexmk` or know where
   are regenerated per PR; the rest are checked at the release gate. Citing a
   figure the manifest cannot render is refused rather than skipped, because
   skipping it is the silent failure the selection would otherwise introduce.
-- **A script owns its builder, not its command line.** `main` declares and
-  calls `runner.figure_main` or `runner.table_main`; it does not build an
-  `ArgumentParser`, write a file, or close a figure. Thirteen copies of that
-  block meant a fix to one reached only that one, and three of the thirteen
-  reported what they had written while ten stayed silent.
+- **A script owns its builder, not its command line.** A script declares
+  what it renders and calls the shared runner; it does not parse arguments,
+  write a file, or close a figure. One copy of that block per script means a
+  fix to one reaches only that one, and the copies drift in what they report.
 - **A builder returns what to render and writes nothing.** Writing is the
   runner's, so a caption passes `figure.check_latex_safe` exactly once and a
   figure is closed even when the write refuses it.
@@ -64,17 +65,14 @@ LaTeX build; this package does not itself invoke `latexmk` or know where
   `simulation_params.yaml`-format input the figure was rendered from, per
   `sim/CLAUDE.md`'s ground-truth-retention rule — never hand-written
   separately from what actually ran.
-- **A caption file is plain text, not LaTeX.** `docs/tex/main.tex` pulls it in
-  verbatim via `\input`, so it must not contain unescaped LaTeX special
-  characters (`_`, `%`, `\`, `&`, `#`). The single exception is `\_`, which
-  `figure.latex_integer` uses as a thousands separator. This is enforced by
-  `figure.check_latex_safe`, called from every writer, rather than asserted
-  once per caption test: a contract every caller must satisfy belongs in the
-  function every caller goes through.
-- **A table is typeset, not drawn.** `figure.write_qa_table` emits a LaTeX
-  `tabular` fragment for `main.tex` to `\input`. A matplotlib table saved as
-  an image does not match the surrounding type, does not scale with the
-  document, and cannot be selected or searched.
+- **A caption file is plain text, not LaTeX.** The document pulls it in
+  verbatim, so an unescaped special character breaks the build. The check
+  lives in the writer every script goes through rather than in a test per
+  caption: a contract every caller must satisfy belongs in the function every
+  caller passes.
+- **A table is typeset, not drawn.** A table ships as a fragment the document
+  includes. Saved as an image it does not match the surrounding type, does not
+  scale with the document, and cannot be selected or searched.
 - **Regression-test the layout, not the rendering.** matplotlib output isn't
   numerically pinnable; the coordinates and text a script computes before
   handing them to matplotlib are, and that is what a test pins.
