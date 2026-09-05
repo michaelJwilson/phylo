@@ -8,7 +8,9 @@ author.
 
 Root `CLAUDE.md` holds the repository-wide rules, and its **Writing Style**
 section binds this file too — and every docstring, comment and commit message
-in this module. It is referenced here, never restated. What follows is local.
+in this module. It is referenced here, never restated. What follows is local,
+and is principle: the numbers behind each rule live with the code that
+produces them or in `STATUS.md`.
 
 ## What lives here
 
@@ -17,19 +19,16 @@ the state, a step returning the next state and a reward, and features of each
 available action. `policy.py` holds the softmax-over-scored-actions policy
 the technical document specifies.
 
-`rollout.py` generates episodes two ways, under a policy and under the greedy
-searcher, through the same loop: a comparison between them is only meaningful
-if the loop is shared.
+`rollout.py` generates episodes under a policy and under the greedy searcher
+through the same loop: a comparison between them is only meaningful if the
+loop is shared. `reinforce.py` is the score-function estimator and `exact.py`
+its oracle, by enumerating trajectories.
 
-`reinforce.py` is the score-function estimator. `exact.py` is its oracle —
-expected return and its gradient by enumerating trajectories.
-
-`potts.py` is a **reference instance**, not an application: single-flip local
-search over the same 1-D Potts chain `phylo.opt.potts` fits. That is
-deliberate rather than convenient. One model appears here as an *environment*
-searched discretely and there as an *objective* fitted continuously, so the
-claim that both halves of this project share one abstraction is demonstrated
-rather than asserted.
+The environments here are **reference instances**, not applications, over the
+same models `phylo.opt` fits. That is deliberate: one model appears here as an
+environment searched discretely and there as an objective fitted continuously,
+so the claim that both halves of the project share one abstraction is
+demonstrated rather than asserted.
 
 ## Local rules
 
@@ -41,26 +40,23 @@ rather than asserted.
   `phylo.opt` is not forbidden: it is infrastructure too, and reusing its
   Potts fixture is the point rather than a shortcut.
 - **A reward is a closed form at known parameters, never an inner solve.**
-  This is issue #131's simplification and the reason an RL loop is
-  affordable: a fitted reward costs one L-BFGS solve per action, and a single
-  episode evaluates the whole neighbourhood at every step. Where the fitted
-  reward is the honest one, the two must be *compared* rather than swapped
-  silently — the cheap surface can rank candidates differently from the
-  maximized one.
+  That is what makes an episode affordable: a fitted reward costs a full solve
+  per action and an episode evaluates a whole neighbourhood per step. Where
+  the fitted reward is the honest one, the two are *compared* rather than
+  swapped silently — the cheap surface can rank candidates differently.
 - **`gamma = 1`, and it is not a hyperparameter.** The reward is a difference
   of the objective, so the undiscounted return telescopes to the total
   improvement an episode achieved. Any `gamma < 1` breaks that and prefers
   improvement found early over the same improvement found late.
-- **A feature constant across a state's actions is unidentifiable.** The
-  policy is a softmax over scores, so a constant shared by every action
-  cancels — the same gauge `phylo.opt.constrain.log_simplex` fixes. No
-  environment supplies a bias term, and a test pins the invariance.
-- **The greedy searcher must be inside the policy class.** On the Potts
-  landscape the reward decomposes exactly into the two features, so the
-  weight vector proportional to `(J, 1)` *is* hill climbing at zero
-  temperature. That is what makes "the agent beat the baseline" a statement
-  about learning rather than about two unrelated algorithms, and a test
-  checks the two produce identical trajectories.
+- **A feature constant across a state's actions is unidentifiable.** A
+  softmax over scores cancels anything every action shares — the same gauge
+  `phylo.opt` fixes for a simplex. No environment supplies a bias term, and a
+  test pins the invariance.
+- **The greedy searcher must be inside the policy class.** Where the reward
+  decomposes into the features, some weight vector *is* the greedy baseline at
+  zero temperature. That is what makes "the agent beat the baseline" a
+  statement about learning rather than about two unrelated algorithms, and a
+  test checks the two produce identical trajectories.
 - **A sampled return is a diagnostic, never a result.** It is a Monte Carlo
   estimate under a changing policy, so it rises for reasons that include a
   broken estimator. Learning is claimed against the enumerated expected
@@ -90,21 +86,14 @@ cannot support.
 
 ## The instances
 
-Three, and the count is the point. `phylo.opt.Objective` earns its
-model-agnosticism by carrying four instances that required no change to
-`phylo.opt`; an interface justified by one model is shaped by that model.
-`potts.py` holds the Potts landscape over a chain *or* an arbitrary graph —
-one class with two constructors, since only the adjacency differs — and
-`hmm.py` the hidden Markov state path, whose objective is a decoding problem
-rather than an energy. The tree lives in `phylo.search`, which may import
-both halves.
-
-None of them takes an application type. A `PottsGraph` and an `HmmParams`
-are unpacked by the caller into edge indices and log-probability arrays,
-because the no-application-imports rule above admits no exception for
-convenience.
+The count is the point: an interface justified by one model is shaped by that
+model, so this one carries an energy landscape, a decoding problem, and — in
+`phylo.search`, which may import both halves — a topology search. None of them
+takes an application type. The caller unpacks a model into index and
+log-probability arrays, because the no-application-imports rule admits no
+exception for convenience.
 
 ## What is not here yet
 
-PPO and a learned state-value critic. Issue #131 stages them; `docs/tex`'s
-reinforcement-learning section states the theory they are built against.
+PPO and a learned state-value critic; `docs/tex`'s reinforcement-learning
+section states the theory they are built against.
