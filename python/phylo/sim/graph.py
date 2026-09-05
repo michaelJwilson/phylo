@@ -233,3 +233,76 @@ def erdos_renyi_graph(
     drawn = rng.random(len(pairs)) < probability
     edges = tuple(pair for pair, keep in zip(pairs, drawn, strict=True) if keep)
     return PottsGraph(n_nodes=n_nodes, edges=edges, coupling=(coupling,) * len(edges))
+
+
+def triangular_lattice_graph(
+    shape: tuple[int, int], boundary: BoundaryCondition, coupling: float
+) -> PottsGraph:
+    """A 2-D triangular lattice: the square lattice plus one diagonal per cell.
+
+    Rows and columns are joined as in :func:`lattice_graph`, and each unit
+    cell gains the ``(row, column) -- (row + 1, column + 1)`` diagonal. Every
+    cell is then split into two triangles, so the graph contains 3-cycles and
+    is **not bipartite** --- which is the whole point of it.
+
+    **Why an odd cycle matters.** A two-state antiferromagnet wants every edge
+    to disagree. That is possible exactly when the graph is 2-colourable, so
+    on a bipartite graph --- a chain, a square lattice --- the ground state is
+    unfrustrated and the minimum energy is zero. A triangle cannot be
+    2-coloured, so at least one edge of it must agree, and the ground state
+    pays for it. That is geometric frustration, and it is the reason the
+    triangular Ising antiferromagnet retains entropy at zero temperature
+    (Wannier 1950).
+
+    Parameters
+    ----------
+    shape : tuple[int, int]
+        ``(rows, columns)``, each ``>= 2``.
+    boundary : BoundaryCondition
+        ``OPEN`` drops the edges that would leave the grid; ``PERIODIC`` wraps
+        both dimensions, giving every node degree 6.
+    coupling : float
+        Uniform ``J``. Negative is the antiferromagnet this exists for; the
+        sign is the caller's, because the same graph read ferromagnetically is
+        a perfectly ordinary unfrustrated instance and the contrast is worth
+        being able to draw.
+
+    Returns
+    -------
+    PottsGraph
+        Carrying ``shape`` and ``boundary``, as :func:`lattice_graph` does.
+        Note it is *not* an open chain even at ``shape = (2, 2)``, so
+        :meth:`PottsGraph.is_open_chain` correctly refuses it.
+
+    Raises
+    ------
+    ValueError
+        If either extent is below 2.
+    """
+    rows, columns = shape
+    if rows < 2 or columns < 2:
+        msg = f"every extent in shape must be >= 2, got {shape}"
+        raise ValueError(msg)
+
+    def index(row: int, column: int) -> int:
+        return row * columns + column
+
+    periodic = boundary is BoundaryCondition.PERIODIC
+    offsets = ((0, 1), (1, 0), (1, 1))
+    edges: list[tuple[int, int]] = []
+    for row, column in product(range(rows), range(columns)):
+        for row_step, column_step in offsets:
+            target_row, target_column = row + row_step, column + column_step
+            if periodic:
+                target_row, target_column = target_row % rows, target_column % columns
+            elif target_row >= rows or target_column >= columns:
+                continue
+            edges.append((index(row, column), index(target_row, target_column)))
+
+    return PottsGraph(
+        n_nodes=rows * columns,
+        edges=tuple(edges),
+        coupling=(coupling,) * len(edges),
+        shape=shape,
+        boundary=boundary,
+    )

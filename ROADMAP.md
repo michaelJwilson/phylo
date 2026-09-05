@@ -162,8 +162,14 @@ nodes/taxa/states, with sequence/lattice lengths `L ∈ [100, 11000]`.
     - *Potts models:* N-D lattices and Markov random fields (MRFs) with
       specified coupling constants and external fields.
     - *HMMs:* hidden state paths and emitted observation sequences.
+    - *Canonical cases:* instances whose answer is known from outside this
+      repository — a closed form, a published result, or an enumeration
+      sharing no code with what it tests — admitted only when more than one
+      module consumes them.
   - *Validation:* verify generated sequence/spin distributions against
     analytic, closed-form transition probabilities and partition functions.
+    A canonical case is validated against the outside answer it was admitted
+    for, never against a run of the method it is meant to referee.
 - **Milestone 1.2: Differentiable Likelihood & Energy Engine**
   - *Deliverable:* high-performance evaluators implemented in
     PyTorch/Triton/JAX (GPU) and Rust (CPU).
