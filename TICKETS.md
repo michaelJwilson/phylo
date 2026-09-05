@@ -12,12 +12,11 @@ A parenthesized number is an issue already filed.
 ## Milestone 1.1 — Simulation & Ground Truth Engine
 
 - Define one fixture API across trees, lattices and chains (#132)
-- Extend the Potts fixture to a 2-D grid, and put all three applications on the
-  same footing (#149)
-- Simulate N-D Potts lattices with declared couplings and external fields
-- Simulate Markov random fields on a general graph
-- Validate lattice spin distributions against the closed-form partition
-  function at enumerable sizes
+- Convert the sixteen signatures that still take a seed where the rule says a
+  generator (#240)
+- Move `PottsParams`/`load_potts_params` out of `phylo.opt.potts`, so
+  `simulate_chains` can call the general graph sampler instead of keeping
+  its own copy of the exact open-chain recursion (#186)
 - Additional evolutionary models (#107)
 - Rate variation across sites, in the simulator and every backend
 - Simulate at the declared scale — `n` to 1000, `L` to 11000 — and report the
@@ -25,10 +24,7 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.2 — Differentiable Likelihood & Energy Engine
 
-- Belief propagation on the Potts lattice, with the transfer matrix as its
-  oracle
-- Transfer-matrix energy for the 2-D strip, exact at enumerable widths
-- Expose forward-backward as an evaluator, not as Baum-Welch's internals
+- Expose forward-backward as an evaluator, not as Baum-Welch's internals (#173)
 - One energy/likelihood evaluator API across the three problem classes,
   asserted by an import-graph test
 - CUDA dispatch for the pruning recursion, pinned against the NumPy oracle
@@ -41,8 +37,6 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.3 — Continuous Optimization via Autodiff
 
-- Fit Potts couplings `J` and external fields `h` on the lattice, with
-  intervals whose coverage is measured
 - Fit HMM transition and emission matrices to nominal interval coverage
 - Refuse an unidentifiable fit rather than returning a meaningless interval
   (#122)
@@ -52,9 +46,15 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.4 — Discrete Move Sets & Classical Baselines
 
-- Swendsen-Wang and Wolff cluster updates on the Potts lattice
-- Viterbi decoding, pinned against brute-force path enumeration
-- Iterated conditional modes over HMM state paths
+- Viterbi decoding, pinned against brute-force path enumeration and against
+  the fixture where it disagrees with posterior decoding (#175, #209)
+- Posterior decoding, reported as the per-site marginal maximum it is and
+  never as the most likely path
+- Iterated conditional modes over HMM state paths (#176)
+- A discrete instance no baseline solves within budget — still open. #177's
+  tree is solved by random-restart greedy at 1.000 (#198), and #209 measured
+  single-site descent matching or beating the planted Viana-Bray state at
+  every frustration and connectivity tried
 - Make the rooted/unrooted distinction explicit and give topologies a canonical
   key (#114)
 - Multi-SPR neighbourhoods, each stating in which sense it is complete and what
@@ -68,13 +68,12 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 2.1 — RL Agent Formulation & Deployment
 
-- Potts and HMM environments behind `phylo.learn.Environment`
 - A feature set for the tree environment, with the unidentifiable-constant
   invariance pinned
 - PPO and a learned state-value critic
 - Truth as a terminal penalty, never a training signal
 - Train a phylogenetic policy and report its learning curve against the
-  enumerated expected return
+  enumerated expected return (#178)
 
 ## Milestone 2.2 — Curriculum Learning
 

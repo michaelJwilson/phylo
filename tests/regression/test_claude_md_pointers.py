@@ -1,4 +1,4 @@
-"""Every module `CLAUDE.md` points at the writing style, and none restates it.
+"""What a module `CLAUDE.md` may contain, enforced rather than stated.
 
 Root `CLAUDE.md` states that its **Writing Style** rules bind every module
 file. Nothing enforced that: the eight module files carried a generic "these
@@ -13,6 +13,7 @@ cover every submodule while missing all eighteen of `phylo.qa`, because
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -35,6 +36,24 @@ POINTER = "**Writing Style**"
 # Rule 5's label, distinctive enough that a file reproducing the section would
 # contain it and a file referencing the section would not.
 RESTATEMENT = "Apply naming, terminology, and syntax consistently"
+
+# Rule 6 says a `CLAUDE.md` carries principles, not technical detail, and the
+# detail that accretes fastest is a measurement: a result belongs to whatever
+# produced it, and a second copy in a module file is a copy to keep true.
+# Three shapes cover what was found in these files (issue #235): scientific
+# notation, an "N of M" count, and a decimal carrying two or more fractional
+# digits.
+MEASUREMENT = re.compile(
+    r"\b\d+(?:\.\d+)?e[-+]?\d+\b|\b\d+ of \d+\b|\b\d+\.\d{2,}\b",
+    re.IGNORECASE,
+)
+
+# The module files were 26 to 93 lines when written and had grown to 48-183 by
+# the time rule 6 landed, three- to six-fold, while root grew by four lines
+# over 26 commits. This is the ceiling that stops that growth resuming; it is
+# above the longest file after issue #235 rewrote them, and adding a rule past
+# it means removing one, which is what "edits are rare" means.
+LINE_BUDGET = 120
 
 
 def _module_claude_files() -> list[Path]:
@@ -130,3 +149,67 @@ def test_the_expected_reader_contract_lives_only_in_docs() -> None:
     ]
 
     assert elsewhere == []
+
+
+def test_no_module_claude_md_carries_a_measurement() -> None:
+    # Rule 6, made checkable. A measurement in one of these files is a second
+    # copy of a number that `STATUS.md`, a docstring or a test already owns,
+    # and the copy is the one that goes stale: nothing recomputes it and no
+    # check compares it against what it was copied from.
+    carrying = {
+        str(path.relative_to(REPO_ROOT)): sorted(
+            set(MEASUREMENT.findall(path.read_text()))
+        )
+        for path in _module_claude_files()
+        if MEASUREMENT.search(path.read_text())
+    }
+
+    assert carrying == {}, (
+        "measurements in a module CLAUDE.md: "
+        + "; ".join(f"{name}: {found}" for name, found in carrying.items())
+        + ". Move each to what produces it -- `STATUS.md` where it is evidence "
+        "for a milestone, the module defining the constant where a caller acts "
+        "on it -- and leave the principle behind."
+    )
+
+
+def test_the_measurement_check_catches_each_shape_it_claims_to() -> None:
+    # The check exercised, per shape rather than in aggregate: a guard that
+    # has never been seen to fail is not known to work, and a regex is exactly
+    # the kind of check that silently matches nothing.
+    caught = ["worst deviation 3.7e-15", "39 of 40 runs", "a ratio of 0.87856"]
+    passed = [
+        "the deviation is reported rather than asserted",
+        "a bound that holds at every size",
+        "Python 3 and a single digit 0.5 are not measurements",
+    ]
+
+    assert [text for text in caught if not MEASUREMENT.search(text)] == []
+    assert [text for text in passed if MEASUREMENT.search(text)] == []
+
+
+def test_no_module_claude_md_exceeds_the_line_budget() -> None:
+    # The other half of rule 6. A file can carry no measurement and still be a
+    # technical brief, and length is what that looks like from outside.
+    over = {
+        str(path.relative_to(REPO_ROOT)): len(path.read_text().splitlines())
+        for path in _module_claude_files()
+        if len(path.read_text().splitlines()) > LINE_BUDGET
+    }
+
+    assert over == {}, (
+        f"module CLAUDE.md files over the {LINE_BUDGET}-line budget: {over}. "
+        "A rule worth adding is worth removing another for."
+    )
+
+
+def test_the_line_budget_check_is_not_vacuous(tmp_path: Path) -> None:
+    # As above: pin that a file over the budget is detected, since the
+    # assertion passes on an empty set for either reason.
+    over = tmp_path / "CLAUDE.md"
+    over.write_text("x\n" * (LINE_BUDGET + 1))
+    under = tmp_path / "other_CLAUDE.md"
+    under.write_text("x\n" * LINE_BUDGET)
+
+    assert len(over.read_text().splitlines()) > LINE_BUDGET
+    assert len(under.read_text().splitlines()) <= LINE_BUDGET

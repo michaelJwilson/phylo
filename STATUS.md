@@ -203,7 +203,9 @@ fixture both move sets reach the enumerated maximum and recover the generating
 topology from all 12 starting points, at a median of 14 candidate fits for NNI
 against 48 for SPR. Budgets are counted in candidate fits rather than seconds,
 so a run reproduces from its seed, and a topology is scored at most once per
-search, keyed on its leaf bipartitions.
+search, keyed on its leaf bipartitions. The fit is the only unit worth
+counting: one candidate fit measures 213 ms against 22 us to generate an
+entire NNI neighbourhood, a factor of about 10 000.
 
 **The accuracy requirement's first half is met.** Normalized Robinson-Foulds
 distance from the inferred to the generating topology is met at the 0.05 bound

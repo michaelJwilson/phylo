@@ -76,7 +76,7 @@ def energy(graph: PottsGraph, field_values: np.ndarray, labelling: np.ndarray) -
     """
     values = _site_field(graph, field_values)
     total = float(values[np.arange(graph.n_nodes), labelling].sum())
-    for (first, second), coupling in zip(graph.edges, graph.coupling, strict=True):
+    for (first, second), coupling in graph.weighted_edges():
         if labelling[first] == labelling[second]:
             total += coupling
     return -total
@@ -147,9 +147,7 @@ def expand(
         network.add_edge(node, sink, keep_cost - offset)
 
     auxiliary = graph.n_nodes + 2
-    for position, ((first, second), coupling) in enumerate(
-        zip(graph.edges, graph.coupling, strict=True)
-    ):
+    for position, ((first, second), coupling) in enumerate(graph.weighted_edges()):
         first_differs = coupling if labelling[first] != alpha else 0.0
         second_differs = coupling if labelling[second] != alpha else 0.0
         if position not in set(disagreeing):
@@ -280,7 +278,7 @@ def iterated_conditional_modes(
     labelling = rng.integers(0, n_states, size=graph.n_nodes)
 
     neighbours: list[list[tuple[int, float]]] = [[] for _ in range(graph.n_nodes)]
-    for (first, second), coupling in zip(graph.edges, graph.coupling, strict=True):
+    for (first, second), coupling in graph.weighted_edges():
         neighbours[first].append((second, coupling))
         neighbours[second].append((first, coupling))
 

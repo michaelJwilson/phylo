@@ -9,8 +9,13 @@ factorization. Shares no traversal or accumulation code with
 ``phylo.likelihood.pruning`` -- only the already-independently-validated
 substitution model, ``jc_transition_probabilities``.
 
-Callers must keep ``tau`` to ``n <= 6`` taxa; cost is
-``O(n_sites * k**(internal nodes) * n_edges)``.
+Cost is ``O(n_sites * k**(internal nodes) * n_edges)``, and the
+``k ** internal`` factor is refused above
+:data:`phylo.enumeration.MAX_ENUMERABLE_CONFIGURATIONS` rather than
+attempted. Until issue #230 that limit was a sentence in this docstring
+asking callers to keep ``tau`` to ``n <= 6`` taxa, which nothing checked: an
+oversized call ran until the kernel stopped it, and read as infrastructure
+breaking rather than as a stated limit.
 """
 
 from __future__ import annotations
@@ -20,6 +25,7 @@ import math
 
 import numpy as np
 
+from phylo.enumeration import refuse_oversized
 from phylo.sim.jc import jc_transition_probabilities
 from phylo.sim.tree import Node, edges, preorder
 
@@ -56,8 +62,10 @@ def brute_force_log_likelihood(
     Raises
     ------
     ValueError
-        If ``pi`` does not have shape ``(k,)``, or ``alignment`` is missing a
-        leaf of ``tau``.
+        If ``pi`` does not have shape ``(k,)``, ``alignment`` is missing a
+        leaf of ``tau``, or the tree is large enough that ``k ** internal``
+        assignments are past
+        :data:`phylo.enumeration.MAX_ENUMERABLE_CONFIGURATIONS`.
     """
     if pi.shape != (k,):
         msg = f"pi has shape {pi.shape}, expected ({k},)"
@@ -65,6 +73,10 @@ def brute_force_log_likelihood(
 
     leaves = [node for node in preorder(tau) if node.is_leaf]
     internal = [node for node in preorder(tau) if not node.is_leaf]
+    refuse_oversized(
+        k ** len(internal),
+        what=f"{k}**{len(internal)} ancestral-state assignments",
+    )
     missing = [leaf.name for leaf in leaves if leaf.name not in alignment]
     if missing:
         msg = f"alignment is missing leaf(ves) {missing}"
