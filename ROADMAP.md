@@ -56,10 +56,10 @@ authoritative — where it and any other document disagree, it wins.
   every tolerance-based test beside the tolerance it was checked against, the
   documents the change made untrue, and anything deferred with the tracking
   issue that carries it.
-- **Gate:** eight required checks — `ruff`, `mypy --strict`, `clippy`,
+- **Gate:** nine required checks — `ruff`, `mypy --strict`, `clippy`,
   `cargo fmt`, the Rust suite, the Python suite under its coverage floor, the
-  Sphinx build with warnings as errors, the technical-document build, and the
-  dependency audits. Documentation Sync is part of the diff, not a follow-up:
+  Sphinx build with warnings as errors, the technical-document build, the
+  re-execution of every committed notebook, and the dependency audits. Documentation Sync is part of the diff, not a follow-up:
   a change that makes `README.md`, `DEV.md`, `INSTALL.md`, a `CLAUDE.md`,
   `STATUS.md`, `ROADMAP.md` or `docs/tex/` untrue corrects it in the same pull
   request, and adds a `changelog.d/` fragment if it is user-visible.
@@ -179,8 +179,13 @@ nodes/taxa/states, with sequence/lattice lengths `L ∈ [100, 11000]`.
       distributions `π`.
     - *Potts models:* coupling strengths `J`, external fields `h`.
     - *HMMs:* transition matrices `A`, emission matrices `B`.
+  - *Deliverable:* posterior sampling over the same interface, so an interval
+    can be a quantile of the posterior rather than the curvature at the mode,
+    and the two can be compared.
   - *Validation:* validate autodiff gradients against central finite
-    differences.
+    differences. Validate a sampler where it is exact before where it is
+    statistical — integrator reversibility and its order of accuracy — then
+    against a target whose normalizer is known by quadrature.
 - **Milestone 1.4: Discrete Move Sets & Classical Baselines**
   - *Deliverable:* implement strict structural neighborhoods for classical
     sampling.

@@ -35,7 +35,8 @@ of ``phylo.opt`` the way issue #171 moved ``phylo.opt.hmm``'s truth type into
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import itertools
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -43,7 +44,7 @@ import numpy as np
 import torch
 import yaml
 
-from phylo.numerics import sample_rows
+from phylo.numerics_rust import sample_rows
 from phylo.opt.constrain import free_from_log_simplex, log_simplex
 
 _REQUIRED_FIELDS = frozenset(
@@ -197,6 +198,195 @@ def simulate_chains(params: PottsParams) -> np.ndarray:
         conditional = _softmax(log_transfer + backward[i][np.newaxis, :], axis=1)
         chains[:, i] = sample_rows(rng, conditional, chains[:, i - 1])
     return chains
+
+
+def graph_statistics(
+    n_states: int, edges: Sequence[tuple[int, int]], n_nodes: int
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Enumerate every configuration's sufficient statistics for a Potts graph.
+
+    The energy is ``J * agreement(s) + sum_i h[s_i]``, so a configuration
+    enters the partition function only through two numbers: how many edges
+    agree, and how many sites hold each state. Enumerating those once turns
+    ``log Z`` into a `logsumexp` over precomputed rows, which is what makes an
+    exact lattice fit affordable at all -- every gradient step would otherwise
+    re-walk the configuration space.
+
+    **This is exact and exponential, and the caller owns that trade.**
+    ``n_states ** n_nodes`` rows: 19,683 for a 3-state 3x3 lattice, which is
+    the size #170's simulator validates against and the size a coverage study
+    can refit at. A 4x4 lattice at 3 states is 43 million and is not this
+    function's business -- an approximation would be, and it would have to
+    declare itself.
+
+    Parameters
+    ----------
+    n_states : int
+        States per site, ``q``.
+    edges : Sequence[tuple[int, int]]
+        Undirected edges as ``(i, j)`` node indices. Passed rather than taken
+        from a `PottsGraph`: ``opt/CLAUDE.md`` forbids importing
+        ``phylo.sim``, so a caller unpacks the graph.
+    n_nodes : int
+        Sites in the graph.
+
+    Returns
+    -------
+    tuple[torch.Tensor, torch.Tensor]
+        Agreeing-edge count per configuration, shape ``(q ** n_nodes,)``, and
+        state counts per configuration, shape ``(q ** n_nodes, q)``.
+    """
+    configurations = torch.tensor(
+        list(itertools.product(range(n_states), repeat=n_nodes)), dtype=torch.long
+    )
+    agreements = torch.zeros(configurations.shape[0], dtype=torch.float64)
+    for first, second in edges:
+        agreements += (configurations[:, first] == configurations[:, second]).to(
+            torch.float64
+        )
+    counts = torch.zeros(
+        (configurations.shape[0], n_states), dtype=torch.float64
+    ).scatter_add_(
+        1, configurations, torch.ones_like(configurations, dtype=torch.float64)
+    )
+    return agreements, counts
+
+
+def log_partition_graph(
+    coupling: torch.Tensor,
+    field: torch.Tensor,
+    agreements: torch.Tensor,
+    counts: torch.Tensor,
+) -> torch.Tensor:
+    """Exact ``log Z`` for a Potts graph, from enumerated statistics.
+
+    Differentiable in ``coupling`` and ``field``, which is the point: the
+    normalizer is where every gradient of the likelihood comes from.
+
+    Parameters
+    ----------
+    coupling : torch.Tensor
+        Scalar ``J``.
+    field : torch.Tensor
+        ``h``, shape ``(n_states,)``.
+    agreements, counts : torch.Tensor
+        As returned by :func:`graph_statistics`, for the graph in question.
+
+    Returns
+    -------
+    torch.Tensor
+        Scalar ``log Z``.
+    """
+    return torch.logsumexp(coupling * agreements + counts @ field, dim=0)
+
+
+class PottsLatticeObjective:
+    """Negative log-likelihood of Potts configurations on a graph.
+
+    The lattice counterpart of :class:`PottsObjective`, and deliberately the
+    same shape: an unconstrained vector, a differentiable scalar, and a map
+    back to named parameters. Nothing in ``phylo.opt.fit`` changes to carry
+    it, which is the claim `opt/CLAUDE.md` makes for the interface and the
+    reason a fourth instance is worth having.
+
+    The normalizer is **exact**, by enumeration, so a fitted optimum can be
+    checked against a brute-force scan rather than against the optimizer's own
+    convergence. That bounds the sizes this is for; see
+    :func:`graph_statistics`.
+
+    Parameters
+    ----------
+    configurations : np.ndarray
+        Observed states, shape ``(n_samples, n_nodes)``.
+    n_states : int
+        Number of states, ``q``.
+    edges : Sequence[tuple[int, int]]
+        The graph's undirected edges, as node-index pairs.
+    dtype : torch.dtype
+        Precision; ``float64`` by default, since a finite-difference check is
+        meaningless in ``float32``.
+
+    Raises
+    ------
+    ValueError
+        If ``configurations`` is not 2-D, or an edge names a node outside it.
+    """
+
+    def __init__(
+        self,
+        configurations: np.ndarray,
+        n_states: int,
+        edges: Sequence[tuple[int, int]],
+        dtype: torch.dtype = torch.float64,
+    ) -> None:
+        observed = torch.as_tensor(configurations, dtype=torch.long)
+        if observed.ndim != 2:
+            msg = (
+                f"expected configurations of shape (n_samples, n_nodes), got "
+                f"{tuple(observed.shape)}"
+            )
+            raise ValueError(msg)
+        n_nodes = int(observed.shape[1])
+        for edge in edges:
+            if not (0 <= edge[0] < n_nodes and 0 <= edge[1] < n_nodes):
+                msg = f"edge {edge} names a node outside [0, {n_nodes})"
+                raise ValueError(msg)
+
+        self._n_states = n_states
+        self._dtype = dtype
+        self._n_samples = int(observed.shape[0])
+        # The data enters only through these two, exactly as for the chain.
+        agreement = torch.zeros(self._n_samples, dtype=dtype)
+        for first, second in edges:
+            agreement += (observed[:, first] == observed[:, second]).to(dtype)
+        self._agreement_total = agreement.sum()
+        self._counts = torch.zeros(n_states, dtype=dtype)
+        self._counts.scatter_add_(
+            0, observed.reshape(-1), torch.ones(observed.numel(), dtype=dtype)
+        )
+        self._agreements, self._configuration_counts = graph_statistics(
+            n_states, edges, n_nodes
+        )
+
+    def initial(self) -> torch.Tensor:
+        """A deliberately uninformative start: zero coupling, uniform field."""
+        return torch.zeros(self._n_states, dtype=self._dtype)
+
+    def constrain(self, theta: torch.Tensor) -> Mapping[str, torch.Tensor]:
+        """Split ``theta`` into the coupling and the gauge-fixed field.
+
+        The gauge is the chain's: adding a constant to every entry of ``h``
+        shifts the energy and ``log Z`` by the same amount, so without it the
+        model is unidentifiable and no fitted field has a value to compare
+        against.
+        """
+        return {"coupling": theta[0], "field": log_simplex(theta[1:])}
+
+    def __call__(self, theta: torch.Tensor) -> torch.Tensor:
+        """Negative log-likelihood of every observed configuration."""
+        constrained = self.constrain(theta)
+        coupling, field = constrained["coupling"], constrained["field"]
+        log_z = log_partition_graph(
+            coupling, field, self._agreements, self._configuration_counts
+        )
+        unnormalized = coupling * self._agreement_total + (self._counts * field).sum()
+        return -(unnormalized - self._n_samples * log_z)
+
+    def theta_from_truth(self, coupling: float, field: np.ndarray) -> torch.Tensor:
+        """Place a known truth in the unconstrained coordinates.
+
+        Returns
+        -------
+        torch.Tensor
+            ``theta`` such that ``constrain(theta)`` returns this truth.
+        """
+        as_tensor = torch.as_tensor(field, dtype=self._dtype)
+        return torch.cat(
+            [
+                torch.tensor([coupling], dtype=self._dtype),
+                free_from_log_simplex(as_tensor),
+            ]
+        )
 
 
 class PottsObjective:

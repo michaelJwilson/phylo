@@ -18,6 +18,11 @@ CPU), a non-differentiable Rust CPU backend (`pruning_rust.py`, wrapping
 Metal/MPS dispatch belong here too but are not yet implemented (ROADMAP.md
 Milestone 3).
 
+`parsimony.py` is Fitch's algorithm: a second evaluator over the same
+topology, with no model, no branch lengths and an integer score. Its oracle is
+exhaustive enumeration over internal-node labellings, sharing no traversal
+with it.
+
 `objective.py` adapts the recursion to `phylo.opt`'s fitting interface. It
 lives here, not in `opt/`, because that package may import no application
 module — the dependency runs application to infrastructure, never back.
@@ -90,6 +95,15 @@ sum-product belief propagation as the approximate one they referee.
   lattice that BP finds hard. It is itself pinned twice — against enumeration
   where both fit, and by reduction, since a strip of width 1 is a chain and
   must reproduce `phylo.opt.potts.log_partition` to machine precision.
+
+- **A criterion may be here to be wrong.** `parsimony.py` is not a method
+  this repository advocates; it exists because the Felsenstein zone is the one
+  place where a named criterion's failure is a *theorem* rather than a defect,
+  and almost every other fixture here is a case some method already solves.
+  Its correctness test is therefore paired: parsimony must fail the
+  Felsenstein zone **and** succeed in the Farris zone, because an
+  implementation that is simply broken fails both and the first result alone
+  cannot tell them apart.
 
 - **Rescaling must stay differentiable.** Partial likelihoods underflow, so
   they are rescaled with the log of the scaling accumulated separately. That
