@@ -8,6 +8,7 @@ the ``shape``/``boundary`` metadata a lattice happens to carry.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import StrEnum
 from itertools import product
@@ -80,6 +81,24 @@ class PottsGraph:
             if not (0 <= first < self.n_nodes and 0 <= second < self.n_nodes):
                 msg = f"edge {edge} names a node outside [0, {self.n_nodes})"
                 raise ValueError(msg)
+
+    def weighted_edges(self) -> Iterator[tuple[tuple[int, int], float]]:
+        """Yield each edge with the coupling on it, in the graph's edge order.
+
+        Eight modules walked these two tuples in step with a hand-written
+        ``zip(graph.edges, graph.coupling, strict=True)``, twelve times
+        (issue #230). The pairing is an invariant of this class -- one
+        coupling per edge, checked in ``__post_init__`` -- so it belongs to
+        the class rather than being restated by every consumer, and a
+        consumer that forgets ``strict=True`` silently truncates to the
+        shorter tuple.
+
+        Yields
+        ------
+        tuple[tuple[int, int], float]
+            ``((first, second), coupling)`` per edge.
+        """
+        yield from zip(self.edges, self.coupling, strict=True)
 
     def is_open_chain(self) -> bool:
         """Whether this graph is a 1-D lattice with an open boundary.

@@ -238,7 +238,7 @@ def energy(
     """
     values = site_field(graph, field_values)
     total = values[np.arange(graph.n_nodes), configurations].sum(axis=-1)
-    for (first, second), coupling in zip(graph.edges, graph.coupling, strict=True):
+    for (first, second), coupling in graph.weighted_edges():
         total = total + coupling * (
             configurations[..., first] == configurations[..., second]
         )
@@ -302,7 +302,7 @@ def ising_ground_state(
         network.add_edge(source, node, float(cost[node, 1] - offsets[node]))
         network.add_edge(node, sink, float(cost[node, 0] - offsets[node]))
 
-    for (first, second), coupling in zip(graph.edges, graph.coupling, strict=True):
+    for (first, second), coupling in graph.weighted_edges():
         network.add_edge(first, second, coupling, reverse=coupling)
 
     cut = max_flow(network, source, sink)

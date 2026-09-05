@@ -25,12 +25,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from phylo.enumeration import MAX_ENUMERABLE_CONFIGURATIONS, refuse_oversized
+from phylo.numerics import logsumexp
 from phylo.sim.graph import BoundaryCondition, PottsGraph
-
-# `k ** n_nodes` configurations are enumerated, so the cap is what keeps a
-# regression test inside `infra/CLAUDE.md`'s CI budget: 3 states on 3x3 is
-# 19,683, 2 states on 4x4 is 65,536, and one more site triples or doubles it.
-MAX_ENUMERABLE_CONFIGURATIONS = 200_000
 
 
 @dataclass(frozen=True)
@@ -85,7 +82,7 @@ def log_weights(
         )
         raise ValueError(msg)
     total = field[configurations].sum(axis=1)
-    for (first, second), coupling in zip(graph.edges, graph.coupling, strict=True):
+    for (first, second), coupling in graph.weighted_edges():
         agree = configurations[:, first] == configurations[:, second]
         total = total + coupling * agree
     return np.asarray(total)
@@ -109,7 +106,7 @@ def enumerate_potts(
         External field ``h``, shape ``(n_states,)``.
     max_configurations : int | None
         Refuse above this many configurations. ``None`` uses
-        :data:`MAX_ENUMERABLE_CONFIGURATIONS`.
+        :data:`phylo.enumeration.MAX_ENUMERABLE_CONFIGURATIONS`.
 
     Returns
     -------
@@ -130,13 +127,11 @@ def enumerate_potts(
         if max_configurations is None
         else max_configurations
     )
-    count = n_states**graph.n_nodes
-    if count > limit:
-        msg = (
-            f"enumerating {n_states}**{graph.n_nodes} = {count} configurations "
-            f"exceeds the cap of {limit}"
-        )
-        raise ValueError(msg)
+    refuse_oversized(
+        n_states**graph.n_nodes,
+        what=f"{n_states}**{graph.n_nodes} spin configurations",
+        limit=limit,
+    )
 
     configurations = np.array(
         list(itertools.product(range(n_states), repeat=graph.n_nodes)), dtype=np.int64
@@ -240,11 +235,5 @@ def strip_log_partition(
 
     alpha = internal
     for _ in range(n_columns - 1):
-        alpha = _logsumexp(alpha[:, np.newaxis] + between, axis=0) + internal
-    return float(_logsumexp(alpha, axis=0))
-
-
-def _logsumexp(values: np.ndarray, axis: int) -> np.ndarray:
-    peak = values.max(axis=axis, keepdims=True)
-    shifted = np.log(np.exp(values - peak).sum(axis=axis, keepdims=True))
-    return np.asarray((peak + shifted).squeeze(axis))
+        alpha = logsumexp(alpha[:, np.newaxis] + between, axis=0) + internal
+    return float(logsumexp(alpha, axis=0))

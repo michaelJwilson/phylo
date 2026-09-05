@@ -85,7 +85,9 @@ def test_enumeration_refuses_a_size_it_cannot_do() -> None:
     # kill inside a test, which reads as broken infrastructure rather than as
     # a caller asking for a size this cannot reach.
     graph = lattice_graph((5, 4), BoundaryCondition.OPEN, 0.6)
-    with pytest.raises(ValueError, match="exceeds the cap"):
+    with pytest.raises(
+        ValueError, match=r"refusing to enumerate .*3\*\*20 spin configurations"
+    ):
         enumerate_potts(graph, FIELD)
 
 

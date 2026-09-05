@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from phylo.numerics import sample_rows
+from phylo.numerics import logsumexp, sample_rows
 from phylo.sim.graph import BoundaryCondition, PottsGraph
 
 _REQUIRED_FIELDS = frozenset(
@@ -245,7 +245,7 @@ def _simulate_open_chain_exact(
     # the state at site i; backward[-1] is empty and so zero.
     backward = np.zeros((length, n_states))
     for i in range(length - 2, -1, -1):
-        backward[i] = _logsumexp(
+        backward[i] = logsumexp(
             log_transfer[i] + backward[i + 1][np.newaxis, :], axis=1
         )
 
@@ -279,7 +279,7 @@ def _simulate_gibbs(
     rng = np.random.default_rng(seed)
     n_states = field.shape[0]
     adjacency: list[list[tuple[int, float]]] = [[] for _ in range(graph.n_nodes)]
-    for (a, b), coupling in zip(graph.edges, graph.coupling, strict=True):
+    for (a, b), coupling in graph.weighted_edges():
         adjacency[a].append((b, coupling))
         adjacency[b].append((a, coupling))
 
@@ -294,13 +294,6 @@ def _simulate_gibbs(
             state[:, node] = sample_rows(rng, _softmax(local, axis=1), chain_index)
 
     return state
-
-
-def _logsumexp(values: np.ndarray, axis: int) -> np.ndarray:
-    peak = values.max(axis=axis, keepdims=True)
-    total = peak + np.log(np.exp(values - peak).sum(axis=axis, keepdims=True))
-    result: np.ndarray = total.squeeze(axis)
-    return result
 
 
 def _softmax(values: np.ndarray, axis: int = -1) -> np.ndarray:
