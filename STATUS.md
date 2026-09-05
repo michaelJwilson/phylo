@@ -15,7 +15,7 @@ started**, on the terms §0.4 sets.
 | --- | --- | --- | --- |
 | §0 Development loop | Landed | Eight required checks; committed PDF byte-compared on every PR | [#49](https://github.com/michaelJwilson/phylo/pull/49), [#57](https://github.com/michaelJwilson/phylo/pull/57), [#72](https://github.com/michaelJwilson/phylo/pull/72), [#92](https://github.com/michaelJwilson/phylo/pull/92), [#102](https://github.com/michaelJwilson/phylo/pull/102), [#151](https://github.com/michaelJwilson/phylo/pull/151) |
 | 1.1 Simulation & ground truth | Trees, the HMM and Potts (1-D chain plus general N-D lattice/MRF) landed as first-class simulators | Simulated substitution frequencies against the closed-form JC probabilities; GTR reproduces JC to machine precision; HMM state and emission marginals against brute-force path enumeration; Potts single-site and pair marginals against exhaustive enumeration at 3-state 3x3 and 2-state 4x4 | [#58](https://github.com/michaelJwilson/phylo/pull/58), [#64](https://github.com/michaelJwilson/phylo/pull/64), [#115](https://github.com/michaelJwilson/phylo/pull/115), [#120](https://github.com/michaelJwilson/phylo/pull/120), [#182](https://github.com/michaelJwilson/phylo/pull/182), [#190](https://github.com/michaelJwilson/phylo/pull/190) |
-| 1.2 Likelihood & energy engine | CPU landed (NumPy, PyTorch, Rust); GPU dispatch not started; belief propagation not started | Worst relative deviation 4.0e-14 against brute-force marginalization across three backends and four site counts spanning a factor of 30 | [#66](https://github.com/michaelJwilson/phylo/pull/66), [#74](https://github.com/michaelJwilson/phylo/pull/74), [#81](https://github.com/michaelJwilson/phylo/pull/81), [#112](https://github.com/michaelJwilson/phylo/pull/112), [#148](https://github.com/michaelJwilson/phylo/pull/148) |
+| 1.2 Likelihood & energy engine | CPU landed (NumPy, PyTorch, Rust); belief propagation landed with two exact oracles; GPU dispatch not started | Worst relative deviation 4.0e-14 against brute-force marginalization across three backends and four site counts spanning a factor of 30 | [#66](https://github.com/michaelJwilson/phylo/pull/66), [#74](https://github.com/michaelJwilson/phylo/pull/74), [#81](https://github.com/michaelJwilson/phylo/pull/81), [#112](https://github.com/michaelJwilson/phylo/pull/112), [#148](https://github.com/michaelJwilson/phylo/pull/148) |
 | 1.3 Continuous optimization | Landed for trees, the 1-D Potts chain and the HMM; Potts lattice not started | Gradients against central differences; 95% intervals cover truth at the nominal rate over 60 replicates | [#115](https://github.com/michaelJwilson/phylo/pull/115), [#116](https://github.com/michaelJwilson/phylo/pull/116), [#119](https://github.com/michaelJwilson/phylo/pull/119), [#120](https://github.com/michaelJwilson/phylo/pull/120) |
 | 1.4 Move sets & classical baselines | Trees landed; cluster updates and Viterbi not started | NNI and SPR neighbour counts exhaustively verified at `n = 5..8`; hill climbing reaches the enumerated optimum from 12 of 12 starts | [#82](https://github.com/michaelJwilson/phylo/pull/82), [#127](https://github.com/michaelJwilson/phylo/pull/127), [#128](https://github.com/michaelJwilson/phylo/pull/128) |
 | 2.1 RL formulation & deployment | Estimator and both environments landed; a trained tree policy not started | Enumerated gradient against finite differences at 1.5e-11 relative; learned policy 86.6% against greedy's 80.2% on the Potts landscape, 8 of 8 seeds | [#135](https://github.com/michaelJwilson/phylo/pull/135), [#137](https://github.com/michaelJwilson/phylo/pull/137), [#139](https://github.com/michaelJwilson/phylo/pull/139) |
@@ -160,9 +160,25 @@ runners without an accelerator still check it. The CUDA and Metal paths
 themselves are not implemented.
 
 **Potts and HMM evaluators: partial.** The 1-D transfer matrix and the HMM
-forward recursion exist, each with its exact oracle. Belief propagation, the
-2-D transfer matrix, and a forward-backward routine exposed outside
-Baum-Welch's internals are not built.
+forward recursion exist, each with its exact oracle. Sum-product belief
+propagation over a general `PottsGraph` now joins them, with the 2-D strip
+transfer matrix as the oracle for the regime enumeration cannot reach
+([#206](https://github.com/michaelJwilson/phylo/pull/206)). A forward-backward
+routine exposed outside Baum-Welch's internals is still not built.
+
+**What belief propagation is claimed to do, and what it is not.** On a
+tree it is exact, and that is where the correctness claim sits: `log Z` agrees
+with exhaustive enumeration to 2.0e-15 relative and the single-site marginals
+to 2.8e-13, inside `likelihood/CLAUDE.md`'s `1e-11` `float64` bound. On a
+loopy lattice it is approximate, so nothing asserts agreement — the deviation
+from the exact strip transfer matrix is reported as a measurement, and it is
+1.7e-15 at zero coupling, 1.1e-03 at `J = 0.5`, and peaks at 5.2e-03 at
+`J = 0.875` on a 6x4 open strip in three states. That peak is the result worth
+having: the exact `q`-state transition on a square lattice is at
+`J_c = ln(1 + sqrt(q)) = 1.005` for `q = 3`, so the Bethe approximation is
+worst where the correlations it neglects are longest-ranged, and it recovers
+on both sides. Messages that do not settle raise rather than returning a
+number.
 
 ## Milestone 1.3 — Continuous Optimization via Autodiff
 

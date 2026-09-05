@@ -57,6 +57,12 @@ whether or not it has members yet.
 .. automodule:: phylo.likelihood.device
    :members:
 
+.. automodule:: phylo.likelihood.potts
+   :members:
+
+.. automodule:: phylo.likelihood.belief_propagation
+   :members:
+
 .. automodule:: phylo.opt
    :members:
 

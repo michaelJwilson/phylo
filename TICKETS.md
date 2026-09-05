@@ -22,9 +22,6 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.2 — Differentiable Likelihood & Energy Engine
 
-- Belief propagation on the Potts lattice, with the transfer matrix as its
-  oracle
-- Transfer-matrix energy for the 2-D strip, exact at enumerable widths
 - Expose forward-backward as an evaluator, not as Baum-Welch's internals
 - One energy/likelihood evaluator API across the three problem classes,
   asserted by an import-graph test
