@@ -14,9 +14,9 @@ import shutil
 from pathlib import Path
 
 import pytest
-from phylo.qa import build, manifest
-from phylo.qa.build import UncitedFigureError, compare, selected
-from phylo.qa.manifest import FIGURES, cited_stems
+from snakes_and_ladders.qa import build, manifest
+from snakes_and_ladders.qa.build import UncitedFigureError, compare, selected
+from snakes_and_ladders.qa.manifest import FIGURES, cited_stems
 
 MAIN_TEX = build.DEFAULT_MAIN_TEX
 COMMITTED_FIGURES = build.DEFAULT_OUTPUT_DIR
