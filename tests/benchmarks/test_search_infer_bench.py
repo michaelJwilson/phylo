@@ -62,7 +62,9 @@ def test_hill_climb_benchmark(benchmark: BenchmarkFixture) -> None:
     """A whole search, so the per-fit number can be checked against a run."""
     alignment, k = _alignment()
 
-    result = benchmark(infer, alignment, k, seed=1, moves=MoveSet.NNI)
+    result = benchmark(
+        infer, alignment, k, rng=np.random.default_rng(1), moves=MoveSet.NNI
+    )
 
     assert result.converged
     assert math.isfinite(result.log_likelihood)
