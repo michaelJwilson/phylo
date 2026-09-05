@@ -16,6 +16,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use oxiphylo::double;
 use oxiphylo::pruning::pruning_log_likelihood_impl;
+use oxiphylo::sampling::sample_rows_impl;
 
 fn bench_double(c: &mut Criterion) {
     c.bench_function("double", |b| b.iter(|| double(std::hint::black_box(21))));
@@ -122,5 +123,56 @@ fn bench_pruning_log_likelihood(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_double, bench_pruning_log_likelihood);
+/// `sample_rows` at the two sizes issue #187's audit profiled: 200,000 and
+/// 2,000,000 draws over a 4-category alphabet, the sizes
+/// `simulate_alignment` reaches on the committed fixtures and one order
+/// above.
+///
+/// This measures the kernel alone, which is the number to compare against
+/// `tests/benchmarks/test_numerics_rust_bench.py` rather than to substitute
+/// for it: the Python-visible speedup is smaller, because the arrays have to
+/// cross the FFI boundary and the NumPy oracle's do not. Reporting only this
+/// one would overstate what the port buys.
+fn bench_sample_rows(c: &mut Criterion) {
+    let n_categories = 4;
+    let distributions: Vec<f64> = (0..n_categories * n_categories)
+        .map(|i| {
+            if i % (n_categories + 1) == 0 {
+                0.7
+            } else {
+                0.1
+            }
+        })
+        .collect();
+
+    for &n_draws in &[200_000_usize, 2_000_000] {
+        let mut rng = SplitMix64::new(20260904);
+        let mut rows = Vec::with_capacity(n_draws);
+        let mut draws = Vec::with_capacity(n_draws);
+        for _ in 0..n_draws {
+            rows.push(rng.next_state(n_categories));
+            // The same [0, 1) construction numpy uses: 53 random bits scaled.
+            draws.push((rng.next_u64() >> 11) as f64 / (1_u64 << 53) as f64);
+        }
+
+        c.bench_function(&format!("sample_rows/{n_draws}"), |b| {
+            b.iter(|| {
+                sample_rows_impl(
+                    std::hint::black_box(&distributions),
+                    n_categories,
+                    std::hint::black_box(&rows),
+                    std::hint::black_box(&draws),
+                )
+                .unwrap()
+            })
+        });
+    }
+}
+
+criterion_group!(
+    benches,
+    bench_double,
+    bench_pruning_log_likelihood,
+    bench_sample_rows
+);
 criterion_main!(benches);

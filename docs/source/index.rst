@@ -15,6 +15,9 @@ whether or not it has members yet.
 .. automodule:: phylo.numerics
    :members:
 
+.. automodule:: phylo.numerics_rust
+   :members:
+
 .. automodule:: phylo.sim
    :members:
 
@@ -31,6 +34,18 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.sim.simulate
+   :members:
+
+.. automodule:: phylo.sim.graph
+   :members:
+
+.. automodule:: phylo.sim.potts
+   :members:
+
+.. automodule:: phylo.sim.hmm
+   :members:
+
+.. automodule:: phylo.sim.canonical
    :members:
 
 .. automodule:: phylo.sim.newick
@@ -54,7 +69,19 @@ whether or not it has members yet.
 .. automodule:: phylo.likelihood.brute_force
    :members:
 
+.. automodule:: phylo.likelihood.parsimony
+   :members:
+
 .. automodule:: phylo.likelihood.device
+   :members:
+
+.. automodule:: phylo.likelihood.potts
+   :members:
+
+.. automodule:: phylo.likelihood.belief_propagation
+   :members:
+
+.. automodule:: phylo.likelihood.hmm_paths
    :members:
 
 .. automodule:: phylo.opt
@@ -67,6 +94,12 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.opt.fit
+   :members:
+
+.. automodule:: phylo.opt.testfunctions
+   :members:
+
+.. automodule:: phylo.opt.hmc
    :members:
 
 .. automodule:: phylo.opt.potts
@@ -85,6 +118,9 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.learn.potts
+   :members:
+
+.. automodule:: phylo.learn.hmm
    :members:
 
 .. automodule:: phylo.learn.rollout
@@ -106,6 +142,24 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.search.rl
+   :members:
+
+.. automodule:: phylo.search.alpha_expansion
+   :members:
+
+.. automodule:: phylo.search.max_cut
+   :members:
+
+.. automodule:: phylo.search.maxflow
+   :members:
+
+.. automodule:: phylo.search.maxflow_rust
+   :members:
+
+.. automodule:: phylo.search.potts_mcmc
+   :members:
+
+.. automodule:: phylo.search.statistics
    :members:
 
 .. automodule:: phylo.qa
@@ -166,4 +220,10 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.qa.topology_accuracy
+   :members:
+
+.. automodule:: phylo.scripts
+   :members:
+
+.. automodule:: phylo.scripts.run_phylo
    :members:
