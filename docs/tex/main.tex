@@ -119,6 +119,19 @@ The following figures validate the mathematical exactness of the simulation and 
   \label{fig:backend-agreement}
 \end{figure}
 
+\subsection{Memory Footprint at the Declared Scale}
+\label{sec:res-footprint}
+
+The roadmap bounds the working set to $O(n \times L \times k)$ inside 16\,GB of unified memory. Table~\ref{tab:likelihood-footprint} measures it, splitting the cost the data carries from the cost the evaluator adds: the simulator retains every node's states and so is linear in the taxon-site product, while pruning retains a partial likelihood only for nodes whose parent has not yet consumed it, and so tracks the tree's depth. Fitting one line through both therefore over-states the total past the sizes measured, which is the direction a memory bound needs to be wrong in.
+
+\qacaptionread{figures/likelihood_footprint_caption.txt}{\likelihoodFootprintCaption}
+\begin{table}[htbp]
+  \centering
+  \input{figures/likelihood_footprint}
+  \caption{\likelihoodFootprintCaption}
+  \label{tab:likelihood-footprint}
+\end{table}
+
 \subsection{Empirical Benchmarking [PLACEHOLDERS]}
 
 In accordance with the project roadmap, the following metrics will be populated upon completion of Milestone 2.3.
