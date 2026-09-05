@@ -159,6 +159,23 @@ derived from measured agreement, and the `float32` bound is exercised on CPU so
 runners without an accelerator still check it. The CUDA and Metal paths
 themselves are not implemented.
 
+**Parsimony landed, and it is here to be wrong.** Fitch's algorithm scores a
+topology beside the likelihood, pinned against exhaustive enumeration over
+internal-node labellings — equality, not a tolerance, since the score is an
+integer. Its purpose is the Felsenstein zone, where four taxa with two long
+branches placed non-adjacently make parsimony *statistically inconsistent*:
+convergent change on the long branches is cheaper to explain by grouping them
+than by the true topology, so more data does not help. Measured over 12
+replicates, parsimony recovered the true topology **0 of 12 times at 200,
+1000 and 5000 sites** while likelihood went 10/12, 12/12, 12/12.
+
+The Farris zone is the control that makes that interpretable: move the same
+two long branches to be adjacent and parsimony is right **12 of 12 at every
+site count**, while likelihood needs more data — 4/12, 6/12, 10/12. An
+implementation that were simply broken would fail both zones, and one result
+alone cannot tell the two apart. This is the repository's first fixture where
+a named method's failure is a theorem rather than a defect.
+
 **Potts and HMM evaluators: partial.** The 1-D transfer matrix and the HMM
 forward recursion exist, each with its exact oracle. Sum-product belief
 propagation over a general `PottsGraph` now joins them, with the 2-D strip
