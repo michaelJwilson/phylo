@@ -40,6 +40,19 @@ Apple Silicon path the memory requirement in `ROADMAP.md` assumes.
 
 ## Local rules
 
+- **`converged` is a statement about the gradient, never about the global
+  minimum.** On Rastrigin, 200 uniform starts over the standard domain reached
+  the global minimum 0 times and every run reported converged, because every
+  run satisfied the first-order condition. A result that rests on a single fit
+  of a surface that may be multimodal states that, or reports a multi-start
+  rate instead (`testfunctions.py`).
+
+- **A test function is not a likelihood, so it has no observed information.**
+  `constrained_standard_errors` must not be called on one: the Hessian at
+  Rosenbrock's minimum is a curvature, not an information matrix, and an
+  interval built from it would carry no meaning. Issue #122 covers the general
+  form of this.
+
 - **No application imports.** Nothing here may import from `phylo.sim`,
   `phylo.likelihood` or `phylo.search`. This is asserted by
   `tests/regression/test_opt_objective.py`, not left to review: a single

@@ -69,6 +69,9 @@ whether or not it has members yet.
 .. automodule:: phylo.opt.fit
    :members:
 
+.. automodule:: phylo.opt.testfunctions
+   :members:
+
 .. automodule:: phylo.opt.potts
    :members:
 
