@@ -43,6 +43,15 @@ dev = [
 docs = [
     "sphinx>=7,<9",
 ]
+# Executing the committed notebooks, so their numbers cannot rot (issue
+# #203). Deliberately its own extra rather than part of `test`: a normal
+# `pip install .` and the per-pull-request suite do not need a kernel, and
+# `infra/check_notebooks.py` is the only consumer.
+notebooks = [
+    "nbclient>=0.10",
+    "nbformat>=5.10",
+    "ipykernel>=6.29",
+]
 test = [
     # >=9.0.3 is the fix for PYSEC-2026-1845; the previous <9 cap blocked it.
     "pytest>=9.0.3",
@@ -122,6 +131,25 @@ mypy_path = "infra"
 [[tool.mypy.overrides]]
 # pytest-benchmark ships no py.typed marker.
 module = "pytest_benchmark.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# `nbformat` ships type information but leaves `read` and `write` untyped, so
+# --strict rejects a correct call site. Narrowed to the one module that reads
+# notebooks rather than relaxed globally.
+module = "check_notebooks"
+disallow_untyped_calls = false
+
+[[tool.mypy.overrides]]
+# The `lint` job syncs `--extra test`, not `--extra notebooks`, so these are
+# absent where mypy runs and every import of them is `import-not-found`.
+# Moving the imports into the functions that execute a notebook does not help:
+# mypy resolves an import wherever it appears. They are optional dependencies
+# of one developer script, so the type checker is told they may be missing
+# rather than the job made to install a Jupyter kernel to type-check three
+# lines. Where they *are* installed -- a developer environment, the
+# `notebooks` job -- mypy still checks against the real thing.
+module = ["nbformat.*", "nbclient.*"]
 ignore_missing_imports = true
 
 [tool.towncrier]

@@ -18,9 +18,26 @@ CPU), a non-differentiable Rust CPU backend (`pruning_rust.py`, wrapping
 Metal/MPS dispatch belong here too but are not yet implemented (ROADMAP.md
 Milestone 3).
 
+`parsimony.py` is Fitch's algorithm: a second evaluator over the same
+topology, with no model, no branch lengths and an integer score. Its oracle is
+exhaustive enumeration over internal-node labellings, sharing no traversal
+with it.
+
 `objective.py` adapts the recursion to `phylo.opt`'s fitting interface. It
 lives here, not in `opt/`, because that package may import no application
 module — the dependency runs application to infrastructure, never back.
+
+`potts.py` and `belief_propagation.py` are the Potts MRF's evaluators:
+exhaustive enumeration and the 2-D strip transfer matrix as exact oracles, and
+sum-product belief propagation as the approximate one they referee.
+
+`hmm_paths.py` enumerates every hidden path of an HMM, on the same footing as
+`brute_force.py` does for a tree: exponential, sharing no recursion with the
+forward algorithm in `phylo.opt.hmm`, and therefore able to referee it. Its
+job is not evidence — the forward recursion computes that faster and they are
+pinned against each other — but to hold *both* decodings of one sequence at
+once, so Viterbi and posterior decoding can be separated by a fixture rather
+than by assertion.
 
 ## Local rules
 
@@ -62,6 +79,40 @@ module — the dependency runs application to infrastructure, never back.
   `CLAUDE.md` states it; here it means a backend is accepted when it agrees
   with the NumPy reference inside that tolerance, and rejected outside it —
   never adjusted until it matches.
+- **An approximate evaluator states which regime carries its correctness.**
+  Belief propagation is exact on a tree and approximate on a loop, so the two
+  regimes get different kinds of test and conflating them would prove nothing.
+  Equality against enumeration is asserted on the tree; on the lattice the
+  deviation from the strip transfer matrix is *reported*, because asserting
+  agreement would assert something false and asserting only that it ran is the
+  coverage theatre root `CLAUDE.md` forbids. What is asserted on the lattice
+  is structure the physics fixes independently: exact at zero coupling, and a
+  deviation peaking near `J_c = ln(1 + sqrt(q))` rather than growing without
+  bound.
+
+- **Refuse rather than return an unconverged number.** A Bethe free energy
+  read off messages that never settled is not an estimate of anything, and a
+  caller cannot distinguish it from one that is. `belief_propagation` raises
+  `ConvergenceError` carrying the residual it stopped at. The same reasoning
+  rejects `damping = 1`, where no message ever updates and every graph would
+  report convergence on the first sweep with the residual identically zero.
+
+- **The oracle for a loopy lattice cannot be enumeration alone.** Enumeration
+  is exponential in the site count and stops at about nine sites; the strip
+  transfer matrix is exponential in the *width* only, so it reaches a 6x4
+  lattice that BP finds hard. It is itself pinned twice — against enumeration
+  where both fit, and by reduction, since a strip of width 1 is a chain and
+  must reproduce `phylo.opt.potts.log_partition` to machine precision.
+
+- **A criterion may be here to be wrong.** `parsimony.py` is not a method
+  this repository advocates; it exists because the Felsenstein zone is the one
+  place where a named criterion's failure is a *theorem* rather than a defect,
+  and almost every other fixture here is a case some method already solves.
+  Its correctness test is therefore paired: parsimony must fail the
+  Felsenstein zone **and** succeed in the Farris zone, because an
+  implementation that is simply broken fails both and the first result alone
+  cannot tell them apart.
+
 - **Rescaling must stay differentiable.** Partial likelihoods underflow, so
   they are rescaled with the log of the scaling accumulated separately. That
   transformation sits inside the autodiff graph.
@@ -80,3 +131,12 @@ module — the dependency runs application to infrastructure, never back.
   ordered by `branch_order(tau)`, separate from the `Node` tree; it never
   reads `Node.branch_length`, so `torch.autograd` differentiates only
   through the tensor, never through Python floats baked into the topology.
+
+- **Viterbi and posterior decoding are different answers, not approximations
+  of each other.** One maximizes a path; the other maximizes each site's
+  marginal independently, and the sequence it returns need not be a path the
+  model favours — on `phylo.sim.canonical.ambiguous_hmm` it is the 5th most
+  likely of 32. They agree on almost every fixture, which is exactly why a
+  decoder that computes one and reports the other survives a suite that never
+  builds a case where they diverge. `hmm_paths.py` reads both off one
+  enumeration, so neither is trusted to validate the other.
