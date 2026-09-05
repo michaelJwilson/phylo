@@ -378,8 +378,8 @@ paths for a 3-state sequence of six. Neither takes an application type, so
 | Requirement | Status |
 | --- | --- |
 | Phylogenetic RF ≤0.05 against simulated truth | **Met**, from 125 sites upward ([#148](https://github.com/michaelJwilson/phylo/pull/148)) |
-| Potts/HMM parameter recovery within 95% intervals | **Met** for the 1-D chain and the discrete HMM ([#116](https://github.com/michaelJwilson/phylo/pull/116)); lattice outstanding |
-| Precise state-sequence decoding | **Not started** — no Viterbi decoder |
+| Potts/HMM parameter recovery within 95% intervals | **Met** for the 1-D chain and the discrete HMM ([#116](https://github.com/michaelJwilson/phylo/pull/116)); lattice outstanding (issue #170) |
+| Precise state-sequence decoding | **Not started** — no Viterbi decoder (issue #175) |
 | Parity with exact oracles on small `n` | **Met** for tree search against exhaustive enumeration ([#128](https://github.com/michaelJwilson/phylo/pull/128)) |
 | Parity with IQ-TREE 2 / RAxML-NG on large `n` | **Not started**; the tools are not in the environment (issue #126) |
 | `O(n×L×k)` memory inside 16 GB / 24 GB | **Not measured**; deterministic and reportable, but no figure exists |
@@ -419,7 +419,8 @@ than drawn with invented data.
   cannot support the claim in either direction, because greedy already reaches
   the enumerated optimum from every start. Separating a policy from greedy
   needs a problem harder than exhaustive enumeration can referee, so the oracle
-  that validates the search cannot validate the agent replacing it.
+  that validates the search cannot validate the agent replacing it
+  (issues #177 and #178).
 - Any comparison against established software. IQ-TREE 2 and RAxML-NG are not
   installed, and no statement anywhere in the repository compares against them.
 - Runtime scaling. Benchmarks are not ranked on CI hardware, so timings live in
