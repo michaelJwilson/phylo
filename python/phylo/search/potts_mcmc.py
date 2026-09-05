@@ -166,7 +166,7 @@ def energies(graph: PottsGraph, field: np.ndarray, states: np.ndarray) -> np.nda
 def _adjacency(graph: PottsGraph) -> list[list[tuple[int, float]]]:
     """Neighbour lists with the coupling on each incident edge."""
     neighbours: list[list[tuple[int, float]]] = [[] for _ in range(graph.n_nodes)]
-    for (first, second), coupling in zip(graph.edges, graph.coupling, strict=True):
+    for (first, second), coupling in graph.weighted_edges():
         neighbours[first].append((second, coupling))
         neighbours[second].append((first, coupling))
     return neighbours

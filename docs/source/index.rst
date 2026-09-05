@@ -15,6 +15,9 @@ whether or not it has members yet.
 .. automodule:: phylo.numerics
    :members:
 
+.. automodule:: phylo.enumeration
+   :members:
+
 .. automodule:: phylo.numerics_rust
    :members:
 

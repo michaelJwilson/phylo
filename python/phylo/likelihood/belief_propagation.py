@@ -30,6 +30,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from phylo.numerics import logsumexp
 from phylo.sim.graph import PottsGraph
 
 # Parallel (flooding) updates with damping. Sequential schedules converge on
@@ -169,11 +170,11 @@ def belief_propagation(
 
         # Everything the source node knows except what the target told it.
         exclusive = inbox[source] - messages[reverse]
-        proposal = _logsumexp((field + exclusive)[:, :, np.newaxis] + log_edge, axis=1)
-        proposal = proposal - _logsumexp(proposal, axis=1)[:, np.newaxis]
+        proposal = logsumexp((field + exclusive)[:, :, np.newaxis] + log_edge, axis=1)
+        proposal = proposal - logsumexp(proposal, axis=1)[:, np.newaxis]
 
         updated = damping * messages + (1.0 - damping) * proposal
-        updated = updated - _logsumexp(updated, axis=1)[:, np.newaxis]
+        updated = updated - logsumexp(updated, axis=1)[:, np.newaxis]
         residual = float(np.abs(updated - messages).max())
         messages = updated
         if residual <= tolerance:
@@ -185,7 +186,7 @@ def belief_propagation(
     inbox = np.zeros((graph.n_nodes, n_states))
     np.add.at(inbox, target, messages)
     log_single = field + inbox
-    log_single = log_single - _logsumexp(log_single, axis=1)[:, np.newaxis]
+    log_single = log_single - logsumexp(log_single, axis=1)[:, np.newaxis]
     single_site = np.exp(log_single)
 
     exclusive = inbox[source] - messages[reverse]
@@ -198,7 +199,7 @@ def belief_propagation(
     )
     log_pair = (
         log_pair
-        - _logsumexp(log_pair.reshape(n_edges, -1), axis=1)[:, np.newaxis, np.newaxis]
+        - logsumexp(log_pair.reshape(n_edges, -1), axis=1)[:, np.newaxis, np.newaxis]
     )
     pairwise = np.exp(log_pair)
 
@@ -235,9 +236,7 @@ def _bethe_free_energy(
     identity = np.eye(field.shape[0])
     degree = np.zeros(graph.n_nodes)
     edge_total = 0.0
-    for position, ((first, second), coupling) in enumerate(
-        zip(graph.edges, graph.coupling, strict=True)
-    ):
+    for position, ((first, second), coupling) in enumerate(graph.weighted_edges()):
         degree[first] += 1
         degree[second] += 1
         log_psi = coupling * identity + field[:, np.newaxis] + field[np.newaxis, :]
@@ -257,20 +256,14 @@ def _disconnected(graph: PottsGraph, field: np.ndarray) -> BeliefPropagationResu
     have to invent a convergence claim. ``log Z`` is ``n_nodes`` copies of the
     single-site normalizer, exactly.
     """
-    log_single = field - _logsumexp(field[np.newaxis, :], axis=1)[0]
+    log_single = field - logsumexp(field[np.newaxis, :], axis=1)[0]
     single_site = np.tile(np.exp(log_single), (graph.n_nodes, 1))
     return BeliefPropagationResult(
         single_site=single_site,
         pairwise=np.zeros((0, field.shape[0], field.shape[0])),
         bethe_log_partition=float(
-            graph.n_nodes * _logsumexp(field[np.newaxis, :], axis=1)[0]
+            graph.n_nodes * logsumexp(field[np.newaxis, :], axis=1)[0]
         ),
         iterations=0,
         residual=0.0,
     )
-
-
-def _logsumexp(values: np.ndarray, axis: int) -> np.ndarray:
-    peak = values.max(axis=axis, keepdims=True)
-    shifted = np.log(np.exp(values - peak).sum(axis=axis, keepdims=True))
-    return np.asarray((peak + shifted).squeeze(axis))

@@ -178,7 +178,12 @@ def test_the_ambiguous_fixture_is_within_the_cap() -> None:
 def test_a_sequence_too_long_to_enumerate_is_refused() -> None:
     params = _params(4, 2, 12, 16)
 
-    with pytest.raises(ValueError, match="exceeds the cap"):
+    # The wording is `phylo.enumeration`'s, shared with every other
+    # enumerator since issue #230; what is asserted here is that this caller
+    # reaches it, and that the message names the size that was too large.
+    with pytest.raises(
+        ValueError, match=r"refusing to enumerate .*4\*\*12 hidden paths"
+    ):
         enumerate_hidden_paths(params, np.zeros(12, dtype=np.int64))
 
 

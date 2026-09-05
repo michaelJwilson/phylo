@@ -28,6 +28,11 @@ fixture                              ``|lnL|``  absolute    relative
 The absolute column spans an order of magnitude; the relative column is flat
 at roughly 0.4 times float32 epsilon, which is the floor. That is why the
 tolerance is relative, and why it is set where it is.
+
+An absolute bound is not merely inconvenient at these magnitudes, it is
+unreachable: near ``|lnL| = 2.4e5`` adjacent float32 values are ``0.0156``
+apart, so no absolute bound tighter than that is achievable in float32 at
+all, however good the kernel.
 """
 
 from __future__ import annotations
