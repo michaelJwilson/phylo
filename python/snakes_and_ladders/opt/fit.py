@@ -269,6 +269,47 @@ def constrained_standard_errors(
     return errors
 
 
+def standard_errors_at(
+    objective: Objective, named: Mapping[str, torch.Tensor]
+) -> Mapping[str, torch.Tensor]:
+    """Delta-method standard errors at a fit stated in the model's parameters.
+
+    The door every optimizer can use. :func:`constrained_standard_errors`
+    takes a ``theta``, which only a gradient fit has; this takes the
+    parameters themselves, which every fit has, and carries them back through
+    :meth:`Objective.theta_from` (issue #268).
+
+    **The refusals are the point, and they are unchanged.** An interval from
+    a Hessian is a statement about a *maximum*, and three things here are not
+    one: a variance at its floor, where the likelihood is unbounded and there
+    is no maximum to expand around; a dispersion at its identifiable bound,
+    where the likelihood is flat and the curvature is numerically
+    indistinguishable from zero; and any point that is simply not an optimum.
+    :func:`parameter_covariance` refuses all three, and this changes nothing
+    about that --- widening the entry point without widening the guard would
+    leave it firing in one code path out of four.
+
+    Parameters
+    ----------
+    objective : Objective
+        The objective the fit belongs to.
+    named : Mapping[str, torch.Tensor]
+        The fitted parameters, under :meth:`Objective.constrain`'s keys.
+
+    Returns
+    -------
+    Mapping[str, torch.Tensor]
+        One tensor per constrained parameter, shaped like that parameter.
+
+    Raises
+    ------
+    ValueError
+        If the observed information at that point is singular, indefinite or
+        worse conditioned than :func:`parameter_covariance` admits.
+    """
+    return constrained_standard_errors(objective, objective.theta_from(named))
+
+
 def covers(
     estimate: torch.Tensor, standard_error: torch.Tensor, truth: torch.Tensor
 ) -> torch.Tensor:
