@@ -17,6 +17,8 @@ A parenthesized number is an issue already filed.
 - Move `PottsParams`/`load_potts_params` out of `snakes_and_ladders.opt.potts`, so
   `simulate_chains` can call the general graph sampler instead of keeping
   its own copy of the exact open-chain recursion (#186)
+- An HMM with negative binomial emissions, the family whose M-step has no
+  closed form (#229)
 - Additional evolutionary models (#107)
 - Rate variation across sites, in the simulator and every backend
 - Simulate at the declared scale — `n` to 1000, `L` to 11000 — and report the
