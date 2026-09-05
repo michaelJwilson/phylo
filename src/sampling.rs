@@ -29,7 +29,7 @@
 //! The implementation (`sample_rows_impl`) is plain Rust with no PyO3 types
 //! so `cargo test` can link it, per `src/pruning.rs`'s module docs.
 
-use pyo3::buffer::PyBuffer;
+use numpy::{PyReadonlyArray1, PyReadwriteArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -42,15 +42,28 @@ use pyo3::prelude::*;
 /// - `rows`: which row each draw comes from, entries in `[0, n_rows)`.
 /// - `draws`: one uniform in `[0, 1)` per entry of `rows`, same length.
 ///
+/// - `out`: where the sampled categories are written, one per entry of
+///   `rows`. Written into rather than returned so the Python binding can
+///   hand over the caller's own array: building a `Vec` and copying it out
+///   is a second pass over the whole result, which at two million draws is
+///   the last copy left at the boundary (issue #202).
+///
 /// # Returns
-/// The sampled category per entry, or `Err` describing the first violated
-/// precondition.
-pub fn sample_rows_impl(
+/// `Ok(())` on success, or `Err` describing the first violated precondition.
+pub fn sample_rows_into(
     distributions: &[f64],
     n_categories: usize,
     rows: &[i64],
     draws: &[f64],
-) -> Result<Vec<i64>, String> {
+    out: &mut [i64],
+) -> Result<(), String> {
+    if out.len() != rows.len() {
+        return Err(format!(
+            "out has {} entries for {} draws",
+            out.len(),
+            rows.len()
+        ));
+    }
     if n_categories == 0 {
         return Err("n_categories must be positive".to_string());
     }
@@ -87,7 +100,6 @@ pub fn sample_rows_impl(
         cumulative[base + n_categories - 1] = 1.0;
     }
 
-    let mut sampled = Vec::with_capacity(rows.len());
     for (index, &row) in rows.iter().enumerate() {
         if row < 0 || row as usize >= n_rows {
             return Err(format!(
@@ -108,41 +120,62 @@ pub fn sample_rows_impl(
                 break;
             }
         }
-        sampled.push(chosen);
+        out[index] = chosen;
     }
+    Ok(())
+}
+
+/// [`sample_rows_into`] with the output allocated here.
+///
+/// The form `cargo test` and `benches/oxiphylo_bench.rs` call: they have no
+/// caller-owned array to write into, and the allocation they pay for is not
+/// the one the Python boundary cares about.
+pub fn sample_rows_impl(
+    distributions: &[f64],
+    n_categories: usize,
+    rows: &[i64],
+    draws: &[f64],
+) -> Result<Vec<i64>, String> {
+    let mut sampled = vec![0_i64; rows.len()];
+    sample_rows_into(distributions, n_categories, rows, draws, &mut sampled)?;
     Ok(sampled)
 }
 
 /// PyO3 wrapper over [`sample_rows_impl`]; converts `Err` to `ValueError`.
 ///
-/// **Arrays cross the boundary through the buffer protocol, and the result is
-/// written into a caller-allocated one.** The obvious binding -- `Vec<f64>`
-/// in, `Vec<i64>` out -- makes PyO3 build a Python list per argument and per
-/// result, and at two million draws that marshalling costs 64 ms in and
-/// 125 ms back against a NumPy oracle that finishes the whole job in 86 ms.
-/// A kernel three times faster than the thing it replaces still loses if the
-/// boundary is priced in objects. `PyBuffer` moves the same data as a
-/// contiguous copy and no Python objects at all.
+/// **Arrays are borrowed, not copied.** The obvious binding -- `Vec<f64>` in,
+/// `Vec<i64>` out -- makes PyO3 build a Python object per element in each
+/// direction, and at two million draws that costs 64 ms in and 125 ms back
+/// against a NumPy oracle that finishes the whole job in 86 ms. Moving to
+/// PyO3's buffer protocol removed the objects but still copied each array
+/// once, which left the caller seeing 1.3x where the kernel runs at 3.6x
+/// (issue #202). `rust-numpy` hands over the buffer itself, so the only work
+/// left at the boundary is writing the result.
 ///
-/// `out` is a writable, C-contiguous `int64` buffer of the same length as
-/// `rows`; the caller allocates it (`numpy.empty`) so that the result never
-/// becomes a list on either side.
+/// `out` is a writable C-contiguous `int64` array the caller allocates, so
+/// the result is never materialized twice.
 #[pyfunction]
 #[pyo3(signature = (distributions, n_categories, rows, draws, out))]
 pub fn sample_rows(
-    py: Python<'_>,
-    distributions: PyBuffer<f64>,
+    distributions: PyReadonlyArray1<'_, f64>,
     n_categories: usize,
-    rows: PyBuffer<i64>,
-    draws: PyBuffer<f64>,
-    out: PyBuffer<i64>,
+    rows: PyReadonlyArray1<'_, i64>,
+    draws: PyReadonlyArray1<'_, f64>,
+    mut out: PyReadwriteArray1<'_, i64>,
 ) -> PyResult<()> {
-    let distributions = distributions.to_vec(py)?;
-    let rows = rows.to_vec(py)?;
-    let draws = draws.to_vec(py)?;
-    let sampled = sample_rows_impl(&distributions, n_categories, &rows, &draws)
+    // `as_slice` succeeds only for a C-contiguous array, so a borrow with
+    // the wrong stride is impossible rather than merely unlikely. Contiguity
+    // is the wrapper's job: `phylo.numerics_rust` calls `ascontiguousarray`,
+    // which is free when the array already is one, so a sliced view is
+    // normalized before it arrives and this check never fires in practice.
+    // It stays because "never fires in practice" is a property of the
+    // current caller and not of the function.
+    let distributions = distributions.as_slice()?;
+    let rows = rows.as_slice()?;
+    let draws = draws.as_slice()?;
+    let destination = out.as_slice_mut()?;
+    sample_rows_into(distributions, n_categories, rows, draws, destination)
         .map_err(PyValueError::new_err)?;
-    out.copy_from_slice(py, &sampled)?;
     Ok(())
 }
 

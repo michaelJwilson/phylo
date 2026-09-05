@@ -87,6 +87,23 @@ def test_the_generator_is_consumed_identically_by_both() -> None:
         )
 
 
+def test_a_non_contiguous_input_gives_the_same_answer() -> None:
+    # Borrowing rather than copying makes stride a real concern where it was
+    # not before. `phylo.numerics_rust` normalizes with `ascontiguousarray`
+    # -- free when the array already is contiguous -- so a sliced view must
+    # still agree with the oracle rather than reading every other element of
+    # something else.
+    distributions = np.random.default_rng(1).dirichlet(np.ones(4), size=4)
+    rows = np.random.default_rng(2).integers(4, size=2000)
+    sliced = rows[::2]
+    assert not sliced.flags["C_CONTIGUOUS"]
+
+    assert np.array_equal(
+        oracle(np.random.default_rng(SEED), distributions, sliced),
+        accelerated(np.random.default_rng(SEED), distributions, sliced),
+    )
+
+
 def test_a_one_dimensional_distribution_is_refused() -> None:
     # Matching the oracle's own refusal: a 1-D distribution has no row to
     # select, and broadcasting past it would sample from the wrong thing.
