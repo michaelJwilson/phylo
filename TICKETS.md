@@ -22,7 +22,7 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.2 — Differentiable Likelihood & Energy Engine
 
-- Expose forward-backward as an evaluator, not as Baum-Welch's internals
+- Expose forward-backward as an evaluator, not as Baum-Welch's internals (#173)
 - One energy/likelihood evaluator API across the three problem classes,
   asserted by an import-graph test
 - CUDA dispatch for the pruning recursion, pinned against the NumPy oracle
@@ -46,8 +46,8 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.4 — Discrete Move Sets & Classical Baselines
 
-- Viterbi decoding, pinned against brute-force path enumeration
-- Iterated conditional modes over HMM state paths
+- Viterbi decoding, pinned against brute-force path enumeration (#175)
+- Iterated conditional modes over HMM state paths (#176)
 - Make the rooted/unrooted distinction explicit and give topologies a canonical
   key (#114)
 - Multi-SPR neighbourhoods, each stating in which sense it is complete and what
@@ -61,14 +61,13 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 2.1 — RL Agent Formulation & Deployment
 
-- Potts and HMM environments behind `phylo.learn.Environment`
 - A feature set for the tree environment, with the unidentifiable-constant
   invariance pinned
-- A tree fixture hard enough to separate a policy from greedy
+- A tree fixture hard enough to separate a policy from greedy (#177)
 - PPO and a learned state-value critic
 - Truth as a terminal penalty, never a training signal
 - Train a phylogenetic policy and report its learning curve against the
-  enumerated expected return
+  enumerated expected return (#178)
 
 ## Milestone 2.2 — Curriculum Learning
 

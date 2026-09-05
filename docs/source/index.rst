@@ -75,6 +75,12 @@ whether or not it has members yet.
 .. automodule:: phylo.opt.fit
    :members:
 
+.. automodule:: phylo.opt.testfunctions
+   :members:
+
+.. automodule:: phylo.opt.hmc
+   :members:
+
 .. automodule:: phylo.opt.potts
    :members:
 
@@ -91,6 +97,9 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: phylo.learn.potts
+   :members:
+
+.. automodule:: phylo.learn.hmm
    :members:
 
 .. automodule:: phylo.learn.rollout

@@ -192,6 +192,45 @@ topology, and the GTR substitution model — and none required a change to
 `phylo.likelihood` or `phylo.search`, so the separation cannot decay by
 convenience import.
 
+**The optimizer is now pinned to minimizers known in closed form, not only to
+likelihood surfaces.** Every earlier test of `fit` measured a statistical
+property — the first-order condition, coverage at the nominal rate, agreement
+with Baum-Welch — under which an optimizer that stops early and a parameter
+that is weakly identified look identical. Three standard test functions
+separate them: Rosenbrock is reached to `1e-11` of its analytic minimizer at
+2, 3 and 5 dimensions, the autodiff gradient matches the hand-written closed
+form exactly on all three functions, and all four of Himmelblau's equal minima
+are reachable, each from its own basin.
+
+The third is a measurement that constrains what may be claimed elsewhere.
+On Rastrigin, over 200 starts drawn uniformly from the standard `+/-5.12`
+domain, a single L-BFGS fit reached the global minimum **0 times**; restricted
+to `+/-2` it reached it in 4%. Every one of those runs reported `converged`,
+because every one satisfied the first-order condition. `converged` is a
+statement about the gradient and says nothing about global optimality, and any
+result resting on a single fit of a multimodal surface has to say so.
+
+**Intervals now have a second, non-asymptotic source.** Hamiltonian Monte
+Carlo samples the posterior over any `Objective`, so an interval can be a
+quantile rather than a curvature estimate at the mode. The integrator is
+pinned where it is exact before anything statistical is claimed: it is
+reversible to `1e-15`, and its energy error is second order in the step size,
+measured at a ratio of exactly 4.00 across four halvings at fixed trajectory
+length. The chain is then checked against two references that are not
+samplers -- an analytic Gaussian, and the Potts chain's own two-dimensional
+posterior integrated on a grid, which it matches to 0.005 in the mean and 10%
+in the spread. On that fixture the Laplace standard error agrees with the
+posterior's to 15%, which is the expected outcome for a well-identified
+two-parameter model and is what would make a disagreement elsewhere
+informative.
+
+**A step size too large biases the spread while the acceptance rate looks
+healthy**, and that is why `HmcChain` reports the per-proposal energy error.
+Measured against quadrature: at a step of 0.020 the acceptance rate was 0.982
+and the posterior standard deviation was 12% low, because divergent
+trajectories are rejected preferentially in the tails. Acceptance rate does
+not detect it; `max |dH|` tracks it monotonically.
+
 **Fitting and intervals.** L-BFGS with a strong-Wolfe line search, convergence
 judged on the gradient relative to the objective's own magnitude, and
 confidence intervals from the observed Fisher information pushed through the
@@ -350,13 +389,26 @@ branch distinguishing them fits to zero and the tree collapses to the same
 polytomy — so a rank correlation moves by up to 0.04 under a perturbation of
 one part in 1e9 and is not a measurement.
 
+**All three problem classes are now MDPs.** `phylo.learn.Environment` had
+one instance, a 1-D Potts chain, which is the same position `phylo.opt` was in
+before four instances made its model-agnosticism a measurement rather than an
+assertion. It now carries the Potts landscape over an arbitrary graph — the
+chain is the one-dimensional case of the same class, not a second one — and
+the hidden Markov state path, whose objective is a decoding problem rather
+than an energy. Both are pinned against the enumerated estimator oracle
+carried over unchanged from the chain, and against exhaustive enumeration of
+their own state spaces: 19,683 configurations for a 3-state 3x3 lattice, 729
+paths for a 3-state sequence of six. Neither takes an application type, so
+`phylo.learn` still imports nothing from `phylo.sim`, `phylo.likelihood` or
+`phylo.search`, and a test asserts it.
+
 ## §1.2 Requirements Ledger
 
 | Requirement | Status |
 | --- | --- |
 | Phylogenetic RF ≤0.05 against simulated truth | **Met**, from 125 sites upward ([#148](https://github.com/michaelJwilson/phylo/pull/148)) |
-| Potts/HMM parameter recovery within 95% intervals | **Met** for the 1-D chain and the discrete HMM ([#116](https://github.com/michaelJwilson/phylo/pull/116)); lattice outstanding |
-| Precise state-sequence decoding | **Not started** — no Viterbi decoder |
+| Potts/HMM parameter recovery within 95% intervals | **Met** for the 1-D chain and the discrete HMM ([#116](https://github.com/michaelJwilson/phylo/pull/116)); lattice outstanding (issue #170) |
+| Precise state-sequence decoding | **Not started** — no Viterbi decoder (issue #175) |
 | Parity with exact oracles on small `n` | **Met** for tree search against exhaustive enumeration ([#128](https://github.com/michaelJwilson/phylo/pull/128)) |
 | Parity with IQ-TREE 2 / RAxML-NG on large `n` | **Not started**; the tools are not in the environment (issue #126) |
 | `O(n×L×k)` memory inside 16 GB / 24 GB | **Not measured**; deterministic and reportable, but no figure exists |
@@ -396,7 +448,8 @@ than drawn with invented data.
   cannot support the claim in either direction, because greedy already reaches
   the enumerated optimum from every start. Separating a policy from greedy
   needs a problem harder than exhaustive enumeration can referee, so the oracle
-  that validates the search cannot validate the agent replacing it.
+  that validates the search cannot validate the agent replacing it
+  (issues #177 and #178).
 - Any comparison against established software. IQ-TREE 2 and RAxML-NG are not
   installed, and no statement anywhere in the repository compares against them.
 - Runtime scaling. Benchmarks are not ranked on CI hardware, so timings live in

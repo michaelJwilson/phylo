@@ -2,9 +2,11 @@ use pyo3::prelude::*;
 
 pub mod maxflow;
 pub mod pruning;
+pub mod sampling;
 
 pub use maxflow::{ising_ground_state, max_flow};
 pub use pruning::pruning_log_likelihood;
+pub use sampling::sample_rows;
 
 /// Doubles an integer.
 ///
@@ -24,6 +26,7 @@ pub fn double(x: i64) -> i64 {
 fn oxiphylo(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(double, m)?)?;
     m.add_function(wrap_pyfunction!(pruning_log_likelihood, m)?)?;
+    m.add_function(wrap_pyfunction!(sample_rows, m)?)?;
     m.add_function(wrap_pyfunction!(max_flow, m)?)?;
     m.add_function(wrap_pyfunction!(ising_ground_state, m)?)?;
     Ok(())
