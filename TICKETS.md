@@ -35,8 +35,6 @@ A parenthesized number is an issue already filed.
 
 ## Milestone 1.3 — Continuous Optimization via Autodiff
 
-- Fit Potts couplings `J` and external fields `h` on the lattice, with
-  intervals whose coverage is measured
 - Fit HMM transition and emission matrices to nominal interval coverage
 - Refuse an unidentifiable fit rather than returning a meaningless interval
   (#122)
