@@ -1,44 +1,48 @@
-"""The memory footprint table's structural claims, checked against measurement
-rather than against the arithmetic that produced the table.
+"""The footprint table publishes a model; this is what pins it to measurement.
 
-``ROADMAP.md`` §1.2 bounds the footprint to ``O(n x L x k)``.
-`phylo.qa.likelihood_footprint` measures three points of the declared scale and
-projects the fourth, and that projection is usable only if three things hold:
-both costs are linear in the taxon-site product at the topology measured, the
-topology measured is the worst case, and the printed table does not move when
-its inputs are perturbed.
+`phylo.qa.likelihood_footprint` computes what the arrays occupy from their
+shapes, because `docs/CLAUDE.md` admits only a number that survives a rebuild on
+another machine and a ``tracemalloc`` peak does not — an earlier draft published
+one and the continuous-integration runner regenerated a different table. That
+moves the burden here: a model nothing checks is arithmetic, not a measurement,
+so every published figure is compared against the allocator's own count.
 
-Byte counts are not pinned. They move with the interpreter and the NumPy
-build, and a test asserting one would fail for the machine rather than for the
-code -- the same reason ``DEV.md`` keeps wall clocks out of CI assertions. The
-*shapes* of the two curves are what the projection rests on, and those are
-properties of the algorithms.
+The comparison is a ratio within a stated tolerance rather than an equality. The
+model omits the transient a matrix product allocates and the interpreter's own
+overhead, both bounded and neither worth modelling; what matters is that nothing
+*unaccounted for* dominates, and a 5% band says so while catching a term left
+out.
 """
 
 from __future__ import annotations
 
-from itertools import pairwise
+import tracemalloc
 
 import numpy as np
 import pytest
-from phylo.qa import likelihood_footprint
+from phylo.likelihood import pruning
 from phylo.qa.likelihood_footprint import (
     DECLARED_MAXIMUM,
+    MEASURED_SIZES,
     MEMORY_BUDGET_BYTES,
-    bytes_per_site_taxon,
     caterpillar,
+    evaluation_bytes,
     measure,
+    simulation_bytes,
     warm_up,
 )
 from phylo.search.rl import with_uniform_branch_lengths
+from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import Node
 
-# Small enough that the whole file runs in seconds: every claim here is about
-# a curve's shape, and a shape is visible at any sizes spanning a factor.
+#: The band the model is held to. Wide enough for the transients it does not
+#: model, narrow enough that a missing array term fails: at 4 states the
+#: evaluator's own array is 8 times the simulator's, so omitting either shows
+#: as a factor, not a percentage.
+TOLERANCE = 0.05
+
 FIXED_TAXA = 16
 FIXED_SITES = 2_000
-SITES_AT_FIXED_TAXA = (2_000, 4_000, 8_000)
-TAXA_AT_FIXED_SITES = (16, 32, 64)
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -69,40 +73,37 @@ def _balanced(n_taxa: int) -> Node:
     return Node(name="root", branch_length=None, children=tuple(level))
 
 
-def test_simulation_memory_is_linear_in_the_taxon_site_product() -> None:
-    """Doubling either taxa or sites doubles what simulation holds.
+@pytest.mark.parametrize(
+    "size", MEASURED_SIZES, ids=lambda s: f"{s[0]}taxa_{s[1]}sites"
+)
+def test_the_published_simulation_figure_matches_the_allocator(
+    size: tuple[int, int],
+) -> None:
+    """Every cell of the Simulate column, against `tracemalloc`.
 
-    The simulator keeps every node's states, so the cost is `2n x L x 8` bytes
-    and each doubling multiplies it by 2. A simulator that kept only the
-    leaves, or that left a per-site temporary alive, would break this in
-    opposite directions.
+    The model is `(2n - 1) x L x 8`: the simulator retains every node's states,
+    internal ones included, because the ancestral truth is what the validation
+    tests compare against. A simulator that kept only the leaves would come in
+    at half this and fail here rather than quietly making the table wrong.
     """
-    at_sites = [measure(FIXED_TAXA, sites)[0] for sites in SITES_AT_FIXED_TAXA]
-    for smaller, larger in pairwise(at_sites):
-        assert larger / smaller == pytest.approx(2.0, rel=0.05)
-
-    at_taxa = [measure(taxa, FIXED_SITES)[0] for taxa in TAXA_AT_FIXED_SITES]
-    for smaller, larger in pairwise(at_taxa):
-        assert larger / smaller == pytest.approx(2.0, rel=0.10)
+    measured, _ = measure(*size)
+    assert measured / simulation_bytes(*size) == pytest.approx(1.0, rel=TOLERANCE)
 
 
-def test_evaluation_memory_is_linear_in_the_taxon_site_product_on_a_caterpillar() -> (
-    None
-):
-    """A caterpillar's depth is its taxon count, so the evaluator is linear too.
+@pytest.mark.parametrize(
+    "size", MEASURED_SIZES, ids=lambda s: f"{s[0]}taxa_{s[1]}sites"
+)
+def test_the_published_evaluation_figure_matches_the_allocator(
+    size: tuple[int, int],
+) -> None:
+    """Every cell of the Evaluate column, against `tracemalloc`.
 
-    Pruning holds one partial likelihood per *open* node, and on the deepest
-    tree every node is open at once. That is what makes ``O(n x L x k)`` tight
-    at this topology rather than loose, and it is why the table's single fitted
-    slope is a fit rather than a shape mismatch papered over.
+    The model is `(2n - 2) x L x k x 8`: on a caterpillar every node but the
+    root is open at the deepest point of the post-order, which is the claim
+    that makes this the worst case and the table a bound.
     """
-    at_sites = [measure(FIXED_TAXA, sites)[1] for sites in SITES_AT_FIXED_TAXA]
-    for smaller, larger in pairwise(at_sites):
-        assert larger / smaller == pytest.approx(2.0, rel=0.05)
-
-    at_taxa = [measure(taxa, FIXED_SITES)[1] for taxa in TAXA_AT_FIXED_SITES]
-    for smaller, larger in pairwise(at_taxa):
-        assert larger / smaller == pytest.approx(2.0, rel=0.10)
+    _, measured = measure(*size)
+    assert measured / evaluation_bytes(*size) == pytest.approx(1.0, rel=TOLERANCE)
 
 
 def test_a_balanced_topology_costs_strictly_less_than_the_caterpillar() -> None:
@@ -110,13 +111,8 @@ def test_a_balanced_topology_costs_strictly_less_than_the_caterpillar() -> None:
 
     Same taxa, same sites, same data volume: only the depth differs. If a
     balanced tree were not cheaper, the caterpillar would not be the bound the
-    caption claims, and the projection would understate the requirement.
+    caption claims and the last row would understate the requirement.
     """
-    import tracemalloc
-
-    from phylo.likelihood import pruning
-    from phylo.sim.simulate import simulate_alignment
-
     pi = np.full(4, 0.25)
     peaks: list[float] = []
     for topology in (_balanced(FIXED_TAXA), caterpillar(FIXED_TAXA)):
@@ -136,60 +132,29 @@ def test_a_balanced_topology_costs_strictly_less_than_the_caterpillar() -> None:
     assert balanced_peak < caterpillar_peak
 
 
-def test_the_declared_maximum_is_projected_inside_the_memory_requirement() -> None:
-    """The bound `ROADMAP.md` states, evaluated at the corner it states it for.
+def test_the_declared_maximum_sits_inside_the_memory_requirement() -> None:
+    """The bound `ROADMAP.md` §1.2 states, at the corner it states it for.
 
-    Measured at three points, fitted through the origin, and projected to 1000
-    taxa by 11,000 sites. The assertion is an order of magnitude of headroom
-    rather than an exact figure, because the byte count is not portable and the
-    margin is what the requirement is about.
+    Asserted as an order of magnitude of headroom rather than an exact figure:
+    the margin is what the requirement is about, and a tight assertion here
+    would fail for a change to the representation rather than for a change that
+    breaks the requirement.
     """
-    sizes = ((16, 2_000), (16, 4_000), (32, 4_000))
-    totals = [sum(measure(taxa, sites)) for taxa, sites in sizes]
-    coefficient = bytes_per_site_taxon(sizes, totals)
-
-    projected = coefficient * DECLARED_MAXIMUM[0] * DECLARED_MAXIMUM[1]
-    assert projected < MEMORY_BUDGET_BYTES / 10
+    taxa, sites = DECLARED_MAXIMUM
+    total = simulation_bytes(taxa, sites) + evaluation_bytes(taxa, sites)
+    assert total < MEMORY_BUDGET_BYTES / 10
 
 
-def test_the_printed_table_does_not_move_when_its_inputs_are_perturbed(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """`docs/CLAUDE.md`'s admissibility check, run rather than asserted in prose.
+def test_the_check_would_fail_on_a_model_missing_a_term() -> None:
+    """The tolerance rejects the error it exists to reject.
 
-    Only a quantity continuous in its inputs may be published, because CI
-    byte-compares the rebuilt artifact. One extra site must leave every
-    measured figure and the whole caption alone. An earlier draft drew the
-    topology from the site count, and this moved the evaluator column by 65%.
+    A 5% band is only a check if a plausible mistake lands outside it. Dropping
+    the internal nodes from the simulator, or the state axis from the
+    evaluator, are the two mistakes available, and both are factors.
     """
-    sizes = ((16, 2_000), (16, 4_000))
-    monkeypatch.setattr(likelihood_footprint, "MEASURED_SIZES", sizes)
-    _, baseline_caption = likelihood_footprint.build_table()
+    taxa, sites = 20, 2_000
+    leaves_only = taxa * sites * 8
+    without_states = (2 * taxa - 2) * sites * 8
 
-    perturbed = tuple((taxa, sites + 1) for taxa, sites in sizes)
-    monkeypatch.setattr(likelihood_footprint, "MEASURED_SIZES", perturbed)
-    _, perturbed_caption = likelihood_footprint.build_table()
-
-    assert perturbed_caption == baseline_caption
-
-
-def test_the_linearity_check_would_fail_on_a_quadratic_curve() -> None:
-    """The fit rejects the shape it exists to reject.
-
-    `bytes_per_site_taxon` fits through the origin, so a cost quadratic in the
-    product -- an evaluator materializing a per-node-pair array, say -- leaves
-    a residual the fit cannot absorb. Asserting that here is what says the
-    tests above measure the curve and not merely the largest point.
-    """
-    sizes = ((16, 2_000), (16, 4_000), (32, 4_000))
-    products = np.array([taxa * sites for taxa, sites in sizes], dtype=float)
-
-    linear = list(products * 32.0)
-    quadratic = list(products**2 * 1e-4)
-
-    assert np.allclose(
-        products * bytes_per_site_taxon(sizes, linear), linear, rtol=1e-12
-    )
-    assert not np.allclose(
-        products * bytes_per_site_taxon(sizes, quadratic), quadratic, rtol=0.1
-    )
+    assert leaves_only / simulation_bytes(taxa, sites) < 1.0 - TOLERANCE
+    assert without_states / evaluation_bytes(taxa, sites) < 1.0 - TOLERANCE

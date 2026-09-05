@@ -3,35 +3,28 @@ declared scale.
 
 ``ROADMAP.md`` §1.2 bounds the footprint to ``O(n x L x k)`` inside 16 GB
 unified memory or 24 GB VRAM, and ``STATUS.md`` recorded that row as **Not
-measured**. This table measures it.
+measured**. This table closes it.
 
-**Why measured rather than derived.** The bound is a statement about what the
-evaluator allocates, and an arithmetic model of that is a restatement of the
-code rather than a check on it -- the 140 MB the Rust backend held live until
-issue #232 was `O(n x L x k)` by the same arithmetic and six times what the
-NumPy oracle needs. What settles the question is the allocator's own count.
+**What is published, and what is measured.** The table is the footprint the
+arrays occupy, computed from their shapes: exact arithmetic, identical on every
+machine, which is what ``docs/CLAUDE.md`` requires of a published number since
+CI byte-compares the rebuilt artifact. A ``tracemalloc`` peak is *not* that --
+an earlier draft published one and the continuous-integration runner
+regenerated a different table, which is the failure mode the rule exists to
+prevent. The measurement is where a tolerance is allowed:
+``tests/regression/qa/test_qa_likelihood_footprint.py`` pins every figure here
+against the allocator's own count, and the realized agreement is 2.5% at the
+smallest cell and 0.3% at the two larger ones.
 
-**Why a caterpillar, and why not a drawn tree.** Pruning holds a partial
-likelihood per *open* node, so its footprint is set by the topology's depth
-rather than by its taxa. A caterpillar is the deepest tree on `n` leaves, so
-it is the worst case and the one a *requirement* is about -- and it is the
-shape at which the roadmap's `O(n x L x k)` is tight rather than loose. It is
-also the only choice that keeps the table admissible: a drawn topology makes
-the evaluator's peak depend on which tree the generator produced, and
-perturbing the site count by one then moved the printed figure by 65%, which
-``docs/CLAUDE.md`` forbids outright.
+**Why a caterpillar.** Pruning holds a partial likelihood per *open* node, so
+its footprint is set by the topology's depth rather than by its taxa. A
+caterpillar is the deepest tree on ``n`` leaves, so it is the worst case, the
+one a *requirement* is about, and the shape at which ``O(n x L x k)`` is tight
+rather than loose. A balanced tree of the same size costs strictly less, which
+is what makes the number a bound.
 
-**Why the printed numbers are stable.** ``docs/CLAUDE.md`` admits only a
-quantity continuous in its inputs, because CI byte-compares the rebuilt
-artifact. A ``tracemalloc`` peak over a fixed topology is continuous in the
-problem size and deterministic for a given interpreter and NumPy build, but
-its last digits are not portable, so every figure is rounded to three
-significant digits and the projection to two. Perturbing the site count by one
-leaves the printed table unchanged, and
-``tests/regression/qa/test_likelihood_footprint.py`` asserts it.
-
-Wall clock is deliberately absent: ``DEV.md`` forbids ranking performance on
-CI hardware, so timings live in ``tests/benchmarks`` instead.
+Wall clock is deliberately absent: ``DEV.md`` forbids ranking performance on CI
+hardware, so timings live in ``tests/benchmarks`` instead.
 """
 
 from __future__ import annotations
@@ -48,53 +41,30 @@ from phylo.search.topology import Topology
 from phylo.sim.simulate import simulate_alignment
 from phylo.sim.tree import Node
 
-#: The declared scale's lower and middle reaches. The upper corner
-#: (``n = 1000``) is projected rather than measured: rendering it on every
-#: documentation build would cost a gigabyte for a number the linear fit
-#: already supplies, and ``tests/regression/qa/test_likelihood_footprint.py``
-#: is where the linearity that licenses the projection is asserted.
+#: The declared scale's lower and middle reaches, the sizes the regression
+#: suite pins the model against.
 MEASURED_SIZES: tuple[tuple[int, int], ...] = ((20, 2_000), (20, 11_000), (100, 11_000))
 
 #: The upper corner of ``ROADMAP.md`` §1.2's declared scale.
 DECLARED_MAXIMUM: tuple[int, int] = (1_000, 11_000)
 
-#: The tighter of the two hardware bounds in ``ROADMAP.md`` §1.2 (16 GB
-#: unified memory against 24 GB VRAM), so the headroom reported is the one
-#: that binds.
+#: The tighter of the two hardware bounds in ``ROADMAP.md`` §1.2 (16 GB unified
+#: memory against 24 GB VRAM), so the headroom reported is the one that binds.
 MEMORY_BUDGET_BYTES: int = 16 * 1024**3
 
-#: States in the alphabet every measurement here runs at.
+#: States in the alphabet every figure here is computed at.
 N_STATES: int = 4
 
-
-def _round_significant(value: float, digits: int) -> float:
-    """Round to ``digits`` significant figures, so the printed table is stable.
-
-    Parameters
-    ----------
-    value : float
-        The quantity to round.
-    digits : int
-        Significant figures to keep.
-
-    Returns
-    -------
-    float
-        ``value`` rounded, or ``0.0`` where it already is.
-    """
-    if value == 0.0:
-        return 0.0
-    exponent = int(np.floor(np.log10(abs(value))))
-    return float(round(value, digits - 1 - exponent))
+#: Bytes per entry. Both arrays are ``int64``/``float64``; a backend that moved
+#: to ``float32`` would halve the second term and is a different table.
+BYTES_PER_ENTRY: int = 8
 
 
 def caterpillar(n_taxa: int) -> Topology:
     """The deepest unrooted topology on ``n_taxa`` leaves, branch lengths unset.
 
     Every internal node has one leaf and one internal child, so the post-order
-    depth is ``n_taxa - 2`` and pruning holds that many partials at once. That
-    is the worst case the requirement has to hold at, and it is deterministic,
-    which a drawn topology is not.
+    depth is ``n_taxa - 2`` and pruning holds that many partials at once.
 
     Parameters
     ----------
@@ -104,8 +74,8 @@ def caterpillar(n_taxa: int) -> Topology:
     Returns
     -------
     Topology
-        A caterpillar rooted at a trifurcation, as
-        ``phylo.search.topology`` represents an unrooted tree.
+        A caterpillar rooted at a trifurcation, as `phylo.search.topology`
+        represents an unrooted tree.
     """
     leaves = [Node(name=f"t{index}", branch_length=None) for index in range(n_taxa)]
     tail: Node = leaves[-1]
@@ -114,20 +84,43 @@ def caterpillar(n_taxa: int) -> Topology:
     return Node(name="root", branch_length=None, children=(leaves[0], leaves[1], tail))
 
 
+def simulation_bytes(n_taxa: int, n_sites: int) -> int:
+    """What the simulator holds: every node's states, leaf and internal alike.
+
+    An unrooted tree on ``n_taxa`` leaves has ``2 * n_taxa - 1`` nodes in the
+    representation this repository uses, and ``simulate_alignment`` retains all
+    of them -- the ancestral states are the truth the validation tests need, so
+    keeping them is the point rather than an oversight.
+
+    Returns
+    -------
+    int
+        Bytes.
+    """
+    return (2 * n_taxa - 1) * n_sites * BYTES_PER_ENTRY
+
+
+def evaluation_bytes(n_taxa: int, n_sites: int, n_states: int = N_STATES) -> int:
+    """What pruning holds on a caterpillar: one ``(n_sites, k)`` partial per node.
+
+    Every node but the root is open at once at the deepest point of a
+    caterpillar's post-order, which is what makes this the worst case.
+
+    Returns
+    -------
+    int
+        Bytes.
+    """
+    return (2 * n_taxa - 2) * n_sites * n_states * BYTES_PER_ENTRY
+
+
 def measure(n_taxa: int, n_sites: int) -> tuple[float, float]:
-    """Peak bytes held while simulating an alignment, and while evaluating it.
+    """Peak bytes the allocator counts, simulating and then evaluating.
 
-    The two are reported apart because they answer different questions: the
-    first is what the *data* costs at this size, which no evaluator can avoid,
-    and the second is what the algorithm adds on top of it. The topology is a
-    caterpillar, so the second is the worst case rather than a draw.
-
-    Parameters
-    ----------
-    n_taxa : int
-        Leaf count.
-    n_sites : int
-        Sites per leaf.
+    Not published: this is what `simulation_bytes` and `evaluation_bytes` are
+    checked against in `tests/regression/qa/test_qa_likelihood_footprint.py`.
+    A ``tracemalloc`` peak does not survive a change of machine, and the table
+    must.
 
     Returns
     -------
@@ -154,162 +147,96 @@ def measure(n_taxa: int, n_sites: int) -> tuple[float, float]:
 def warm_up() -> None:
     """Discard one measurement, so the next is a property of the problem size.
 
-    The first simulation in a process pays NumPy's own one-time allocations
-    and ``tracemalloc`` counts them: measured cold, the smallest cell reads
-    1.29 MB against 0.636 MB warm. That doubling has nothing to do with the
-    problem size, and publishing it would put a figure in the table that moves
-    with call order rather than with its inputs -- exactly what
-    ``docs/CLAUDE.md`` refuses. Both this module and its regression tests call
-    this first, so the fact has one home rather than two.
+    The first simulation in a process pays NumPy's own one-time allocations and
+    ``tracemalloc`` counts them: measured cold, the smallest cell reads twice
+    what it reads warm. Only the regression tests call this, since only they
+    measure.
     """
     measure(*MEASURED_SIZES[0])
 
 
-def bytes_per_site_taxon(
-    sizes: tuple[tuple[int, int], ...], totals: list[float]
-) -> float:
-    """The single coefficient the ``O(n x L x k)`` claim reduces to.
-
-    A least-squares slope through the origin, because the bound has no constant
-    term: an evaluator with a fixed overhead would show as a systematically
-    poor fit rather than being absorbed into an intercept.
-
-    Both costs are linear in the taxon-site product at the topology measured --
-    simulation because it holds every node's states, evaluation because a
-    caterpillar's depth *is* its taxon count -- so one slope is a fit rather
-    than a shape mismatch papered over.
-    ``tests/regression/qa/test_likelihood_footprint.py`` asserts that linearity
-    and that a shallower topology costs strictly less, which together are what
-    make the projection a bound rather than an estimate.
-
-    Parameters
-    ----------
-    sizes : tuple[tuple[int, int], ...]
-        The ``(n_taxa, n_sites)`` pairs measured.
-    totals : list[float]
-        Peak bytes at each, in the same order.
-
-    Returns
-    -------
-    float
-        Bytes per taxon-site.
-    """
-    products = np.array([n_taxa * n_sites for n_taxa, n_sites in sizes], dtype=float)
-    observed = np.asarray(totals, dtype=float)
-    return float(products @ observed / (products @ products))
+def _megabytes(value: int) -> str:
+    """Format bytes as megabytes, three significant digits."""
+    return f"{float(f'{value / 1e6:.3g}'):g}"
 
 
-def render_footprint(
-    rows: list[tuple[int, int, float, float]], coefficient: float
-) -> str:
-    """Build the LaTeX ``tabular``: one row per measured size, then the projection.
-
-    Parameters
-    ----------
-    rows : list[tuple[int, int, float, float]]
-        ``(n_taxa, n_sites, simulate_bytes, evaluate_bytes)`` per measured size.
-    coefficient : float
-        Bytes per taxon-site, from :func:`bytes_per_site_taxon`.
+def render_footprint() -> str:
+    """Build the LaTeX ``tabular``: the measured sizes, then the declared maximum.
 
     Returns
     -------
     str
         A complete ``tabular`` environment.
     """
-    body = [
+    rows = [
         " & ".join(
             [
                 latex_integer(n_taxa),
                 latex_integer(n_sites),
-                f"{_round_significant(simulate_bytes / 1e6, 3):g}",
-                f"{_round_significant(evaluate_bytes / 1e6, 3):g}",
-                f"{_round_significant((simulate_bytes + evaluate_bytes) / 1e6, 3):g}",
+                _megabytes(simulation_bytes(n_taxa, n_sites)),
+                _megabytes(evaluation_bytes(n_taxa, n_sites)),
+                _megabytes(
+                    simulation_bytes(n_taxa, n_sites)
+                    + evaluation_bytes(n_taxa, n_sites)
+                ),
             ]
         )
         + r" \\"
-        for n_taxa, n_sites, simulate_bytes, evaluate_bytes in rows
+        for n_taxa, n_sites in (*MEASURED_SIZES, DECLARED_MAXIMUM)
     ]
-    projected_taxa, projected_sites = DECLARED_MAXIMUM
-    projected = coefficient * projected_taxa * projected_sites
-    projection = (
-        " & ".join(
-            [
-                latex_integer(projected_taxa),
-                latex_integer(projected_sites),
-                r"\multicolumn{2}{c}{projected}",
-                f"{_round_significant(projected / 1e6, 2):g}",
-            ]
-        )
-        + r" \\"
-    )
     return "\n".join(
         [
             r"\begin{tabular}{rrrrr}",
             r"  \toprule",
             r"  Taxa & Sites & Simulate (MB) & Evaluate (MB) & Total (MB) \\",
             r"  \midrule",
-            *(f"  {row}" for row in body),
+            *(f"  {row}" for row in rows[:-1]),
             r"  \midrule",
-            f"  {projection}",
+            f"  {rows[-1]}",
             r"  \bottomrule",
             r"\end{tabular}",
         ]
     )
 
 
-def build_caption(coefficient: float) -> str:
+def build_caption() -> str:
     """Caption text for the footprint table.
-
-    Parameters
-    ----------
-    coefficient : float
-        Bytes per taxon-site.
 
     Returns
     -------
     str
         Plain-text caption, safe to ``\\input`` into LaTeX verbatim.
     """
-    projected_taxa, projected_sites = DECLARED_MAXIMUM
-    projected = coefficient * projected_taxa * projected_sites
-    headroom = MEMORY_BUDGET_BYTES / projected
+    taxa, sites = DECLARED_MAXIMUM
+    total = simulation_bytes(taxa, sites) + evaluation_bytes(taxa, sites)
+    headroom = f"{float(f'{MEMORY_BUDGET_BYTES / total:.2g}'):g}"
     return (
-        "Peak memory held while simulating a Jukes-Cantor alignment and while "
-        f"evaluating its likelihood by pruning, at {N_STATES} states, over "
-        "three points of the declared scale, counted by tracemalloc. The "
-        f"fitted cost is {_round_significant(coefficient, 3):g} bytes per "
-        "taxon-site with no constant term, from which the last row projects "
-        f"the declared maximum of {latex_integer(projected_taxa)} taxa and "
-        f"{latex_integer(projected_sites)} sites. That projection sits a "
-        f"factor of {_round_significant(headroom, 2):g} inside the 16 GB "
-        "unified-memory requirement. The topology is a caterpillar at every "
-        "size, which is the deepest tree on its leaves and so the worst case "
-        "for an evaluator holding one partial likelihood per open node: a "
-        "balanced tree of the same taxon count costs strictly less. Every "
-        "figure is rounded so the printed table does not move with the "
-        "allocator's last digits; timings are reported in the benchmark suite "
-        "instead, because a wall clock ranks the machine rather than the code."
+        "Memory held while simulating a Jukes-Cantor alignment and while "
+        f"evaluating its likelihood by pruning, at {N_STATES} states, across "
+        "the declared scale. The simulator retains every node's states and "
+        "pruning retains one partial likelihood per open node, so both are "
+        "computed from the arrays' own shapes and are exact rather than "
+        "sampled; the regression suite pins each figure against the "
+        "allocator's count. The last row is the declared maximum of "
+        f"{latex_integer(taxa)} taxa and {latex_integer(sites)} sites, which "
+        f"sits a factor of {headroom} inside the 16 GB unified-memory "
+        "requirement. The topology is a caterpillar at every size, the deepest "
+        "tree on its leaves and so the worst case: a balanced tree of the same "
+        "taxon count costs strictly less. Timings are reported in the benchmark "
+        "suite instead, because a wall clock ranks the machine rather than the "
+        "code."
     )
 
 
 def build_table() -> tuple[str, str]:
-    """Measure every size and assemble the ``tabular`` body and its caption.
+    """Assemble the ``tabular`` body and its caption.
 
     Returns
     -------
     tuple[str, str]
         The ``tabular`` body and the caption.
     """
-    warm_up()
-
-    rows: list[tuple[int, int, float, float]] = []
-    totals: list[float] = []
-    for n_taxa, n_sites in MEASURED_SIZES:
-        simulate_bytes, evaluate_bytes = measure(n_taxa, n_sites)
-        rows.append((n_taxa, n_sites, simulate_bytes, evaluate_bytes))
-        totals.append(simulate_bytes + evaluate_bytes)
-    coefficient = bytes_per_site_taxon(MEASURED_SIZES, totals)
-    return render_footprint(rows, coefficient), build_caption(coefficient)
+    return render_footprint(), build_caption()
 
 
 def main(argv: list[str] | None = None) -> QATable:

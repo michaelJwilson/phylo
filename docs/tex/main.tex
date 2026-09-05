@@ -122,7 +122,7 @@ The following figures validate the mathematical exactness of the simulation and 
 \subsection{Memory Footprint at the Declared Scale}
 \label{sec:res-footprint}
 
-The roadmap bounds the working set to $O(n \times L \times k)$ inside 16\,GB of unified memory. Table~\ref{tab:likelihood-footprint} measures it, splitting the cost the data carries from the cost the evaluator adds: the simulator retains every node's states and so is linear in the taxon-site product, while pruning retains a partial likelihood only for nodes whose parent has not yet consumed it, and so tracks the tree's depth. Fitting one line through both therefore over-states the total past the sizes measured, which is the direction a memory bound needs to be wrong in.
+The roadmap bounds the working set to $O(n \times L \times k)$ inside 16\,GB of unified memory. Table~\ref{tab:likelihood-footprint} settles it, splitting the cost the data carries from the cost the evaluator adds: the simulator retains every node's states, while pruning retains a partial likelihood only for nodes whose parent has not yet consumed it and so tracks the tree's depth. Both are reported on a caterpillar, the deepest tree on its leaves, which makes the bound tight rather than loose and the reported total a worst case rather than a typical one.
 
 \qacaptionread{figures/likelihood_footprint_caption.txt}{\likelihoodFootprintCaption}
 \begin{table}[htbp]
