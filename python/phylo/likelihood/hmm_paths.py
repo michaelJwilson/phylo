@@ -31,12 +31,14 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from phylo.enumeration import MAX_ENUMERABLE_CONFIGURATIONS, refuse_oversized
 from phylo.sim.hmm import HmmParams
 
-#: Above this the enumeration is refused rather than attempted. ``k ** T``
-#: paths times ``T`` sites is the work, and a test killed for memory reads as
-#: an infrastructure failure rather than the stated limit it is.
-MAX_ENUMERABLE_PATHS = 200_000
+#: A path is one configuration, so this is
+#: :data:`phylo.enumeration.MAX_ENUMERABLE_CONFIGURATIONS` under the name the
+#: callers here use. Kept as an alias rather than a second number, so the two
+#: cannot drift (issue #230).
+MAX_ENUMERABLE_PATHS = MAX_ENUMERABLE_CONFIGURATIONS
 
 
 @dataclass(frozen=True)
@@ -125,12 +127,11 @@ def enumerate_hidden_paths(
             f"[{int(observations.min())}, {int(observations.max())}]"
         )
         raise ValueError(msg)
-    if params.n_states**length > max_paths:
-        msg = (
-            f"enumerating {params.n_states}**{length} paths exceeds the cap "
-            f"of {max_paths}"
-        )
-        raise ValueError(msg)
+    refuse_oversized(
+        params.n_states**length,
+        what=f"{params.n_states}**{length} hidden paths",
+        limit=max_paths,
+    )
 
     log_joint: list[float] = []
     paths: list[np.ndarray] = []

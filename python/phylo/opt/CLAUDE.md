@@ -7,7 +7,9 @@ one instance of it rather than its author.
 
 Root `CLAUDE.md` holds the repository-wide rules, and its **Writing Style**
 section binds this file too — and every docstring, comment and commit message
-in this module. It is referenced here, never restated. What follows is local.
+in this module. It is referenced here, never restated. What follows is local,
+and is principle: the numbers behind each rule live with the code that
+produces them or in `STATUS.md`, and the module docstrings say which.
 
 ## What lives here
 
@@ -27,10 +29,9 @@ independent oracle for its own objective. They exist so the interface is
 tested against something that is not a tree. The phylogenetic instance
 belongs with them, as another instance.
 
-`hmm.py`'s truth type (`HmmParams`) and its data generator live in
-`phylo.sim.hmm`; this module imports the type and fits, but does not draw
-data — the same split `potts.py`'s own generator is moving towards
-(issue #170).
+Truth types and data generation live in `phylo.sim`; a reference instance
+here imports the type and fits, but draws no data. Issue #186 tracks the last
+instance still holding its own generator.
 
 ## Framework
 
@@ -41,24 +42,22 @@ Apple Silicon path the memory requirement in `ROADMAP.md` assumes.
 ## Local rules
 
 - **`converged` is a statement about the gradient, never about the global
-  minimum.** On Rastrigin, 200 uniform starts over the standard domain reached
-  the global minimum 0 times and every run reported converged, because every
-  run satisfied the first-order condition. A result that rests on a single fit
-  of a surface that may be multimodal states that, or reports a multi-start
-  rate instead (`testfunctions.py`).
+  minimum.** A run satisfying the first-order condition reports convergence
+  wherever it stopped, and on a multimodal surface that is routinely a local
+  minimum. A result resting on a single fit of such a surface says so, or
+  reports a multi-start rate instead.
 
 - **A test function is not a likelihood, so it has no observed information.**
-  `constrained_standard_errors` must not be called on one: the Hessian at
-  Rosenbrock's minimum is a curvature, not an information matrix, and an
-  interval built from it would carry no meaning. Issue #122 covers the general
-  form of this.
+  The Hessian at its minimum is a curvature rather than an information matrix,
+  and an interval built from it carries no meaning. Issue #122 covers the
+  general form: an interval is refused where the quantity it would summarize
+  does not exist.
 
-- **An acceptance rate is not a diagnostic on its own.** A leapfrog step too
-  large biases a posterior's *spread* downward while leaving its mean right
-  and its acceptance rate healthy: measured at 0.982 acceptance with the
-  standard deviation 12% low, because divergent trajectories are rejected
-  preferentially in the tails. The energy error tracks it and the acceptance
-  rate does not, so `hmc.HmcChain` carries both.
+- **An acceptance rate is not a diagnostic on its own.** An integrator step
+  too large biases a posterior's *spread* downward while leaving its mean
+  right and its acceptance rate healthy, because divergent trajectories are
+  rejected preferentially in the tails. The energy error tracks that and the
+  acceptance rate does not, so a sampler here reports both.
 
 - **A negative log-likelihood is not a log posterior.** Reading a bare
   likelihood as a density is a posterior under an improper flat prior, which
@@ -75,29 +74,27 @@ Apple Silicon path the memory requirement in `ROADMAP.md` assumes.
   a log or softplus map, the root distribution through a softmax, rate
   parameters positive through a log map. An optimizer that has to be stopped
   from leaving the feasible set will eventually leave it.
-- **Gauge-fix, or a fitted parameter has no value.** A softmax over `n`
-  logits is invariant to adding a constant to all of them; a Potts field is
-  invariant to the same shift. `constrain.log_simplex` pins the first logit
-  so the map is a bijection onto the simplex. Without that the observed
-  information is singular and a confidence interval is undefined.
+- **Gauge-fix, or a fitted parameter has no value.** Where a
+  reparameterization leaves the likelihood unchanged, the direction along it
+  is not estimable: the observed information is singular and an interval is
+  undefined. The constraint map removes the freedom rather than the optimizer
+  tolerating it.
 - **Finite differences are the derivative test that matters here.** Root
-  `CLAUDE.md` requires the check; this is the module where a wrong derivative
-  in the pruning recursion surfaces, and nothing else catches it. The check
-  is shared (`tests/_objective_checks.py`) and compares relative to the
-  gradient's norm — entrywise relative fails at a symmetric starting point,
-  where entries are exactly zero, and absolute does not transfer across data
-  sizes.
+  `CLAUDE.md` requires the check, and this is the module where a wrong
+  derivative surfaces. The comparison is relative to the gradient's norm:
+  entrywise relative fails wherever an entry is exactly zero, and absolute
+  does not transfer across data sizes.
 - **Every threshold is relative, inside the optimizer too.** Convergence is
-  the gradient's infinity norm against the objective's own magnitude, and
-  L-BFGS's own `tolerance_grad`/`tolerance_change` are switched **off**: their
-  defaults are absolute, so on a summed log-likelihood they halt the inner
-  loop long before the gradient is small relative to the objective. That is
-  issue #111's failure inside the optimizer rather than in a test.
-- **A symmetric starting point can be a stationary point.** The HMM's uniform
-  parameters are one: with every hidden state identical, the gradient in the
-  initial and transition blocks is exactly zero, and a fit started there
-  returns a one-state model while appearing to make progress. Starting points
-  break the symmetry deterministically, and a test pins the reason.
+  the gradient's norm against the objective's own magnitude. A library's
+  absolute stopping tolerance halts a summed log-likelihood long before its
+  gradient is small relative to the objective, so those are switched off
+  rather than trusted — the same failure a test would have with an absolute
+  bound, one layer down.
+- **A symmetric starting point can be a stationary point.** Where a model's
+  parameters are exchangeable, the symmetric point has an exactly zero
+  gradient in the exchangeable block and a fit started there never leaves it,
+  while appearing to make progress. Starting points break the symmetry
+  deterministically, and a test pins the reason.
 - **Recovery is the acceptance test.** Fit simulated data with known
   parameters and require the confidence intervals to cover the truth at the
   nominal rate. A likelihood that increases proves the optimizer runs, not

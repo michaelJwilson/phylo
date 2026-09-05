@@ -190,7 +190,9 @@ def test_the_cut_does_not_depend_on_the_sign_of_the_coupling() -> None:
 def test_enumeration_refuses_a_size_it_cannot_do() -> None:
     graph = lattice_graph((5, 5), BoundaryCondition.OPEN, 1.0)
 
-    with pytest.raises(ValueError, match="exceeds the cap"):
+    with pytest.raises(
+        ValueError, match=r"refusing to enumerate .*2\*\*25 assignments"
+    ):
         enumerate_max_cut(graph)
 
 

@@ -260,7 +260,7 @@ def planted_spin_glass(
     graph = PottsGraph(n_nodes=n_nodes, edges=skeleton.edges, coupling=tuple(coupling))
     energy = -sum(
         weight
-        for (first, second), weight in zip(graph.edges, graph.coupling, strict=True)
+        for (first, second), weight in graph.weighted_edges()
         if planted[first] == planted[second]
     )
     return PlantedSpinGlass(

@@ -10,6 +10,13 @@ and `phylo.opt.hmm` -- and the three copies drifted: two of them omitted the
 guard the third had, which is the difference between a valid state index and
 one past the end of the alphabet. A helper with one home cannot drift from
 itself.
+
+`logsumexp` arrived here for the same reason and by the same route (issue
+#230): four private copies in two spellings, across `phylo.sim.potts`,
+`phylo.opt.potts`, `phylo.likelihood.potts` and
+`phylo.likelihood.belief_propagation`. They had not drifted in *behaviour* --
+the two spellings compute the same thing -- which is what makes consolidating
+them safe, and what would have made a later divergence hard to notice.
 """
 
 from __future__ import annotations
@@ -72,3 +79,37 @@ def sample_rows(
     draws = rng.random(size=(int(rows.shape[0]),))
     selected: np.ndarray = np.argmax(draws[:, np.newaxis] < cumulative[rows], axis=1)
     return selected
+
+
+def logsumexp(values: np.ndarray, axis: int) -> np.ndarray:
+    """``log(sum(exp(values)))`` along ``axis``, shifted by the maximum.
+
+    The shift is the whole point: a Potts coupling of ``J = 2`` on a 4x4
+    lattice puts ``exp(32)`` inside a product of sixteen messages, and the
+    linear-domain recursion loses it. Subtracting the row maximum before
+    exponentiating bounds every term at 1, and adding it back afterwards is
+    exact.
+
+    Parameters
+    ----------
+    values : np.ndarray
+        Log-domain values.
+    axis : int
+        Axis to reduce. It is removed from the result, as ``np.max`` without
+        ``keepdims`` would remove it.
+
+    Returns
+    -------
+    np.ndarray
+        The reduction, with ``axis`` removed.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> float(logsumexp(np.array([[0.0, 0.0]]), axis=1)[0])
+    0.6931471805599453
+    """
+    peak = values.max(axis=axis, keepdims=True)
+    shifted = np.log(np.exp(values - peak).sum(axis=axis, keepdims=True))
+    result: np.ndarray = (peak + shifted).squeeze(axis)
+    return result
