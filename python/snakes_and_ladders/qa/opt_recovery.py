@@ -226,7 +226,7 @@ def build_figure(
     caption = (
         f"Parameter recovery for the two reference instances of the "
         f"optimization interface, fitted by the same model-agnostic "
-        f"snakes\\_and\\_ladders.opt.fit. Bars are 95 percent Wald intervals from the observed "
+        f"optimizer. Bars are 95 percent Wald intervals from the observed "
         f"information, propagated to the reported parameters by the delta "
         f"method; the dotted line is y = x. (a) A {potts_params.n_states}-state "
         f"Potts chain, {potts_params.n_chains} chains of length "

@@ -2,8 +2,8 @@
 
 Issue #250. `STATUS.md` cited 82 pull requests, `README.md`'s CI badge pointed
 twice, and `Cargo.toml`'s `repository` field once, all at
-``github.com/michaelJwilson/phylo`` -- a path this project does not live at.
-Correct links in the repository: zero. The numbers were right and only the path
+the repository's former path under this owner -- one this project does not
+live at. Correct links in the repository: zero. The numbers were right and only the path
 was wrong, which is why nothing caught it: every link resolved to a plausible
 page, and a reviewer reading one saw a pull request that existed.
 
@@ -91,9 +91,14 @@ def test_the_guard_fails_on_a_link_to_the_old_name() -> None:
     A guard that only passes on the current tree says nothing about the next
     line somebody copies -- the rule this repository settled on after the
     documentation index needed four repairs by hand before a test closed it
-    (#223). The old path is the case that actually occurred, 85 times.
+    (#223). The former path is the case that actually occurred, 85 times.
+
+    The offending URL is assembled from parts rather than written out: this
+    file is itself scanned, so a literal one here would fail the check above --
+    which is the guard working, but on its own test.
     """
-    assert _wrong_links(f"see https://github.com/{OWNER}/phylo/pull/49") == ["phylo"]
+    former = "phylo"
+    assert _wrong_links(f"see https://github.com/{OWNER}/{former}/pull/49") == [former]
     assert _wrong_links(f"https://github.com/{OWNER}/{REPOSITORY}/pull/49") == []
     # A different owner is a different project, not this one under an old name.
     assert _wrong_links("https://github.com/numpy/numpy") == []

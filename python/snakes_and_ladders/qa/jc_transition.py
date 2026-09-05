@@ -187,7 +187,7 @@ def build_figure(params: SimulationParams) -> tuple[Figure, str]:
 
     caption = (
         f"Closed-form {_MODEL_NAME} transition probabilities for k = {params.k} "
-        f"(curves) against the frequencies snakes\\_and\\_ladders.sim.simulate produced "
+        f"(curves) against the frequencies the simulator produced "
         f"(markers), one pair per branch of the {len(points)}-branch fixture "
         f"tree. Simulated at seed {params.seed} over {params.n_sites} sites. "
         f"Largest deviation {worst:.2e}, within the fixture's declared Monte "
