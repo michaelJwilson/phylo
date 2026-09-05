@@ -8,13 +8,14 @@ Guidance for Claude Code when working in this repository.
 3.  **Stay neutral and objective:** Avoid hype, subjective opinions, and weak qualifiers. Use nouns and verbs; avoid adjectives and adverbs.
 4.  **Provide evidence:** Back every claim in PRs/commits with benchmark numbers, test validated outputs, or reproductions.
 5.  **Maintain formatting:** Apply naming, terminology, and syntax consistently.
+6.  ***CLAUDE.md edits are rare* Do not add technical details to CLAUDE.md files, but principles.  These edits are rare, as principles become clear.
 
 These rules govern everything written in this repository: every document, each module's `CLAUDE.md` included, and every docstring, comment, commit message, pull-request body, and plan or comment posted to a ticket thread. They are stated here once and referenced from the module files rather than copied into them, so there is one text to change and nothing to fall out of step with it.
 
 **Expected Reader:** a well-educated developer with scientific and performance-computing background, but not an application expert, e.g. phylogenetics. Keep tech. doc. streamlined — hyperlinks and citations over inline derivation — and push required application background (e.g. NNI, other standard algorithms) into a dedicated appendix, cited from the point of use rather than re-derived there. Treat the main text as a high-level overview of the current best-known approach (simulation, models, results) in terms of the roadmap, not an exhaustive record; link out to supporting docs, with plots, and results for dedicated studies that informed the technical doc. Adopt the style of an academic paper, supported by textbook style appendices on domain-specific material likely new to the developer.
 
 ## Project
-`phylo` is a high-performance scientific repository. Correctness and reproducibility of numerical and scientific results take priority over convenience.
+`snakes_and_ladders` is a high-performance scientific repository. Correctness and reproducibility of numerical and scientific results take priority over convenience.
 
 Two concerns are supported, and they must stay separable:
 
