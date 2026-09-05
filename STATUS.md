@@ -360,6 +360,19 @@ branch distinguishing them fits to zero and the tree collapses to the same
 polytomy — so a rank correlation moves by up to 0.04 under a perturbation of
 one part in 1e9 and is not a measurement.
 
+**All three problem classes are now MDPs.** `phylo.learn.Environment` had
+one instance, a 1-D Potts chain, which is the same position `phylo.opt` was in
+before four instances made its model-agnosticism a measurement rather than an
+assertion. It now carries the Potts landscape over an arbitrary graph — the
+chain is the one-dimensional case of the same class, not a second one — and
+the hidden Markov state path, whose objective is a decoding problem rather
+than an energy. Both are pinned against the enumerated estimator oracle
+carried over unchanged from the chain, and against exhaustive enumeration of
+their own state spaces: 19,683 configurations for a 3-state 3x3 lattice, 729
+paths for a 3-state sequence of six. Neither takes an application type, so
+`phylo.learn` still imports nothing from `phylo.sim`, `phylo.likelihood` or
+`phylo.search`, and a test asserts it.
+
 ## §1.2 Requirements Ledger
 
 | Requirement | Status |
