@@ -13,10 +13,10 @@ unsafe answer is the one that looks like a saving.
 
 Root `CLAUDE.md` holds the repository-wide rules, and its **Writing Style**
 section binds this file too — and every docstring, comment and commit message
-in this module. It is referenced here, never restated. What follows is local. `DEV.md` holds the CI
-budget, the repository settings, and the eight CI jobs — including the two
-that bind hardest here: discrete problem sizes, e.g. trees, are capped at `n <= 10`,
-so tests complete.
+in this module. It is referenced here, never restated. What follows is local,
+and is principle: `DEV.md` holds the CI budget, the repository settings and
+the CI jobs, including the size caps that keep an exact oracle available, and
+is not restated here.
 
 ## Tickets and the approval flow
 
@@ -36,13 +36,8 @@ so tests complete.
   mid-implementation leaves a ticket that already points at the in-flight
   branch, instead of requiring a search across open branches and PRs to find
   it.
-- **A plan is 2–5 steps**, or more where the work needs them and the plan
-  says why, each stating how it will be validated — the analytic result,
-  brute-force computation or enumeration it is checked against, not "tests
-  pass". It ends with an `Open Questions` section carrying every question on
-  the desired behaviour, so a reviewer finds them in one place; a plan with
-  none says so under that heading rather than omitting it. This is the shape
-  the agent writing the plan needs, so it is stated here as well as in
-  `ROADMAP.md` §0.2 — per root `CLAUDE.md`, the two must agree.
+- **A plan has a required shape**, stated in `ROADMAP.md` §0.2 and not
+  restated here: a plan that does not carry its own validation is a proposal
+  to find out later whether the work was right.
 - **A plan is subject to the Writing Style**, like everything else written
   here. Referenced, not restated: root `CLAUDE.md` holds it.
