@@ -194,6 +194,27 @@ because every one satisfied the first-order condition. `converged` is a
 statement about the gradient and says nothing about global optimality, and any
 result resting on a single fit of a multimodal surface has to say so.
 
+**Intervals now have a second, non-asymptotic source.** Hamiltonian Monte
+Carlo samples the posterior over any `Objective`, so an interval can be a
+quantile rather than a curvature estimate at the mode. The integrator is
+pinned where it is exact before anything statistical is claimed: it is
+reversible to `1e-15`, and its energy error is second order in the step size,
+measured at a ratio of exactly 4.00 across four halvings at fixed trajectory
+length. The chain is then checked against two references that are not
+samplers -- an analytic Gaussian, and the Potts chain's own two-dimensional
+posterior integrated on a grid, which it matches to 0.005 in the mean and 10%
+in the spread. On that fixture the Laplace standard error agrees with the
+posterior's to 15%, which is the expected outcome for a well-identified
+two-parameter model and is what would make a disagreement elsewhere
+informative.
+
+**A step size too large biases the spread while the acceptance rate looks
+healthy**, and that is why `HmcChain` reports the per-proposal energy error.
+Measured against quadrature: at a step of 0.020 the acceptance rate was 0.982
+and the posterior standard deviation was 12% low, because divergent
+trajectories are rejected preferentially in the tails. Acceptance rate does
+not detect it; `max |dH|` tracks it monotonically.
+
 **Fitting and intervals.** L-BFGS with a strong-Wolfe line search, convergence
 judged on the gradient relative to the objective's own magnitude, and
 confidence intervals from the observed Fisher information pushed through the

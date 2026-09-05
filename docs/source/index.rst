@@ -72,6 +72,9 @@ whether or not it has members yet.
 .. automodule:: phylo.opt.testfunctions
    :members:
 
+.. automodule:: phylo.opt.hmc
+   :members:
+
 .. automodule:: phylo.opt.potts
    :members:
 
