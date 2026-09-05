@@ -40,6 +40,7 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 
+from phylo.enumeration import refuse_oversized
 from phylo.sim.graph import PottsGraph
 
 # The Goemans-Williamson constant: the expected ratio of the rounded cut to
@@ -76,7 +77,7 @@ class MaxCutResult:
 def cut_value(graph: PottsGraph, assignment: np.ndarray) -> float:
     """Total weight of the edges this assignment separates."""
     total = 0.0
-    for (first, second), weight in zip(graph.edges, graph.coupling, strict=True):
+    for (first, second), weight in graph.weighted_edges():
         if assignment[first] != assignment[second]:
             total += abs(weight)
     return total
@@ -99,12 +100,11 @@ def enumerate_max_cut(
         rather than attempted, so the failure is a stated limit rather than a
         test killed for memory.
     """
-    if graph.n_nodes > max_nodes:
-        msg = (
-            f"enumerating 2**{graph.n_nodes} assignments exceeds the cap of "
-            f"2**{max_nodes}"
-        )
-        raise ValueError(msg)
+    refuse_oversized(
+        2**graph.n_nodes,
+        what=f"2**{graph.n_nodes} assignments",
+        limit=2**max_nodes,
+    )
 
     best_value = -1.0
     best = np.zeros(graph.n_nodes, dtype=np.int64)
@@ -156,7 +156,7 @@ def goemans_williamson(
         realized ratio typically beats the expected one by a wide margin.
     """
     weights = torch.zeros((graph.n_nodes, graph.n_nodes), dtype=torch.float64)
-    for (first, second), coupling in zip(graph.edges, graph.coupling, strict=True):
+    for (first, second), coupling in graph.weighted_edges():
         weights[first, second] += abs(coupling)
         weights[second, first] += abs(coupling)
 
