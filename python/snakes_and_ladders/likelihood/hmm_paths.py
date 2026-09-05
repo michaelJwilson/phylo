@@ -126,8 +126,7 @@ def _path_log_probability(
     total = float(log_initial[path[0]] + log_density[0, path[0]])
     for step in range(1, len(path)):
         total += float(
-            log_transition[path[step - 1], path[step]]
-            + log_density[step, path[step]]
+            log_transition[path[step - 1], path[step]] + log_density[step, path[step]]
         )
     return total
 

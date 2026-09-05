@@ -163,9 +163,7 @@ class HmmObjective(_HmmObjective):
         """The categorical family ``theta``'s emission block encodes."""
         return CategoricalEmission.from_log(
             log_simplex(
-                theta[self._emission_slice].reshape(
-                    self._n_states, self._n_symbols - 1
-                )
+                theta[self._emission_slice].reshape(self._n_states, self._n_symbols - 1)
             )
         )
 

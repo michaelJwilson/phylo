@@ -259,10 +259,7 @@ class CategoricalEmission:
         """Raise if a symbol lies outside the alphabet."""
         low, high = int(observations.min()), int(observations.max())
         if low < 0 or high >= self.n_symbols:
-            msg = (
-                f"observations must lie in [0, {self.n_symbols}), got "
-                f"[{low}, {high}]"
-            )
+            msg = f"observations must lie in [0, {self.n_symbols}), got [{low}, {high}]"
             raise ValueError(msg)
 
     def reestimate(
@@ -273,9 +270,7 @@ class CategoricalEmission:
             observations.reshape(-1).to(torch.long), self.n_symbols
         ).to(posterior.dtype)
         weights = posterior.reshape(-1, self.n_states)
-        counts = torch.log(
-            weights.t() @ mask + torch.finfo(posterior.dtype).tiny
-        )
+        counts = torch.log(weights.t() @ mask + torch.finfo(posterior.dtype).tiny)
         return CategoricalEmission.from_log(
             counts - torch.logsumexp(counts, dim=1, keepdim=True)
         )

@@ -13,6 +13,7 @@ import itertools
 import numpy as np
 import pytest
 import torch
+from snakes_and_ladders.emissions import CategoricalEmission
 from snakes_and_ladders.likelihood.hmm_paths import (
     MAX_ENUMERABLE_PATHS,
     enumerate_hidden_paths,
@@ -20,7 +21,6 @@ from snakes_and_ladders.likelihood.hmm_paths import (
 )
 from snakes_and_ladders.opt.hmm import forward_log_likelihood
 from snakes_and_ladders.sim.canonical import AMBIGUOUS_OBSERVATIONS, ambiguous_hmm
-from snakes_and_ladders.emissions import CategoricalEmission
 from snakes_and_ladders.sim.hmm import HmmParams
 
 
