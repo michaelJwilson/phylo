@@ -235,6 +235,18 @@ not as an interval in the wrong place, which is the opposite of what the
 Gaussian case showed and is why both were measured rather than one assumed
 from the other.
 
+**A Gaussian mixture: the emission seam with the Markov chain removed.**
+`snakes_and_ladders.sim.mixture` draws component labels and observations
+jointly, retaining the label so a clustering has something to be checked
+against; `snakes_and_ladders.opt.mixture` fits
+([#262](https://github.com/michaelJwilson/snakes_and_ladders/issues/262)). Its
+component M step **is** `GaussianEmission.reestimate`, called with
+responsibilities where an HMM passes state posteriors, and a test asserts the
+two produce identical numbers on the same responsibilities rather than merely
+similar ones — the evidence that the seam extracted from an HMM was not shaped
+by one. The unbounded likelihood transfers unchanged with it: a component
+collapsed onto a single observation is refused, not clamped.
+
 ## Milestone 1.2 — Differentiable Likelihood & Energy Engine
 
 **Felsenstein pruning: three CPU backends, one oracle.** Vectorized NumPy is
@@ -422,6 +434,28 @@ and the posterior standard deviation was 12% low, because divergent
 trajectories are rejected preferentially in the tails. Acceptance rate does
 not detect it; `max |dH|` tracks it monotonically.
 
+**Where a fit starts is now the caller's to choose, and multi-start is
+measured rather than assumed.** `Objective.initial()` was already the seam;
+what went through it was one fixed constant per objective.
+`snakes_and_ladders.opt.initialize` adds the objective's own start, a
+deterministic perturbation, and random restarts from a passed-in generator, and
+`fit_from` reports every fit and their spread rather than only the best --
+returning one answer for a surface with four basins is the failure the
+abstraction is about.
+
+The measurement says multi-start is a tool for a particular shape of surface
+and not a general improvement. On Himmelblau, four equal minima, a single fixed
+start reaches exactly **one** basin however often it is run and four random
+restarts reach all **four**. On Rastrigin, roughly `10**n` local minima each
+satisfying the first-order condition, sixteen restarts reach the global minimum
+**2 times in 30** against **0 in 30** from one start -- sixteen times the cost
+for a success rate still near zero, and widening the draw does not help
+(the same 2 in 30 at scale 4.0 as at 2.0), because the obstacle is the density
+of the minima and not the reach of the proposal.
+
+No default changes on that evidence. Every number below was produced from the
+objective's own start and still is.
+
 **Fitting and intervals.** L-BFGS with a strong-Wolfe line search, convergence
 judged on the gradient relative to the objective's own magnitude, and
 confidence intervals from the observed Fisher information pushed through the
@@ -443,6 +477,36 @@ GTR model's three normalizations are gauges rather than conventions, each
 removing an exactly flat direction that would otherwise leave every parameter
 without an interval. The roadmap's sub-second gradient update at `n = 100` is
 now measured — 203 ms at 1000 sites — rather than assumed.
+
+**k-means++ lands, and buys nothing the fit can use.** The first initializer
+that reads its objective's data
+([#262](https://github.com/michaelJwilson/snakes_and_ladders/issues/262)), and
+the case [#251](https://github.com/michaelJwilson/snakes_and_ladders/issues/251)
+built the `Initializer` protocol for. **The protocol needed no change.** A
+data-dependent strategy turns out to be model-*specific* rather than
+protocol-incompatible: it takes an `Objective` like every other initializer and
+refuses the ones whose parameter vector it cannot interpret, which is why it
+lives beside the mixture rather than with the model-free strategies.
+
+Measured against its published guarantee — Arthur & Vassilvitskii (2007) bound
+the expected seeding cost at `8 (ln k + 2)` times optimal, and in one dimension
+the optimal clustering is computable exactly by dynamic programming over
+contiguous runs, so the bound has something to be checked against. On three
+components six standard deviations apart, over 200 replicates: mean cost ratio
+**2.91** against a bound of **24.79**, worst draw 14.41. Uniform seeding
+realizes **11.03** mean and a worst draw of **58.08**, outside the k-means++
+guarantee.
+
+**And none of that reaches the likelihood, which is the finding.** EM reaches
+the same optimum from either seeding on that mixture — 200/200 from k-means++,
+195/200 from uniform — and from the objective's own quantile start too. Harder
+fixtures do not reverse it, they make both fail: at five components 1.5
+standard deviations apart neither seeding reached the best optimum found in 200
+draws, and at five with unequal weights uniform reached it 9 times in 150
+against k-means++'s 3 — noise, in the direction opposite to the one a default
+change would need. So **no default moves**; k-means++ lands as a strategy a
+caller may choose, at a cost of one objective evaluation (271 us of seeding
+against 260 us per evaluation at 4000 points).
 
 ## Milestone 1.4 — Discrete Move Sets & Classical Baselines
 

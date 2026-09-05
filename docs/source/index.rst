@@ -51,6 +51,9 @@ whether or not it has members yet.
 .. automodule:: snakes_and_ladders.sim.hmm
    :members:
 
+.. automodule:: snakes_and_ladders.sim.mixture
+   :members:
+
 .. automodule:: snakes_and_ladders.sim.canonical
    :members:
 
@@ -102,6 +105,9 @@ whether or not it has members yet.
 .. automodule:: snakes_and_ladders.opt.fit
    :members:
 
+.. automodule:: snakes_and_ladders.opt.initialize
+   :members:
+
 .. automodule:: snakes_and_ladders.opt.testfunctions
    :members:
 
@@ -112,6 +118,9 @@ whether or not it has members yet.
    :members:
 
 .. automodule:: snakes_and_ladders.opt.hmm
+   :members:
+
+.. automodule:: snakes_and_ladders.opt.mixture
    :members:
 
 .. automodule:: snakes_and_ladders.learn
