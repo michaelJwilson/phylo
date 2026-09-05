@@ -402,12 +402,31 @@ paths for a 3-state sequence of six. Neither takes an application type, so
 `phylo.learn` still imports nothing from `phylo.sim`, `phylo.likelihood` or
 `phylo.search`, and a test asserts it.
 
+**The lattice is fitted, against an exact normalizer.** `log Z` is
+enumerated over all 19,683 configurations of a 3-state 3x3 lattice rather than
+approximated, so the fitted optimum is checked against a brute-force scan of
+the likelihood instead of against the optimizer's own convergence, and the
+enumerated normalizer reduces to `phylo.opt.potts.log_partition`'s transfer
+matrix on a chain to machine precision. Interval coverage over 40 replicates
+is 157/160 at 100 samples, 153/160 at 400 and 153/160 at 1600 — approaching
+the nominal rate from above and settling, as the Potts chain does.
+
+That closes the requirements row. It also leaves the hidden Markov model's
+half of the same row less settled than the committed coverage figure reads:
+its 45/48 = 0.938 at 150 sequences and 91/96 = 0.948 at 2400 both sit within
+one binomial standard error of 0.95 (0.032 and 0.022 respectively), so the
+under-coverage the caption describes is not distinguishable from sampling
+noise at those replicate counts. The two identified causes are real — an
+emission fitted near zero, and the post-selection cost of aligning the hidden
+states — but stating a sample size at which nominal coverage begins to hold
+would need more replicates than the figure runs, and none is claimed here.
+
 ## §1.2 Requirements Ledger
 
 | Requirement | Status |
 | --- | --- |
 | Phylogenetic RF ≤0.05 against simulated truth | **Met**, from 125 sites upward ([#148](https://github.com/michaelJwilson/phylo/pull/148)) |
-| Potts/HMM parameter recovery within 95% intervals | **Met** for the 1-D chain and the discrete HMM ([#116](https://github.com/michaelJwilson/phylo/pull/116)); lattice outstanding (issue #170) |
+| Potts/HMM parameter recovery within 95% intervals | **Met** for the 1-D chain, the discrete HMM ([#116](https://github.com/michaelJwilson/phylo/pull/116)) and the 2-D lattice — realized 0.981 at 100 samples and 0.956 at 400 and 1600, over 40 replicates each |
 | Precise state-sequence decoding | **Not started** — no Viterbi decoder (issue #175) |
 | Parity with exact oracles on small `n` | **Met** for tree search against exhaustive enumeration ([#128](https://github.com/michaelJwilson/phylo/pull/128)) |
 | Parity with IQ-TREE 2 / RAxML-NG on large `n` | **Not started**; the tools are not in the environment (issue #126) |
